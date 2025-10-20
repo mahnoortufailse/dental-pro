@@ -1,0 +1,228 @@
+//@ts-nocheck
+import mongoose from "mongoose"
+
+const MONGODB_URI = process.env.MONGODB_URI
+
+if (!MONGODB_URI) {
+  throw new Error("Please add your MONGODB_URI to environment variables")
+}
+
+// Define Schemas
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  name: { type: String, required: true },
+  role: { type: String, enum: ["admin", "doctor", "receptionist"], required: true },
+  phone: String,
+  specialty: String,
+  active: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+})
+
+const patientSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  phone: { type: String, required: true },
+  email: { type: String, required: true },
+  dob: { type: String, required: true },
+  insuranceProvider: String,
+  allergies: [String],
+  medicalConditions: [String],
+  status: { type: String, enum: ["active", "inactive"], default: "active" },
+  balance: { type: Number, default: 0 },
+  lastVisit: Date,
+  nextAppt: Date,
+  assignedDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  doctorHistory: [
+    {
+      doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      doctorName: String,
+      startDate: Date,
+      endDate: Date,
+    },
+  ],
+  medicalHistory: String,
+  credentialStatus: { type: String, enum: ["complete", "incomplete"], default: "incomplete" },
+  missingCredentials: [String],
+  createdAt: { type: Date, default: Date.now },
+})
+
+const appointmentSchema = new mongoose.Schema({
+  patientId: { type: String, required: true },
+  patientName: { type: String, required: true },
+  doctorId: { type: String, required: true },
+  doctorName: { type: String, required: true },
+  date: { type: String, required: true },
+  time: { type: String, required: true },
+  type: { type: String, enum: ["Consultation", "Cleaning", "Filling", "Root Canal"], required: true },
+  status: { type: String, enum: ["pending", "confirmed", "completed"], default: "pending" },
+  chair: String,
+  duration: Number,
+  createdAt: { type: Date, default: Date.now },
+})
+
+const toothChartSchema = new mongoose.Schema({
+  patientId: { type: String, required: true },
+  doctorId: { type: String, required: true },
+  teeth: mongoose.Schema.Types.Mixed,
+  overallNotes: String,
+  lastReview: Date,
+  createdAt: { type: Date, default: Date.now },
+})
+
+const billingSchema = new mongoose.Schema({
+  patientId: { type: String, required: true },
+  appointmentId: String,
+  treatments: [
+    {
+      name: String,
+      cost: Number,
+      quantity: Number,
+    },
+  ],
+  totalAmount: { type: Number, required: true },
+  paidAmount: { type: Number, default: 0 },
+  paymentStatus: { type: String, enum: ["Pending", "Paid", "Partially Paid"], default: "Pending" },
+  paymentDate: Date,
+  notes: String,
+  createdBy: String,
+  createdAt: { type: Date, default: Date.now },
+})
+
+const inventorySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  quantity: { type: Number, required: true },
+  minStock: { type: Number, required: true },
+  unit: String,
+  supplier: String,
+  lastRestocked: Date,
+  createdAt: { type: Date, default: Date.now },
+})
+
+// Create or get models
+export const User = mongoose.models.User || mongoose.model("User", userSchema)
+export const Patient = mongoose.models.Patient || mongoose.model("Patient", patientSchema)
+export const Appointment = mongoose.models.Appointment || mongoose.model("Appointment", appointmentSchema)
+export const ToothChart = mongoose.models.ToothChart || mongoose.model("ToothChart", toothChartSchema)
+export const Billing = mongoose.models.Billing || mongoose.model("Billing", billingSchema)
+export const Inventory = mongoose.models.Inventory || mongoose.model("Inventory", inventorySchema)
+
+// Connect to MongoDB
+const cached = global as any
+
+if (!cached.mongoose) {
+  cached.mongoose = { conn: null, promise: null }
+}
+
+export async function connectDB() {
+  if (cached.mongoose.conn) {
+    return cached.mongoose.conn
+  }
+
+  if (!cached.mongoose.promise) {
+    cached.mongoose.promise = mongoose
+      .connect(MONGODB_URI, {
+        bufferCommands: false,
+      })
+      .then((mongoose) => {
+        return mongoose
+      })
+  }
+
+  try {
+    cached.mongoose.conn = await cached.mongoose.promise
+  } catch (e) {
+    cached.mongoose.promise = null
+    throw e
+  }
+
+  return cached.mongoose.conn
+}
+
+// Initialize default users
+export async function initializeDB() {
+  try {
+    await connectDB()
+
+    const adminExists = await User.findOne({ email: "admin@dentalcare.com" })
+    if (!adminExists) {
+      const createdUsers = await User.create([
+        {
+          username: "admin",
+          email: "admin@dentalcare.com",
+          password: "admin123",
+          name: "Admin User",
+          role: "admin",
+          phone: "1234567890",
+          active: true,
+        },
+        {
+          username: "doctor1",
+          email: "doctor@dentalcare.com",
+          password: "doctor123",
+          name: "Dr. John Smith",
+          role: "doctor",
+          phone: "1234567891",
+          specialty: "General Dentistry",
+          active: true,
+        },
+        {
+          username: "receptionist1",
+          email: "receptionist@dentalcare.com",
+          password: "receptionist123",
+          name: "Jane Doe",
+          role: "receptionist",
+          phone: "1234567892",
+          active: true,
+        },
+      ])
+
+      const doctor = createdUsers.find((u) => u.role === "doctor")
+      if (doctor) {
+        const patientExists = await Patient.findOne({ email: "john@example.com" })
+        if (!patientExists) {
+          await Patient.create({
+            name: "John Doe",
+            phone: "9876543210",
+            email: "john@example.com",
+            dob: "1990-05-15",
+            insuranceProvider: "Blue Cross",
+            allergies: ["Penicillin"],
+            medicalConditions: ["Diabetes"],
+            status: "active",
+            balance: 500,
+            assignedDoctorId: doctor._id,
+            doctorHistory: [{ doctorId: doctor._id, doctorName: doctor.name, startDate: new Date() }],
+            medicalHistory: "Patient has diabetes, monitor blood sugar levels",
+            credentialStatus: "complete",
+            missingCredentials: [],
+          })
+        }
+      }
+    }
+
+    const inventoryExists = await Inventory.findOne({ name: "Dental Filling Material" })
+    if (!inventoryExists) {
+      await Inventory.create([
+        {
+          name: "Dental Filling Material",
+          quantity: 50,
+          minStock: 10,
+          unit: "units",
+          supplier: "Dental Supplies Inc",
+          lastRestocked: new Date(),
+        },
+        {
+          name: "Anesthetic Injection",
+          quantity: 5,
+          minStock: 20,
+          unit: "boxes",
+          supplier: "Medical Supplies Co",
+          lastRestocked: new Date(),
+        },
+      ])
+    }
+  } catch (error) {
+    console.error("Database initialization error:", error)
+  }
+}
