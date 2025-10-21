@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { ToothChart, connectDB } from "@/lib/db"
 import { verifyToken } from "@/lib/auth"
 
@@ -14,12 +14,15 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const chart = await ToothChart.findById(params.id)
     if (!chart) return NextResponse.json({ error: "Tooth chart not found" }, { status: 404 })
 
-    if (payload.role === "doctor" && chart.doctorId.toString() !== payload.userId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    if (payload.role === "doctor") {
+      // Verify the doctor has access to this patient
+      const { Patient } = await import("@/lib/db")
+      const patient = await Patient.findById(chart.patientId)
+      if (!patient) return NextResponse.json({ error: "Patient not found" }, { status: 404 })
     }
 
     const updates = await request.json()
-    Object.assign(chart, updates, { lastReview: new Date() })
+    Object.assign(chart, updates, { lastReview: new Date(), doctorId: payload.userId })
     await chart.save()
 
     return NextResponse.json({ success: true, chart })

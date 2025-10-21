@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { ToothChart, connectDB } from "@/lib/db"
 import { verifyToken } from "@/lib/auth"
 
@@ -12,10 +12,7 @@ export async function GET(request: NextRequest) {
     if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     if (payload.role === "receptionist") return NextResponse.json({ error: "Access denied" }, { status: 403 })
 
-    const query: any = {}
-    if (payload.role === "doctor") query.doctorId = payload.userId
-
-    const charts = await ToothChart.find(query)
+    const charts = await ToothChart.find({})
     return NextResponse.json({ success: true, charts })
   } catch (error) {
     console.error(error)

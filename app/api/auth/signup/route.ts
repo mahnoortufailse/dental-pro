@@ -1,12 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { User, connectDB } from "@/lib/db"
 import { generateToken } from "@/lib/auth"
-import { validateEmail, validatePassword } from "@/lib/utils"
+import { validateEmail, validatePassword } from "@/lib/validation"
 
 export async function POST(request: NextRequest) {
   try {
     await connectDB()
     const { username, email, password, name, role, phone, specialty } = await request.json()
+
+    if (role === "admin") {
+      return NextResponse.json(
+        { error: "Admin accounts cannot be created through signup. Contact system administrator." },
+        { status: 403 },
+      )
+    }
 
     // Validation
     if (!username || !email || !password || !name || !role) {
@@ -18,7 +25,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!validatePassword(password)) {
-      return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
+      return NextResponse.json(
+        {
+          error:
+            "Password must be at least 8 characters with 1 uppercase letter, 1 number, and 1 special character (@$!%*?&)",
+        },
+        { status: 400 },
+      )
     }
 
     const existingUser = await User.findOne({
@@ -34,7 +47,7 @@ export async function POST(request: NextRequest) {
       email,
       password,
       name,
-      role: role as "admin" | "doctor" | "receptionist",
+      role: role as "doctor" | "receptionist",
       phone,
       specialty: role === "doctor" ? specialty : undefined,
       active: true,

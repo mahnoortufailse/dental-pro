@@ -1,4 +1,4 @@
-//@
+//@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { Patient, User, connectDB } from "@/lib/db"
 import { verifyToken } from "@/lib/auth"

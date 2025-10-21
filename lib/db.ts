@@ -1,5 +1,6 @@
 //@ts-nocheck
 import mongoose from "mongoose"
+import { hashPassword } from "./encryption"
 
 const MONGODB_URI = process.env.MONGODB_URI
 
@@ -11,7 +12,7 @@ if (!MONGODB_URI) {
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  password: { type: String, required: true }, // Will be hashed
   name: { type: String, required: true },
   role: { type: String, enum: ["admin", "doctor", "receptionist"], required: true },
   phone: String,
@@ -20,12 +21,25 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 })
 
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next()
+  try {
+    this.password = await hashPassword(this.password)
+    next()
+  } catch (error) {
+    next(error)
+  }
+})
+
 const patientSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true },
   email: { type: String, required: true },
   dob: { type: String, required: true },
+  idNumber: { type: String }, // Added for credential tracking
+  address: { type: String }, // Added for credential tracking
   insuranceProvider: String,
+  insuranceNumber: String, // Added for credential tracking
   allergies: [String],
   medicalConditions: [String],
   status: { type: String, enum: ["active", "inactive"], default: "active" },
@@ -99,6 +113,52 @@ const inventorySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 })
 
+const medicalHistorySchema = new mongoose.Schema({
+  patientId: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
+  doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  entries: [
+    {
+      date: { type: Date, default: Date.now },
+      notes: String,
+      findings: String,
+      treatment: String,
+      medications: [String],
+    },
+  ],
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+})
+
+const patientImageSchema = new mongoose.Schema({
+  patientId: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
+  type: { type: String, enum: ["xray", "photo", "scan"], required: true },
+  title: String,
+  description: String,
+  imageUrl: String,
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  uploadedAt: { type: Date, default: Date.now },
+  notes: String,
+})
+
+const appointmentReportSchema = new mongoose.Schema({
+  appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Appointment", required: true },
+  patientId: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
+  doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  procedures: [
+    {
+      name: String,
+      description: String,
+      tooth: String,
+      status: String,
+    },
+  ],
+  findings: String,
+  notes: String,
+  nextVisit: Date,
+  followUpDetails: String,
+  createdAt: { type: Date, default: Date.now },
+})
+
 // Create or get models
 export const User = mongoose.models.User || mongoose.model("User", userSchema)
 export const Patient = mongoose.models.Patient || mongoose.model("Patient", patientSchema)
@@ -106,6 +166,11 @@ export const Appointment = mongoose.models.Appointment || mongoose.model("Appoin
 export const ToothChart = mongoose.models.ToothChart || mongoose.model("ToothChart", toothChartSchema)
 export const Billing = mongoose.models.Billing || mongoose.model("Billing", billingSchema)
 export const Inventory = mongoose.models.Inventory || mongoose.model("Inventory", inventorySchema)
+
+export const MedicalHistory = mongoose.models.MedicalHistory || mongoose.model("MedicalHistory", medicalHistorySchema)
+export const PatientImage = mongoose.models.PatientImage || mongoose.model("PatientImage", patientImageSchema)
+export const AppointmentReport =
+  mongoose.models.AppointmentReport || mongoose.model("AppointmentReport", appointmentReportSchema)
 
 // Connect to MongoDB
 const cached = global as any
@@ -150,7 +215,7 @@ export async function initializeDB() {
         {
           username: "admin",
           email: "admin@dentalcare.com",
-          password: "admin123",
+          password: "Admin@123456", // Will be hashed by pre-save hook
           name: "Admin User",
           role: "admin",
           phone: "1234567890",
@@ -159,7 +224,7 @@ export async function initializeDB() {
         {
           username: "doctor1",
           email: "doctor@dentalcare.com",
-          password: "doctor123",
+          password: "Doctor@123456", // Will be hashed by pre-save hook
           name: "Dr. John Smith",
           role: "doctor",
           phone: "1234567891",
@@ -169,7 +234,7 @@ export async function initializeDB() {
         {
           username: "receptionist1",
           email: "receptionist@dentalcare.com",
-          password: "receptionist123",
+          password: "Receptionist@123456", // Will be hashed by pre-save hook
           name: "Jane Doe",
           role: "receptionist",
           phone: "1234567892",
@@ -186,7 +251,10 @@ export async function initializeDB() {
             phone: "9876543210",
             email: "john@example.com",
             dob: "1990-05-15",
+            idNumber: "ID123456",
+            address: "123 Main St, City, State",
             insuranceProvider: "Blue Cross",
+            insuranceNumber: "BC123456789",
             allergies: ["Penicillin"],
             medicalConditions: ["Diabetes"],
             status: "active",

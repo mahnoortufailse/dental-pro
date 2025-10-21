@@ -2,12 +2,12 @@
 "use client"
 
 import type React from "react"
-
 import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
-import toast from "react-hot-toast"
+import { toast } from "react-hot-toast"
+import { Plus, Edit2, Trash2, DollarSign, Clock, FileText } from "lucide-react"
 
 export default function BillingPage() {
   const { user, token } = useAuth()
@@ -161,12 +161,16 @@ export default function BillingPage() {
 
   return (
     <ProtectedRoute allowedRoles={["admin", "receptionist"]}>
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 overflow-auto">
-          <div className="p-8">
-            <div className="flex justify-between items-center mb-8">
-              <h1 className="text-3xl font-bold">Billing & Invoicing</h1>
+        <main className="flex-1 overflow-auto md:pt-0 pt-16">
+          <div className="p-4 sm:p-6 lg:p-8">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Billing & Invoicing</h1>
+                <p className="text-muted-foreground text-sm mt-1">Manage patient payments and invoices</p>
+              </div>
               <button
                 onClick={() => {
                   setEditingId(null)
@@ -182,38 +186,52 @@ export default function BillingPage() {
                     })
                   }
                 }}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium"
               >
-                {showForm ? "Cancel" : "Add Billing Record"}
+                <Plus className="w-4 h-4" />
+                {showForm ? "Cancel" : "Add Billing"}
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-lg shadow">
-                <p className="text-gray-600 text-sm">Total Revenue</p>
-                <p className="text-3xl font-bold text-green-600">${stats.totalRevenue.toFixed(2)}</p>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
+              <div className="stat-card">
+                <div className="stat-icon bg-gradient-to-br from-accent/20 to-accent/10">
+                  <DollarSign className="w-6 h-6 text-accent" />
+                </div>
+                <p className="stat-label">Total Revenue</p>
+                <p className="stat-value">${stats.totalRevenue.toFixed(2)}</p>
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow">
-                <p className="text-gray-600 text-sm">Pending Amount</p>
-                <p className="text-3xl font-bold text-yellow-600">${stats.pendingAmount.toFixed(2)}</p>
+              <div className="stat-card">
+                <div className="stat-icon bg-gradient-to-br from-destructive/20 to-destructive/10">
+                  <Clock className="w-6 h-6 text-destructive" />
+                </div>
+                <p className="stat-label">Pending Amount</p>
+                <p className="stat-value">${stats.pendingAmount.toFixed(2)}</p>
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow">
-                <p className="text-gray-600 text-sm">Total Invoices</p>
-                <p className="text-3xl font-bold text-blue-600">{stats.totalInvoices}</p>
+              <div className="stat-card">
+                <div className="stat-icon bg-gradient-to-br from-primary/20 to-primary/10">
+                  <FileText className="w-6 h-6 text-primary" />
+                </div>
+                <p className="stat-label">Total Invoices</p>
+                <p className="stat-value">{stats.totalInvoices}</p>
               </div>
             </div>
 
+            {/* Add/Edit Form */}
             {showForm && (
-              <div className="bg-white rounded-lg shadow p-6 mb-8">
-                <h2 className="text-xl font-bold mb-4">{editingId ? "Edit Billing Record" : "Add Billing Record"}</h2>
+              <div className="bg-card rounded-lg shadow-md border border-border p-6 mb-8">
+                <h2 className="text-lg sm:text-xl font-bold mb-6 text-foreground">
+                  {editingId ? "Edit Billing Record" : "Add Billing Record"}
+                </h2>
                 <form onSubmit={handleAddBilling} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <select
                       value={formData.patientId}
                       onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
                       required
                     >
                       <option value="">Select Patient</option>
@@ -227,13 +245,8 @@ export default function BillingPage() {
                       type="number"
                       placeholder="Total Amount"
                       value={formData.totalAmount}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          totalAmount: e.target.value,
-                        })
-                      }
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, totalAmount: e.target.value })}
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
                       required
                     />
                     <input
@@ -241,17 +254,12 @@ export default function BillingPage() {
                       placeholder="Paid Amount"
                       value={formData.paidAmount}
                       onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value })}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
                     />
                     <select
                       value={formData.paymentStatus}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          paymentStatus: e.target.value,
-                        })
-                      }
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
                     >
                       <option value="Pending">Pending</option>
                       <option value="Paid">Paid</option>
@@ -262,18 +270,20 @@ export default function BillingPage() {
                     placeholder="Treatments (comma-separated)"
                     value={formData.treatments}
                     onChange={(e) => setFormData({ ...formData, treatments: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                    rows={2}
                   />
                   <textarea
                     placeholder="Notes"
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                    rows={2}
                   />
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <button
                       type="submit"
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                      className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium"
                     >
                       {editingId ? "Update Record" : "Add Billing Record"}
                     </button>
@@ -284,7 +294,7 @@ export default function BillingPage() {
                           setEditingId(null)
                           setShowForm(false)
                         }}
-                        className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition-colors"
+                        className="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium"
                       >
                         Cancel Edit
                       </button>
@@ -294,57 +304,85 @@ export default function BillingPage() {
               </div>
             )}
 
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-100 border-b">
-                  <tr>
-                    <th className="text-left px-6 py-3 font-semibold">Patient</th>
-                    <th className="text-left px-6 py-3 font-semibold">Total Amount</th>
-                    <th className="text-left px-6 py-3 font-semibold">Paid Amount</th>
-                    <th className="text-left px-6 py-3 font-semibold">Status</th>
-                    <th className="text-left px-6 py-3 font-semibold">Date</th>
-                    <th className="text-left px-6 py-3 font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {billing.map((bill) => (
-                    <tr key={bill._id} className="border-b hover:bg-gray-50">
-                      <td className="px-6 py-3">{patients.find((p) => p._id === bill.patientId)?.name || "Unknown"}</td>
-
-                      <td className="px-6 py-3">${bill.totalAmount.toFixed(2)}</td>
-                      <td className="px-6 py-3">${bill.paidAmount.toFixed(2)}</td>
-                      <td className="px-6 py-3">
-                        <span
-                          className={`px-2 py-1 rounded text-xs ${
-                            bill.paymentStatus === "Paid"
-                              ? "bg-green-100 text-green-800"
-                              : bill.paymentStatus === "Partially Paid"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {bill.paymentStatus}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3">{new Date(bill.createdAt).toLocaleDateString()}</td>
-                      <td className="px-6 py-3 space-x-2">
-                        <button
-                          onClick={() => handleEditBilling(bill)}
-                          className="text-green-600 hover:underline text-sm"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteBilling(bill._id)}
-                          className="text-red-600 hover:underline text-sm"
-                        >
-                          Delete
-                        </button>
-                      </td>
+            {/* Billing Table */}
+            <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted border-b border-border">
+                    <tr>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Patient</th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden sm:table-cell">
+                        Total
+                      </th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden md:table-cell">
+                        Paid
+                      </th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Status</th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden lg:table-cell">
+                        Date
+                      </th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {billing.length > 0 ? (
+                      billing.map((bill) => (
+                        <tr key={bill._id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                          <td className="px-4 sm:px-6 py-3 font-medium text-foreground">
+                            {patients.find((p) => p._id === bill.patientId)?.name || "Unknown"}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell">
+                            ${bill.totalAmount.toFixed(2)}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell">
+                            ${bill.paidAmount.toFixed(2)}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3">
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-semibold ${
+                                bill.paymentStatus === "Paid"
+                                  ? "bg-accent/20 text-accent"
+                                  : bill.paymentStatus === "Partially Paid"
+                                    ? "bg-secondary/20 text-secondary"
+                                    : "bg-destructive/20 text-destructive"
+                              }`}
+                            >
+                              {bill.paymentStatus}
+                            </span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden lg:table-cell text-xs">
+                            {new Date(bill.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEditBilling(bill)}
+                                className="text-primary hover:text-primary/80 transition-colors"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBilling(bill._id)}
+                                className="text-destructive hover:text-destructive/80 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="px-4 sm:px-6 py-8 text-center text-muted-foreground">
+                          No billing records found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </main>

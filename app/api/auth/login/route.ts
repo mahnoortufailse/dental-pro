@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { User, connectDB } from "@/lib/db"
 import { generateToken } from "@/lib/auth"
+import { comparePassword } from "@/lib/encryption"
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,13 @@ export async function POST(request: NextRequest) {
       $or: [{ username }, { email: username }],
     })
 
-    if (!user || user.password !== password) {
+    if (!user) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    }
+
+    const isPasswordValid = await comparePassword(password, user.password)
+
+    if (!isPasswordValid) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 

@@ -1,0 +1,26 @@
+import { type NextRequest, NextResponse } from "next/server"
+import { AppointmentReport, connectDB } from "@/lib/db"
+import { verifyToken } from "@/lib/auth"
+
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    await connectDB()
+    const token = request.headers.get("authorization")?.split(" ")[1]
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    const payload = verifyToken(token)
+    if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+
+    const updates = await request.json()
+    const report = await AppointmentReport.findByIdAndUpdate(params.id, updates, { new: true })
+      .populate("patientId", "name")
+      .populate("doctorId", "name specialty")
+
+    if (!report) return NextResponse.json({ error: "Report not found" }, { status: 404 })
+
+    return NextResponse.json({ success: true, report })
+  } catch (error) {
+    console.error("[v0] PUT appointment report error:", error)
+    return NextResponse.json({ error: "Failed to update report" }, { status: 500 })
+  }
+}
