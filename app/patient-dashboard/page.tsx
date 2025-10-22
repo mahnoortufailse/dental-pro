@@ -3,24 +3,11 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth-context"
 import Link from "next/link"
 import { FileText, ImageIcon, Calendar, Bluetooth as Tooth } from "lucide-react"
-import { Sidebar } from "@/components/sidebar"
+import { PatientSidebar } from "@/components/patient-sidebar"
 import { ProtectedRoute } from "@/components/protected-route"
-
-interface Patient {
-  _id: string
-  name: string
-  email: string
-  phone: string
-  dob: string
-  address: string
-  insuranceProvider: string
-  insuranceNumber: string
-  allergies: string[]
-  medicalConditions: string[]
-  balance: number
-}
 
 interface DashboardStats {
   totalAppointments: number
@@ -30,7 +17,7 @@ interface DashboardStats {
 }
 
 export default function PatientDashboard() {
-  const [patient, setPatient] = useState<Patient | null>(null)
+  const { patient, patientToken } = useAuth()
   const [stats, setStats] = useState<DashboardStats>({
     totalAppointments: 0,
     upcomingAppointments: 0,
@@ -42,18 +29,10 @@ export default function PatientDashboard() {
   const { toast } = useToast()
 
   useEffect(() => {
-    const patientData = sessionStorage.getItem("patient")
-    const token = sessionStorage.getItem("patientToken")
-
-    if (!patientData || !token) {
-      router.push("/login")
-      return
+    if (patient && patientToken) {
+      fetchDashboardStats(patientToken, patient._id)
     }
-
-    const parsedPatient = JSON.parse(patientData)
-    setPatient(parsedPatient)
-    fetchDashboardStats(token, parsedPatient._id)
-  }, [router])
+  }, [patient, patientToken])
 
   const fetchDashboardStats = async (token: string, patientId: string) => {
     try {
@@ -102,9 +81,9 @@ export default function PatientDashboard() {
   }
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute patientOnly={true}>
       <div className="flex h-screen bg-background">
-        <Sidebar />
+        <PatientSidebar />
         <main className="flex-1 overflow-auto lg:ml-0">
           <div className="p-4 sm:p-6 lg:p-8">
             {/* Header */}
@@ -194,7 +173,7 @@ export default function PatientDashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Account Balance</p>
-                    <p className="text-lg font-bold text-foreground">${patient.balance.toFixed(2)}</p>
+                    <p className="text-lg font-bold text-foreground">${(patient.balance || 0).toFixed(2)}</p>
                   </div>
                 </div>
               </div>

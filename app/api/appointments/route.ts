@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { Appointment, connectDB, User } from "@/lib/db"
-import { verifyToken } from "@/lib/auth"
+import { verifyToken, verifyPatientToken } from "@/lib/auth"
 import { Types } from "mongoose"
 
 export async function GET(request: NextRequest) {
@@ -13,16 +13,26 @@ export async function GET(request: NextRequest) {
     }
 
     const payload = verifyToken(token)
+    let patientId: string | null = null
+
     if (!payload) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+      // Try patient token
+      patientId = verifyPatientToken(token)
+      if (!patientId) {
+        return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+      }
     }
 
     const query: any = {}
 
-    if (payload.role === "doctor") {
+    if (payload?.role === "doctor") {
       // For doctors, show only their appointments
       query.doctorId = payload.userId
       console.log("[v0] Doctor fetching appointments - doctorId:", payload.userId)
+    } else if (patientId) {
+      // For patients, show only their appointments
+      query.patientId = patientId
+      console.log("[v0] Patient fetching appointments - patientId:", patientId)
     }
     // For admin and receptionist, show all appointments
 

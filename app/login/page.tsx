@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
+  const { login, setPatient, setPatientToken } = useAuth()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,6 +57,10 @@ export default function LoginPage() {
         const data = await res.json()
         sessionStorage.setItem("patientToken", data.token)
         sessionStorage.setItem("patient", JSON.stringify(data.patient))
+
+        setPatientToken(data.token)
+        setPatient(data.patient)
+
         toast.success("Login successful!")
         router.push("/patient-dashboard")
       }

@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import toast from "react-hot-toast"
-import Link from "next/link"
 import Image from "next/image"
+import { useAuth } from "@/components/auth-context"
+import { PatientSidebar } from "@/components/patient-sidebar"
+import { ProtectedRoute } from "@/components/protected-route"
 
 interface PatientImage {
   _id: string
@@ -19,23 +20,16 @@ interface PatientImage {
 }
 
 export default function XRaysPage() {
+  const { patient, patientToken } = useAuth()
   const [images, setImages] = useState<PatientImage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState<PatientImage | null>(null)
-  const router = useRouter()
- 
 
   useEffect(() => {
-    const token = sessionStorage.getItem("patientToken")
-    const patient = sessionStorage.getItem("patient")
-
-    if (!token || !patient) {
-      router.push("/patient-login")
-      return
+    if (patient && patientToken) {
+      fetchImages(patientToken, patient._id)
     }
-
-    fetchImages(token, JSON.parse(patient)._id)
-  }, [router])
+  }, [patient, patientToken])
 
   const fetchImages = async (token: string, patientId: string) => {
     try {
@@ -54,12 +48,6 @@ export default function XRaysPage() {
     }
   }
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("patientToken")
-    sessionStorage.removeItem("patient")
-    router.push("/patient-login")
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -69,61 +57,61 @@ export default function XRaysPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/patient-dashboard">
-              <Button variant="ghost">← Back</Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">X-Rays & Images</h1>
-              <p className="text-muted-foreground mt-1">Your dental imaging records</p>
+    <ProtectedRoute patientOnly={true}>
+      <div className="flex h-screen bg-background">
+        <PatientSidebar />
+        <main className="flex-1 overflow-auto lg:ml-0">
+          <div className="p-4 sm:p-6 lg:p-8">
+            {/* Header */}
+            <div className="dashboard-header mb-8">
+              <div>
+                <h1 className="dashboard-title">X-Rays & Images</h1>
+                <p className="text-muted-foreground mt-1 text-sm sm:text-base">Your dental imaging records</p>
+              </div>
             </div>
-          </div>
-          <Button variant="outline" onClick={handleLogout}>
-            Logout
-          </Button>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {images.length === 0 ? (
-          <Card className="p-8 text-center">
-            <p className="text-muted-foreground">No x-rays or images found</p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {images.map((image) => (
-              <Card
-                key={image._id}
-                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => setSelectedImage(image)}
-              >
-                <div className="relative w-full h-48 bg-muted">
-                  {image.imageUrl ? (
-                    <Image src={image.imageUrl || "/placeholder.svg"} alt={image.title} fill className="object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <p className="text-muted-foreground">No image available</p>
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-foreground">{image.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(image.uploadedAt).toLocaleDateString()}
-                  </p>
-                  <span className="inline-block mt-2 px-2 py-1 bg-primary/10 text-primary text-xs rounded">
-                    {image.type.toUpperCase()}
-                  </span>
-                </div>
+            {/* Images Grid */}
+            {images.length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">No x-rays or images found</p>
               </Card>
-            ))}
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {images.map((image) => (
+                  <Card
+                    key={image._id}
+                    className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() => setSelectedImage(image)}
+                  >
+                    <div className="relative w-full h-48 bg-muted">
+                      {image.imageUrl ? (
+                        <Image
+                          src={image.imageUrl || "/placeholder.svg"}
+                          alt={image.title}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <p className="text-muted-foreground">No image available</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-foreground">{image.title}</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(image.uploadedAt).toLocaleDateString()}
+                      </p>
+                      <span className="inline-block mt-2 px-2 py-1 bg-primary/10 text-primary text-xs rounded">
+                        {image.type.toUpperCase()}
+                      </span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </main>
       </div>
 
       {/* Image Modal */}
@@ -180,6 +168,6 @@ export default function XRaysPage() {
           </Card>
         </div>
       )}
-    </div>
+    </ProtectedRoute>
   )
 }

@@ -1,7 +1,7 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { AppointmentReport, connectDB, Patient, User, Appointment } from "@/lib/db"
-import { verifyToken } from "@/lib/auth"
+import { verifyToken, verifyPatientToken } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,24 +10,34 @@ export async function GET(request: NextRequest) {
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const payload = verifyToken(token)
-    if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    let patientId: string | null = null
+
+    if (!payload) {
+      patientId = verifyPatientToken(token)
+      if (!patientId) {
+        return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+      }
+    }
 
     const { searchParams } = new URL(request.url)
     const appointmentId = searchParams.get("appointmentId")
-    const patientId = searchParams.get("patientId")
+    const queryPatientId = searchParams.get("patientId")
 
     const query: any = {}
 
-    if (payload.role === "doctor") {
+    if (payload?.role === "doctor") {
       query.doctorId = payload.userId
+    } else if (patientId) {
+      // For patients, only show their own reports
+      query.patientId = patientId
     }
 
     if (appointmentId) {
       query.appointmentId = appointmentId
     }
 
-    if (patientId) {
-      query.patientId = patientId
+    if (queryPatientId && payload?.role !== "doctor" && !patientId) {
+      query.patientId = queryPatientId
     }
 
     const reports = await AppointmentReport.find(query)
@@ -50,7 +60,9 @@ export async function POST(request: NextRequest) {
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const payload = verifyToken(token)
-    if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    if (!payload) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
 
     if (payload.role !== "doctor") {
       return NextResponse.json({ error: "Only doctors can create reports" }, { status: 403 })

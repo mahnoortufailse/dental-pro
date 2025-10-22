@@ -29,11 +29,18 @@ export async function POST(request: NextRequest) {
       success: true,
       token,
       patient: {
+        _id: patient._id.toString(),
         id: patient._id.toString(),
         name: patient.name,
         email: patient.email,
         phone: patient.phone,
         dob: patient.dob,
+        address: patient.address || "",
+        insuranceProvider: patient.insuranceProvider || "",
+        insuranceNumber: patient.insuranceNumber || "",
+        allergies: patient.allergies || [],
+        medicalConditions: patient.medicalConditions || [],
+        balance: patient.balance || 0,
         assignedDoctor: patient.assignedDoctorId,
       },
     })

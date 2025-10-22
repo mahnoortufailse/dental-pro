@@ -30,3 +30,17 @@ export function decodeToken(token: string): JWTPayload | null {
     return null
   }
 }
+
+export function verifyPatientToken(token: string): string | null {
+  try {
+    // Patient token is base64-encoded patient ID
+    const patientId = Buffer.from(token, "base64").toString("utf-8")
+    // Validate it's a valid MongoDB ObjectId format
+    if (patientId.match(/^[0-9a-fA-F]{24}$/)) {
+      return patientId
+    }
+    return null
+  } catch {
+    return null
+  }
+}
