@@ -9,6 +9,7 @@ import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
 import { ChevronLeft, ChevronRight, Plus, FileText, X, CheckCircle } from "lucide-react"
 import { AppointmentActionModal } from "@/components/appointment-action-modal"
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 
 export default function AppointmentsPage() {
   const { user, token } = useAuth()
@@ -51,6 +52,8 @@ export default function AppointmentsPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [reportErrors, setReportErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null)
 
   useEffect(() => {
     if (token) {
@@ -139,8 +142,6 @@ export default function AppointmentsPage() {
   }
 
   const handleDeleteAppointment = async (appointmentId: string) => {
-    if (!window.confirm("Are you sure you want to delete this appointment?")) return
-
     try {
       const res = await fetch(`/api/appointments/${appointmentId}`, {
         method: "DELETE",
@@ -559,7 +560,10 @@ export default function AppointmentsPage() {
                                     Edit
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteAppointment(apt._id || apt.id)}
+                                    onClick={() => {
+                                      setAppointmentToDelete(apt)
+                                      setShowDeleteModal(true)
+                                    }}
                                     className="text-xs text-destructive hover:underline cursor-pointer"
                                   >
                                     Delete
@@ -950,6 +954,24 @@ export default function AppointmentsPage() {
                 })
               }
               isLoading={loading}
+            />
+
+            <ConfirmDeleteModal
+              isOpen={showDeleteModal}
+              title="Delete Appointment"
+              description="Are you sure you want to delete this appointment? This action cannot be undone."
+              itemName={
+                appointmentToDelete ? `${appointmentToDelete.patientName} - ${appointmentToDelete.date}` : undefined
+              }
+              onConfirm={() => {
+                handleDeleteAppointment(appointmentToDelete._id || appointmentToDelete.id)
+                setShowDeleteModal(false)
+                setAppointmentToDelete(null)
+              }}
+              onCancel={() => {
+                setShowDeleteModal(false)
+                setAppointmentToDelete(null)
+              }}
             />
           </div>
         </main>

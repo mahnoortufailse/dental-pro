@@ -5,6 +5,7 @@ import type React from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
 import { AlertCircle, Plus, Edit2, Trash2, Eye, X } from "lucide-react"
@@ -35,6 +36,8 @@ export default function PatientsPage() {
     allergies: "",
     medicalConditions: "",
   })
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [patientToDelete, setPatientToDelete] = useState<any>(null)
 
   useEffect(() => {
     if (token) {
@@ -106,8 +109,6 @@ export default function PatientsPage() {
   }
 
   const handleDeletePatient = async (patientId: string) => {
-    if (!window.confirm("Are you sure you want to delete this patient?")) return
-
     try {
       const res = await fetch(`/api/patients/${patientId}`, {
         method: "DELETE",
@@ -183,6 +184,8 @@ export default function PatientsPage() {
       const method = editingPatient ? "PUT" : "POST"
       const url = editingPatient ? `/api/patients/${editingPatient}` : "/api/patients"
 
+      const tempPassword = editingPatient ? undefined : `${formData.name.split(" ")[0]}@${formData.dob.split("-")[0]}`
+
       const res = await fetch(url, {
         method,
         headers: {
@@ -191,6 +194,7 @@ export default function PatientsPage() {
         },
         body: JSON.stringify({
           ...formData,
+          ...(tempPassword && { password: tempPassword }),
           allergies: formData.allergies
             .split(",")
             .map((a) => a.trim())
@@ -210,7 +214,7 @@ export default function PatientsPage() {
           setEditingPatient(null)
         } else {
           setPatients([...patients, data.patient])
-          toast.success("Patient added successfully")
+          toast.success(`Patient added successfully! Temporary password: ${tempPassword}`)
         }
 
         setShowForm(false)
@@ -533,7 +537,10 @@ export default function PatientsPage() {
                                     <Edit2 className="w-4 h-4" />
                                   </button>
                                   <button
-                                    onClick={() => handleDeletePatient(patient._id)}
+                                    onClick={() => {
+                                      setPatientToDelete(patient)
+                                      setShowDeleteModal(true)
+                                    }}
                                     className="text-destructive hover:text-destructive/80 transition-colors"
                                     title="Delete"
                                   >
@@ -677,6 +684,22 @@ export default function PatientsPage() {
                 </div>
               </div>
             )}
+
+            <ConfirmDeleteModal
+              isOpen={showDeleteModal}
+              title="Delete Patient"
+              description="Are you sure you want to delete this patient? This action cannot be undone and will remove all associated records."
+              itemName={patientToDelete?.name}
+              onConfirm={() => {
+                handleDeletePatient(patientToDelete._id)
+                setShowDeleteModal(false)
+                setPatientToDelete(null)
+              }}
+              onCancel={() => {
+                setShowDeleteModal(false)
+                setPatientToDelete(null)
+              }}
+            />
           </div>
         </main>
       </div>

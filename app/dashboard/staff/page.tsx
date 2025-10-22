@@ -6,10 +6,13 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import toast from "react-hot-toast"
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 
 export default function StaffPage() {
   const { user, token } = useAuth()
   const [staff, setStaff] = useState([])
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [staffToDelete, setStaffToDelete] = useState<any>(null)
 
   useEffect(() => {
     if (token) {
@@ -32,8 +35,6 @@ export default function StaffPage() {
   }
 
   const handleDeleteStaff = async (staffId: string) => {
-    if (!window.confirm("Are you sure you want to delete this staff member?")) return
-
     try {
       const res = await fetch(`/api/users/${staffId}`, {
         method: "DELETE",
@@ -103,7 +104,10 @@ export default function StaffPage() {
                       <td className="px-6 py-3">{member.specialty || "-"}</td>
                       <td className="px-6 py-3">
                         <button
-                          onClick={() => handleDeleteStaff(member.id)}
+                          onClick={() => {
+                            setStaffToDelete(member)
+                            setShowDeleteModal(true)
+                          }}
                           className="text-red-600 hover:underline text-sm"
                         >
                           Delete
@@ -114,6 +118,22 @@ export default function StaffPage() {
                 </tbody>
               </table>
             </div>
+
+            <ConfirmDeleteModal
+              isOpen={showDeleteModal}
+              title="Delete Staff Member"
+              description="Are you sure you want to delete this staff member? This action cannot be undone."
+              itemName={staffToDelete?.name}
+              onConfirm={() => {
+                handleDeleteStaff(staffToDelete.id)
+                setShowDeleteModal(false)
+                setStaffToDelete(null)
+              }}
+              onCancel={() => {
+                setShowDeleteModal(false)
+                setStaffToDelete(null)
+              }}
+            />
           </div>
         </main>
       </div>

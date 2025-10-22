@@ -1,11 +1,13 @@
 //@ts-nocheck
 "use client"
 
-import React, { useState, useEffect } from "react"
+import type React from "react"
+import { useState, useEffect } from "react"
 import toast from "react-hot-toast"
 import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 
 export default function InventoryPage() {
   const { token } = useAuth()
@@ -19,6 +21,8 @@ export default function InventoryPage() {
     unit: "",
     supplier: "",
   })
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState<any>(null)
 
   // Fetch inventory on load or token change
   useEffect(() => {
@@ -41,8 +45,6 @@ export default function InventoryPage() {
   }
 
   const handleDeleteItem = async (_id: string) => {
-    if (!window.confirm("Are you sure you want to delete this item?")) return
-
     try {
       const res = await fetch(`/api/inventory/${_id}`, {
         method: "DELETE",
@@ -87,8 +89,8 @@ export default function InventoryPage() {
         },
         body: JSON.stringify({
           ...formData,
-          quantity: parseInt(formData.quantity),
-          minStock: parseInt(formData.minStock),
+          quantity: Number.parseInt(formData.quantity),
+          minStock: Number.parseInt(formData.minStock),
         }),
       })
 
@@ -244,7 +246,13 @@ export default function InventoryPage() {
                       <button onClick={() => handleEditItem(item)} className="text-green-600 hover:underline text-sm">
                         Edit
                       </button>
-                      <button onClick={() => handleDeleteItem(item._id)} className="text-red-600 hover:underline text-sm">
+                      <button
+                        onClick={() => {
+                          setItemToDelete(item)
+                          setShowDeleteModal(true)
+                        }}
+                        className="text-red-600 hover:underline text-sm"
+                      >
                         Delete
                       </button>
                     </td>
@@ -253,6 +261,22 @@ export default function InventoryPage() {
               </tbody>
             </table>
           </div>
+
+          <ConfirmDeleteModal
+            isOpen={showDeleteModal}
+            title="Delete Inventory Item"
+            description="Are you sure you want to delete this inventory item? This action cannot be undone."
+            itemName={itemToDelete?.name}
+            onConfirm={() => {
+              handleDeleteItem(itemToDelete._id)
+              setShowDeleteModal(false)
+              setItemToDelete(null)
+            }}
+            onCancel={() => {
+              setShowDeleteModal(false)
+              setItemToDelete(null)
+            }}
+          />
         </main>
       </div>
     </ProtectedRoute>

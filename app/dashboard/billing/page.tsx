@@ -8,6 +8,7 @@ import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
 import { Plus, Edit2, Trash2, DollarSign, Clock, FileText } from "lucide-react"
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 
 export default function BillingPage() {
   const { user, token } = useAuth()
@@ -28,6 +29,8 @@ export default function BillingPage() {
     pendingAmount: 0,
     totalInvoices: 0,
   })
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [billingToDelete, setBillingToDelete] = useState<any>(null)
 
   useEffect(() => {
     if (token) {
@@ -77,8 +80,6 @@ export default function BillingPage() {
   }
 
   const handleDeleteBilling = async (billingId: string) => {
-    if (!window.confirm("Are you sure you want to delete this billing record?")) return
-
     try {
       const res = await fetch(`/api/billing/${billingId}`, {
         method: "DELETE",
@@ -363,7 +364,10 @@ export default function BillingPage() {
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => handleDeleteBilling(bill._id)}
+                                onClick={() => {
+                                  setBillingToDelete(bill)
+                                  setShowDeleteModal(true)
+                                }}
                                 className="text-destructive hover:text-destructive/80 transition-colors"
                                 title="Delete"
                               >
@@ -384,6 +388,26 @@ export default function BillingPage() {
                 </table>
               </div>
             </div>
+
+            <ConfirmDeleteModal
+              isOpen={showDeleteModal}
+              title="Delete Billing Record"
+              description="Are you sure you want to delete this billing record? This action cannot be undone."
+              itemName={
+                billingToDelete
+                  ? `${patients.find((p) => p._id === billingToDelete.patientId)?.name || "Unknown"} - $${billingToDelete.totalAmount.toFixed(2)}`
+                  : undefined
+              }
+              onConfirm={() => {
+                handleDeleteBilling(billingToDelete._id)
+                setShowDeleteModal(false)
+                setBillingToDelete(null)
+              }}
+              onCancel={() => {
+                setShowDeleteModal(false)
+                setBillingToDelete(null)
+              }}
+            />
           </div>
         </main>
       </div>

@@ -55,6 +55,9 @@ export async function POST(request: NextRequest) {
       allergies = [],
       medicalConditions = [],
       assignedDoctorId,
+      idNumber,
+      address,
+      insuranceNumber,
     } = await request.json()
 
     if (!name || !phone || !email || !dob || !insuranceProvider) {
@@ -87,12 +90,17 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Creating patient with doctor:", doctor._id, "doctor name:", doctor.name)
 
+    const tempPassword = `${name.split(" ")[0]}@${dob.split("-")[0]}`
+
     const newPatient = await Patient.create({
       name,
       phone,
       email,
       dob,
+      idNumber,
+      address,
       insuranceProvider,
+      insuranceNumber,
       allergies,
       medicalConditions,
       status: "active",
@@ -102,7 +110,17 @@ export async function POST(request: NextRequest) {
       medicalHistory: "",
       credentialStatus: missingCredentials.length === 0 ? "complete" : "incomplete",
       missingCredentials,
+      password: tempPassword,
     })
+
+    try {
+      const { sendPatientCredentials } = await import("@/lib/email")
+      await sendPatientCredentials(email, name, tempPassword)
+      console.log("[v0] Credentials email sent to patient:", email)
+    } catch (emailError) {
+      console.error("[v0] Failed to send email:", emailError)
+      // Continue even if email fails - patient can still login with temp password
+    }
 
     await newPatient.populate("assignedDoctorId", "name email specialty")
     console.log("[v0] Patient created successfully:", newPatient._id, "assigned to:", newPatient.assignedDoctorId?._id)

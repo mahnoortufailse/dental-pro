@@ -58,8 +58,8 @@ export function ConfirmDeleteModal({
             disabled={isLoading}
             className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:opacity-50 ${
               isDangerous
-                ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                : "bg-warning hover:bg-warning/90 text-warning-foreground"
+                ? "bg-destructive hover:bg-destructive/90 text-white"
+                : "bg-warning hover:bg-warning/90 text-white"
             }`}
           >
             {isLoading ? "Deleting..." : "Delete"}
