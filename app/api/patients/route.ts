@@ -105,12 +105,12 @@ export async function POST(request: NextRequest) {
       medicalConditions,
       status: "active",
       balance: 0,
+      password: tempPassword,
       assignedDoctorId: doctor._id,
       doctorHistory: [{ doctorId: doctor._id, doctorName: doctor.name, startDate: new Date() }],
       medicalHistory: "",
       credentialStatus: missingCredentials.length === 0 ? "complete" : "incomplete",
       missingCredentials,
-      password: tempPassword,
     })
 
     try {

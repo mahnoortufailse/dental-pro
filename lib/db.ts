@@ -38,16 +38,17 @@ const patientSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   email: { type: String, required: true },
   dob: { type: String, required: true },
-  idNumber: { type: String }, // Added for credential tracking
-  address: { type: String }, // Added for credential tracking
+  idNumber: { type: String },
+  address: { type: String },
   insuranceProvider: String,
-  insuranceNumber: String, // Added for credential tracking
+  insuranceNumber: String,
   allergies: [String],
   medicalConditions: [String],
   status: { type: String, enum: ["active", "inactive"], default: "active" },
   balance: { type: Number, default: 0 },
   lastVisit: Date,
   nextAppt: Date,
+  password: { type: String, required: true },
   assignedDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   doctorHistory: [
     {
@@ -61,6 +62,16 @@ const patientSchema = new mongoose.Schema({
   credentialStatus: { type: String, enum: ["complete", "incomplete"], default: "incomplete" },
   missingCredentials: [String],
   createdAt: { type: Date, default: Date.now },
+})
+
+patientSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next()
+  try {
+    this.password = await hashPassword(this.password)
+    next()
+  } catch (error) {
+    next(error)
+  }
 })
 
 const appointmentSchema = new mongoose.Schema({

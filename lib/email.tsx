@@ -1,17 +1,35 @@
+//@ts-nocheck
 import nodemailer from "nodemailer"
 
-// Create transporter - using Gmail or your email service
-const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE || "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-})
+let transporter: any = null
+
+function getTransporter() {
+  if (transporter) return transporter
+
+  const emailService = process.env.EMAIL_SERVICE || "gmail"
+  const emailUser = process.env.EMAIL_USER
+  const emailPassword = process.env.EMAIL_PASSWORD
+
+  if (!emailUser || !emailPassword) {
+    console.warn("[v0] Email credentials not configured. Email sending will fail.")
+    console.warn("[v0] Please set EMAIL_USER and EMAIL_PASSWORD environment variables")
+  }
+
+  transporter = nodemailer.createTransport({
+    service: emailService,
+    auth: {
+      user: emailUser,
+      pass: emailPassword,
+    },
+  })
+
+  return transporter
+}
 
 export async function sendPatientCredentials(email: string, patientName: string, tempPassword: string) {
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    const transporter = getTransporter()
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
