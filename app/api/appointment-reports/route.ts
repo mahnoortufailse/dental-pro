@@ -14,19 +14,32 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const appointmentId = searchParams.get("appointmentId")
+    const patientId = searchParams.get("patientId")
 
-    if (!appointmentId) {
-      return NextResponse.json({ error: "Appointment ID required" }, { status: 400 })
+    const query: any = {}
+
+    if (payload.role === "doctor") {
+      query.doctorId = payload.userId
     }
 
-    const report = await AppointmentReport.findOne({ appointmentId })
-      .populate("patientId", "name")
-      .populate("doctorId", "name specialty")
+    if (appointmentId) {
+      query.appointmentId = appointmentId
+    }
 
-    return NextResponse.json({ success: true, report })
+    if (patientId) {
+      query.patientId = patientId
+    }
+
+    const reports = await AppointmentReport.find(query)
+      .populate("patientId", "name email phone")
+      .populate("doctorId", "name specialty")
+      .populate("appointmentId", "date time type")
+      .sort({ createdAt: -1 })
+
+    return NextResponse.json({ success: true, reports })
   } catch (error) {
-    console.error("[v0] GET appointment report error:", error)
-    return NextResponse.json({ error: "Failed to fetch report" }, { status: 500 })
+    console.error("[v0] GET appointment reports error:", error)
+    return NextResponse.json({ error: "Failed to fetch reports" }, { status: 500 })
   }
 }
 

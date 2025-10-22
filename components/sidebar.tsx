@@ -39,6 +39,7 @@ export function Sidebar() {
         ...baseItems,
         { label: "Patients", href: "/dashboard/patients", icon: Users },
         { label: "Appointments", href: "/dashboard/appointments", icon: Calendar },
+        { label: "Medical Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Billing", href: "/dashboard/billing", icon: FileText },
         { label: "Inventory", href: "/dashboard/inventory", icon: Package },
         { label: "Staff", href: "/dashboard/staff", icon: Users2 },
@@ -50,6 +51,7 @@ export function Sidebar() {
         ...baseItems,
         { label: "My Patients", href: "/dashboard/patients", icon: Users },
         { label: "My Appointments", href: "/dashboard/appointments", icon: Calendar },
+        { label: "My Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Clinical Tools", href: "/dashboard/clinical-tools", icon: Stethoscope },
       ]
     }
@@ -59,6 +61,7 @@ export function Sidebar() {
         ...baseItems,
         { label: "Patients", href: "/dashboard/patients", icon: Users },
         { label: "Appointments", href: "/dashboard/appointments", icon: Calendar },
+        { label: "Medical Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Billing", href: "/dashboard/billing", icon: FileText },
       ]
     }

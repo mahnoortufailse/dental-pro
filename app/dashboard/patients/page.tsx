@@ -183,7 +183,6 @@ export default function PatientsPage() {
       const method = editingPatient ? "PUT" : "POST"
       const url = editingPatient ? `/api/patients/${editingPatient}` : "/api/patients"
 
-
       const res = await fetch(url, {
         method,
         headers: {
@@ -520,7 +519,7 @@ export default function PatientsPage() {
                                   })
                                 }}
                                 className="text-primary hover:text-primary/80 transition-colors"
-                                title="View"
+                                title="View Details"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>

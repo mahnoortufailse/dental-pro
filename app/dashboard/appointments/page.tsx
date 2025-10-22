@@ -7,7 +7,8 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { ChevronLeft, ChevronRight, Plus, FileText } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, FileText, X, CheckCircle } from "lucide-react"
+import { AppointmentActionModal } from "@/components/appointment-action-modal"
 
 export default function AppointmentsPage() {
   const { user, token } = useAuth()
@@ -18,6 +19,15 @@ export default function AppointmentsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [showReportForm, setShowReportForm] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [appointmentActionModal, setAppointmentActionModal] = useState<{
+    isOpen: boolean
+    action: "close" | "cancel" | null
+    appointmentId: string | null
+  }>({
+    isOpen: false,
+    action: null,
+    appointmentId: null,
+  })
   const [formData, setFormData] = useState({
     patientId: "",
     patientName: "",
@@ -40,6 +50,7 @@ export default function AppointmentsPage() {
   const [doctors, setDoctors] = useState([])
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [reportErrors, setReportErrors] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (token) {
@@ -148,6 +159,68 @@ export default function AppointmentsPage() {
     }
   }
 
+  const handleCancelAppointment = async (appointmentId: string) => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "cancelled" }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setAppointments(
+          appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
+        )
+        toast.success("Appointment cancelled successfully")
+        setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to cancel appointment")
+      }
+    } catch (error) {
+      console.error("Failed to cancel appointment:", error)
+      toast.error("Error cancelling appointment")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCompleteAppointment = async (appointmentId: string) => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "completed" }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setAppointments(
+          appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
+        )
+        toast.success("Appointment marked as completed")
+        setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to complete appointment")
+      }
+    } catch (error) {
+      console.error("Failed to complete appointment:", error)
+      toast.error("Error completing appointment")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleEditAppointment = (appointment: any) => {
     setEditingId(appointment._id || appointment.id)
     setFormData({
@@ -205,6 +278,7 @@ export default function AppointmentsPage() {
       return
     }
 
+    setLoading(true)
     try {
       const method = editingId ? "PUT" : "POST"
       const url = editingId ? `/api/appointments/${editingId}` : "/api/appointments"
@@ -248,6 +322,8 @@ export default function AppointmentsPage() {
     } catch (error) {
       console.error("Failed to add appointment:", error)
       toast.error("Error saving appointment")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -277,6 +353,7 @@ export default function AppointmentsPage() {
       return
     }
 
+    setLoading(true)
     try {
       const proceduresArray = Array.isArray(reportData.procedures)
         ? reportData.procedures.filter((p) => p && p.trim())
@@ -323,6 +400,8 @@ export default function AppointmentsPage() {
     } catch (error) {
       console.error("[v0] Failed to create report:", error)
       toast.error("Error creating report")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -340,6 +419,19 @@ export default function AppointmentsPage() {
 
   const selectedDateAppointments = selectedDate ? appointments.filter((apt) => apt.date === selectedDate) : []
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800"
+      case "cancelled":
+        return "bg-red-100 text-red-800"
+      case "confirmed":
+        return "bg-blue-100 text-blue-800"
+      default:
+        return "bg-yellow-100 text-yellow-800"
+    }
+  }
+
   return (
     <ProtectedRoute>
       <div className="flex h-screen bg-background">
@@ -356,11 +448,17 @@ export default function AppointmentsPage() {
               <div className="lg:col-span-2">
                 <div className="bg-card rounded-lg shadow-md border border-border p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <button onClick={handlePreviousMonth} className="p-2 hover:bg-muted rounded-lg transition-colors">
+                    <button
+                      onClick={handlePreviousMonth}
+                      className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                    >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <h2 className="text-xl font-bold text-foreground">{monthName}</h2>
-                    <button onClick={handleNextMonth} className="p-2 hover:bg-muted rounded-lg transition-colors">
+                    <button
+                      onClick={handleNextMonth}
+                      className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                    >
                       <ChevronRight className="w-5 h-5" />
                     </button>
                   </div>
@@ -423,7 +521,7 @@ export default function AppointmentsPage() {
                       setShowForm(!showForm)
                       setFormErrors({})
                     }}
-                    className="w-full flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium"
+                    className="w-full flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     New Appointment
@@ -441,7 +539,12 @@ export default function AppointmentsPage() {
                       ) : (
                         selectedDateAppointments.map((apt) => (
                           <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
-                            <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
+                            <div className="flex justify-between items-start gap-2 mb-2">
+                              <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
+                              <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
+                                {apt.status}
+                              </span>
+                            </div>
                             <p className="text-xs text-muted-foreground">
                               {apt.time} - {apt.type}
                             </p>
@@ -451,30 +554,60 @@ export default function AppointmentsPage() {
                                 <>
                                   <button
                                     onClick={() => handleEditAppointment(apt)}
-                                    className="text-xs text-primary hover:underline"
+                                    className="text-xs text-primary hover:underline cursor-pointer"
                                   >
                                     Edit
                                   </button>
                                   <button
                                     onClick={() => handleDeleteAppointment(apt._id || apt.id)}
-                                    className="text-xs text-destructive hover:underline"
+                                    className="text-xs text-destructive hover:underline cursor-pointer"
                                   >
                                     Delete
                                   </button>
                                 </>
                               )}
-                              {user?.role === "doctor" && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedAppointment(apt)
-                                    setShowReportForm(true)
-                                    setReportErrors({})
-                                  }}
-                                  className="text-xs text-primary hover:underline flex items-center gap-1"
-                                >
-                                  <FileText className="w-3 h-3" />
-                                  Report
-                                </button>
+                              {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "completed" && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedAppointment(apt)
+                                      setShowReportForm(true)
+                                      setReportErrors({})
+                                    }}
+                                    className="text-xs text-primary hover:underline cursor-pointer flex items-center gap-1"
+                                  >
+                                    <FileText className="w-3 h-3" />
+                                    Report
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      setAppointmentActionModal({
+                                        isOpen: true,
+                                        action: "close",
+                                        appointmentId: apt._id || apt.id,
+                                      })
+                                    }
+                                    disabled={loading}
+                                    className="text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                                  >
+                                    <CheckCircle className="w-3 h-3" />
+                                    Close
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      setAppointmentActionModal({
+                                        isOpen: true,
+                                        action: "cancel",
+                                        appointmentId: apt._id || apt.id,
+                                      })
+                                    }
+                                    disabled={loading}
+                                    className="text-xs text-destructive hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                                  >
+                                    <X className="w-3 h-3" />
+                                    Cancel
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -493,19 +626,24 @@ export default function AppointmentsPage() {
                     ) : (
                       appointments.slice(0, 5).map((apt) => (
                         <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
-                          <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
+                          <div className="flex justify-between items-start gap-2 mb-1">
+                            <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
+                            <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
+                              {apt.status}
+                            </span>
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             {apt.date} at {apt.time}
                           </p>
                           <p className="text-xs text-muted-foreground">{apt.type}</p>
-                          {user?.role === "doctor" && (
+                          {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "completed" && (
                             <button
                               onClick={() => {
                                 setSelectedAppointment(apt)
                                 setShowReportForm(true)
                                 setReportErrors({})
                               }}
-                              className="mt-2 text-xs text-primary hover:underline flex items-center gap-1"
+                              className="mt-2 text-xs text-primary hover:underline cursor-pointer flex items-center gap-1"
                             >
                               <FileText className="w-3 h-3" />
                               Create Report
@@ -540,7 +678,7 @@ export default function AppointmentsPage() {
                           })
                           setFormErrors({ ...formErrors, patientId: "" })
                         }}
-                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm ${
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer ${
                           formErrors.patientId ? "border-destructive" : "border-border"
                         }`}
                       >
@@ -567,7 +705,7 @@ export default function AppointmentsPage() {
                           })
                           setFormErrors({ ...formErrors, doctorId: "" })
                         }}
-                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm ${
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer ${
                           formErrors.doctorId ? "border-destructive" : "border-border"
                         }`}
                       >
@@ -590,7 +728,7 @@ export default function AppointmentsPage() {
                           setFormData({ ...formData, date: e.target.value })
                           setFormErrors({ ...formErrors, date: "" })
                         }}
-                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm ${
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer ${
                           formErrors.date ? "border-destructive" : "border-border"
                         }`}
                       />
@@ -606,7 +744,7 @@ export default function AppointmentsPage() {
                           setFormData({ ...formData, time: e.target.value })
                           setFormErrors({ ...formErrors, time: "" })
                         }}
-                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm ${
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer ${
                           formErrors.time ? "border-destructive" : "border-border"
                         }`}
                       />
@@ -618,7 +756,7 @@ export default function AppointmentsPage() {
                       <select
                         value={formData.type}
                         onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer"
                       >
                         <option value="Consultation">Consultation</option>
                         <option value="Cleaning">Cleaning</option>
@@ -637,7 +775,7 @@ export default function AppointmentsPage() {
                           setFormData({ ...formData, chair: e.target.value })
                           setFormErrors({ ...formErrors, chair: "" })
                         }}
-                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm ${
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer ${
                           formErrors.chair ? "border-destructive" : "border-border"
                         }`}
                       />
@@ -651,7 +789,7 @@ export default function AppointmentsPage() {
                         min="1"
                         value={formData.duration}
                         onChange={(e) => setFormData({ ...formData, duration: Number.parseInt(e.target.value) })}
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer"
                       />
                       {formErrors.duration && <p className="text-xs text-destructive mt-1">{formErrors.duration}</p>}
                     </div>
@@ -659,7 +797,8 @@ export default function AppointmentsPage() {
                     <div className="flex gap-2">
                       <button
                         type="submit"
-                        className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                        disabled={loading}
+                        className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 cursor-pointer"
                       >
                         {editingId ? "Update" : "Schedule"}
                       </button>
@@ -670,7 +809,7 @@ export default function AppointmentsPage() {
                           setEditingId(null)
                           setFormErrors({})
                         }}
-                        className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                        className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -698,7 +837,7 @@ export default function AppointmentsPage() {
                           })
                           setReportErrors({ ...reportErrors, procedures: "" })
                         }}
-                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm ${
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer ${
                           reportErrors.procedures ? "border-destructive" : "border-border"
                         }`}
                         rows={3}
@@ -717,7 +856,7 @@ export default function AppointmentsPage() {
                           setReportData({ ...reportData, findings: e.target.value })
                           setReportErrors({ ...reportErrors, findings: "" })
                         }}
-                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm ${
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer ${
                           reportErrors.findings ? "border-destructive" : "border-border"
                         }`}
                         rows={3}
@@ -736,7 +875,7 @@ export default function AppointmentsPage() {
                           setReportData({ ...reportData, notes: e.target.value })
                           setReportErrors({ ...reportErrors, notes: "" })
                         }}
-                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm ${
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer ${
                           reportErrors.notes ? "border-destructive" : "border-border"
                         }`}
                         rows={2}
@@ -750,7 +889,7 @@ export default function AppointmentsPage() {
                         type="date"
                         value={reportData.nextVisit}
                         onChange={(e) => setReportData({ ...reportData, nextVisit: e.target.value })}
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer"
                       />
                     </div>
 
@@ -760,7 +899,7 @@ export default function AppointmentsPage() {
                         placeholder="Follow-up details..."
                         value={reportData.followUpDetails}
                         onChange={(e) => setReportData({ ...reportData, followUpDetails: e.target.value })}
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer"
                         rows={2}
                       />
                     </div>
@@ -768,9 +907,10 @@ export default function AppointmentsPage() {
                     <div className="flex gap-2">
                       <button
                         type="submit"
-                        className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                        disabled={loading}
+                        className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 cursor-pointer"
                       >
-                        Create Report
+                        {loading ? "Creating..." : "Create Report"}
                       </button>
                       <button
                         type="button"
@@ -779,7 +919,7 @@ export default function AppointmentsPage() {
                           setReportErrors({})
                           setSelectedAppointment(null)
                         }}
-                        className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                        className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -788,6 +928,29 @@ export default function AppointmentsPage() {
                 </div>
               </div>
             )}
+
+            <AppointmentActionModal
+              isOpen={appointmentActionModal.isOpen}
+              action={appointmentActionModal.action}
+              appointmentPatientName={
+                appointments.find((a) => (a._id || a.id) === appointmentActionModal.appointmentId)?.patientName
+              }
+              onConfirm={() => {
+                if (appointmentActionModal.action === "close") {
+                  handleCompleteAppointment(appointmentActionModal.appointmentId!)
+                } else if (appointmentActionModal.action === "cancel") {
+                  handleCancelAppointment(appointmentActionModal.appointmentId!)
+                }
+              }}
+              onCancel={() =>
+                setAppointmentActionModal({
+                  isOpen: false,
+                  action: null,
+                  appointmentId: null,
+                })
+              }
+              isLoading={loading}
+            />
           </div>
         </main>
       </div>
