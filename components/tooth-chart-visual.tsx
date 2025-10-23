@@ -238,7 +238,7 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
               key={toothNum}
               onClick={() => !readOnly && onToothClick(toothNum)}
               disabled={readOnly}
-              className={`aspect-[0.8] rounded-lg flex flex-col items-center justify-center font-bold text-xs transition-all overflow-hidden ${
+              className={`aspect-[0.8] rounded-lg flex flex-col items-center justify-center font-bold text-xs transition-all overflow-hidden !p-0 ${
                 readOnly ? "cursor-default" : "hover:shadow-md cursor-pointer hover:scale-105"
               }`}
               title={`${getToothLabel(toothNum)} - ${teeth[toothNum]?.status || "healthy"}`}
@@ -248,10 +248,10 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
                 backgroundColor: "white",
               }}
             >
-              <div className="w-full h-full p-1">
+              <div className="w-full h-full ">
                 <ToothVisual toothNumber={toothNum} status={teeth[toothNum]?.status || "healthy"} />
               </div>
-              <span className="text-[10px] font-semibold text-foreground bg-white/90 px-1 rounded mt-1">
+              <span className="text-[10px] font-semibold text-foreground bg-white/90 px-1 rounded mt-0">
                 {getToothLabel(toothNum)}
               </span>
             </button>
