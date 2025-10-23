@@ -57,13 +57,7 @@ export async function sendPatientCredentials(
             
             <div style="background: white; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 4px;">
               <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Temporary Password:</strong> ${tempPassword}</p>
-            </div>
-
-            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0;">
-              <p style="margin: 0; color: #856404; font-size: 14px;">
-                ⚠️ Please change your password after logging in.
-              </p>
+              <p><strong>Password:</strong> ${tempPassword}</p>
             </div>
             
             <div style="text-align: center; margin: 30px 0;">

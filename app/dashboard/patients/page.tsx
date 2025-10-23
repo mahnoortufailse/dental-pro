@@ -214,7 +214,7 @@ export default function PatientsPage() {
           setEditingPatient(null)
         } else {
           setPatients([...patients, data.patient])
-          toast.success(`Patient added successfully! Temporary password: ${tempPassword}`)
+          toast.success(`Patient added successfully!`)
         }
 
         setShowForm(false)
