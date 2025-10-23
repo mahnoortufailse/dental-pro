@@ -10,7 +10,7 @@ function getTransporter() {
 
   const emailService = process.env.EMAIL_SERVICE || "gmail"
   const emailUser = process.env.EMAIL_USER
-  const emailPassword = process.env.EMAIL_PASSWORD
+  const emailPassword = process.env.EMAIL_PASS
 
   if (!emailUser || !emailPassword) {
     console.warn("[v0] Email credentials not configured. Email sending will fail.")
