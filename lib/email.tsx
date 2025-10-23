@@ -1,6 +1,8 @@
 // @ts-nocheck
 import nodemailer from "nodemailer"
+import dotenv from "dotenv"
 
+dotenv.config()
 let transporter: any = null
 
 function getTransporter() {
