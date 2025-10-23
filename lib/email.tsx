@@ -1,4 +1,4 @@
-//@ts-nocheck
+// @ts-nocheck
 import nodemailer from "nodemailer"
 
 let transporter: any = null
@@ -12,11 +12,13 @@ function getTransporter() {
 
   if (!emailUser || !emailPassword) {
     console.warn("[v0] Email credentials not configured. Email sending will fail.")
-    console.warn("[v0] Please set EMAIL_USER and EMAIL_PASSWORD environment variables")
+    console.warn("[v0] Please set EMAIL_USER and EMAIL_PASSWORD environment variables.")
   }
 
   transporter = nodemailer.createTransport({
-    service: emailService,
+    host: "smtp.gmail.com",
+    port: 465, // Use 587 for TLS or 465 for SSL
+    secure: true, // true for port 465, false for 587
     auth: {
       user: emailUser,
       pass: emailPassword,
@@ -26,13 +28,17 @@ function getTransporter() {
   return transporter
 }
 
-export async function sendPatientCredentials(email: string, patientName: string, tempPassword: string) {
+export async function sendPatientCredentials(
+  email: string,
+  patientName: string,
+  tempPassword: string
+) {
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
     const transporter = getTransporter()
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"Dental Clinic" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Your Dental Clinic Portal Credentials",
       html: `
@@ -43,24 +49,18 @@ export async function sendPatientCredentials(email: string, patientName: string,
           
           <div style="background: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 8px 8px;">
             <p style="color: #333; font-size: 16px;">Dear <strong>${patientName}</strong>,</p>
-            
             <p style="color: #555; font-size: 14px; line-height: 1.6;">
               Your account has been created in our dental clinic management system. You can now access your medical records, appointment history, x-rays, and other important health information.
             </p>
             
             <div style="background: white; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 4px;">
-              <p style="margin: 0 0 10px 0; color: #333;"><strong>Login Credentials:</strong></p>
-              <p style="margin: 5px 0; color: #555;">
-                <strong>Email:</strong> <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">${email}</code>
-              </p>
-              <p style="margin: 5px 0; color: #555;">
-                <strong>Temporary Password:</strong> <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">${tempPassword}</code>
-              </p>
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>Temporary Password:</strong> ${tempPassword}</p>
             </div>
-            
+
             <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0;">
               <p style="margin: 0; color: #856404; font-size: 14px;">
-                <strong>⚠️ Important:</strong> This is a temporary password. Please change it after your first login for security purposes.
+                ⚠️ Please change your password after logging in.
               </p>
             </div>
             
@@ -69,31 +69,16 @@ export async function sendPatientCredentials(email: string, patientName: string,
                 Login to Your Portal
               </a>
             </div>
-            
-            <div style="background: #f0f0f0; padding: 20px; border-radius: 4px; margin-top: 30px;">
-              <p style="color: #666; font-size: 13px; margin: 0 0 10px 0;"><strong>What you can access:</strong></p>
-              <ul style="color: #666; font-size: 13px; margin: 0; padding-left: 20px;">
-                <li>Personal medical profile and health information</li>
-                <li>Complete appointment history and upcoming appointments</li>
-                <li>X-rays and dental images</li>
-                <li>Medical reports and findings</li>
-                <li>Dental tooth chart</li>
-              </ul>
-            </div>
-            
-            <p style="color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #ddd; padding-top: 20px;">
-              If you did not request this account or have any questions, please contact our clinic immediately.
-            </p>
           </div>
         </div>
       `,
     }
 
     await transporter.sendMail(mailOptions)
-    console.log("[v0] Patient credentials email sent successfully to:", email)
+    console.log("[v0] ✅ Patient credentials email sent successfully to:", email)
     return true
   } catch (error) {
-    console.error("[v0] Error sending patient credentials email:", error)
+    console.error("[v0] ❌ Error sending patient credentials email:", error)
     throw error
   }
 }
