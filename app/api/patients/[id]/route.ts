@@ -164,28 +164,43 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
 
     console.log("[v0] Starting cascade delete for patient:", id)
 
+    const deletedRecords = {
+      toothCharts: 0,
+      appointments: 0,
+      images: 0,
+      medicalHistory: 0,
+      reports: 0,
+      billing: 0,
+    }
+
     // Delete tooth charts
     const deletedCharts = await ToothChart.deleteMany({ patientId: id })
+    deletedRecords.toothCharts = deletedCharts.deletedCount
     console.log("[v0] Deleted tooth charts:", deletedCharts.deletedCount)
 
     // Delete appointments
     const deletedAppointments = await Appointment.deleteMany({ patientId: id })
+    deletedRecords.appointments = deletedAppointments.deletedCount
     console.log("[v0] Deleted appointments:", deletedAppointments.deletedCount)
 
     // Delete patient images (x-rays, photos, scans)
     const deletedImages = await PatientImage.deleteMany({ patientId: id })
+    deletedRecords.images = deletedImages.deletedCount
     console.log("[v0] Deleted patient images:", deletedImages.deletedCount)
 
     // Delete medical history
     const deletedMedicalHistory = await MedicalHistory.deleteMany({ patientId: id })
+    deletedRecords.medicalHistory = deletedMedicalHistory.deletedCount
     console.log("[v0] Deleted medical history records:", deletedMedicalHistory.deletedCount)
 
     // Delete appointment reports
     const deletedReports = await AppointmentReport.deleteMany({ patientId: id })
+    deletedRecords.reports = deletedReports.deletedCount
     console.log("[v0] Deleted appointment reports:", deletedReports.deletedCount)
 
     // Delete billing records
     const deletedBilling = await Billing.deleteMany({ patientId: id })
+    deletedRecords.billing = deletedBilling.deletedCount
     console.log("[v0] Deleted billing records:", deletedBilling.deletedCount)
 
     // Finally, delete the patient
@@ -193,7 +208,11 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     if (!deleted) return NextResponse.json({ error: "Patient not found" }, { status: 404 })
 
     console.log("[v0] Patient and all related data deleted successfully:", id)
-    return NextResponse.json({ success: true, message: "Patient and all related data deleted successfully" })
+    return NextResponse.json({
+      success: true,
+      message: "Patient and all related data deleted successfully",
+      deletedRecords,
+    })
   } catch (error) {
     console.error("[v0] Delete patient error:", error)
     return NextResponse.json({ error: "Failed to delete patient" }, { status: 500 })

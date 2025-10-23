@@ -51,7 +51,7 @@ export function Sidebar() {
         ...baseItems,
         { label: "My Patients", href: "/dashboard/patients", icon: Users },
         { label: "My Appointments", href: "/dashboard/appointments", icon: Calendar },
-        { label: "My Reports", href: "/dashboard/medical-reports", icon: FileText },
+        { label: "Patients Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Clinical Tools", href: "/dashboard/clinical-tools", icon: Stethoscope },
       ]
     }

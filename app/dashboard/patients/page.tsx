@@ -8,7 +8,10 @@ import { useAuth } from "@/components/auth-context"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { AlertCircle, Plus, Edit2, Trash2, Eye, X } from "lucide-react"
+import { AlertCircle, Plus, Edit2, Trash2, Eye, X, Loader2 } from "lucide-react"
+import { formatPhoneForDisplay, formatPhoneForDatabase } from "@/lib/validation"
+import PhoneInput from "react-phone-number-input"
+import "react-phone-number-input/style.css"
 
 export default function PatientsPage() {
   const { user, token } = useAuth()
@@ -21,10 +24,10 @@ export default function PatientsPage() {
     phone: "",
     email: "",
     dob: "",
-    idNumber: "", // added ID number field for credential tracking
-    address: "", // added address field for credential tracking
+    idNumber: "",
+    address: "",
     insuranceProvider: "",
-    insuranceNumber: "", // added insurance number field for credential tracking
+    insuranceNumber: "",
     allergies: "",
     medicalConditions: "",
     assignedDoctorId: "",
@@ -38,6 +41,16 @@ export default function PatientsPage() {
   })
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [patientToDelete, setPatientToDelete] = useState<any>(null)
+  
+  // Loading states
+  const [loading, setLoading] = useState({
+    patients: false,
+    doctors: false,
+    addPatient: false,
+    updatePatient: false,
+    deletePatient: false,
+    updateMedicalInfo: false
+  })
 
   useEffect(() => {
     if (token) {
@@ -49,6 +62,7 @@ export default function PatientsPage() {
   }, [token, user?.role])
 
   const fetchPatients = async () => {
+    setLoading(prev => ({ ...prev, patients: true }))
     try {
       const res = await fetch("/api/patients", {
         headers: { Authorization: `Bearer ${token}` },
@@ -66,10 +80,13 @@ export default function PatientsPage() {
       }
     } catch (error) {
       toast.error("Error fetching patients")
+    } finally {
+      setLoading(prev => ({ ...prev, patients: false }))
     }
   }
 
   const fetchDoctors = async () => {
+    setLoading(prev => ({ ...prev, doctors: true }))
     try {
       const res = await fetch("/api/users?role=doctor", {
         headers: { Authorization: `Bearer ${token}` },
@@ -87,6 +104,8 @@ export default function PatientsPage() {
       }
     } catch (error) {
       toast.error("Error fetching doctors")
+    } finally {
+      setLoading(prev => ({ ...prev, doctors: false }))
     }
   }
 
@@ -94,13 +113,11 @@ export default function PatientsPage() {
     const missingCredentials: string[] = []
     const warnings: string[] = []
 
-    // Critical credentials
     if (!data.idNumber?.trim()) missingCredentials.push("ID Number")
     if (!data.phone?.trim()) missingCredentials.push("Phone Number")
     if (!data.email?.trim()) missingCredentials.push("Email Address")
     if (!data.dob?.trim()) missingCredentials.push("Date of Birth")
 
-    // Important credentials
     if (!data.insuranceProvider?.trim()) warnings.push("Insurance Provider")
     if (!data.insuranceNumber?.trim()) warnings.push("Insurance Number")
     if (!data.address?.trim()) warnings.push("Address")
@@ -108,7 +125,52 @@ export default function PatientsPage() {
     return { isComplete: missingCredentials.length === 0, missingCredentials, warnings }
   }
 
+  const validatePhoneInput = (phone: string): { valid: boolean; error?: string } => {
+    if (!phone) {
+      return { valid: false, error: "Phone number is required" }
+    }
+
+    const phoneStr = String(phone).trim()
+
+    if (phoneStr === "") {
+      return { valid: false, error: "Phone number is required" }
+    }
+
+    // Check if it starts with +
+    if (!phoneStr.startsWith("+")) {
+      return { valid: false, error: "Phone must start with + (country code, e.g., +1234567890)" }
+    }
+
+    // Get digits after +
+    const digitsOnly = phoneStr.slice(1)
+
+    // Check if contains only digits
+    if (!/^\d+$/.test(digitsOnly)) {
+      return { valid: false, error: "Phone must contain only digits after +" }
+    }
+
+    return { valid: true }
+  }
+
+  const validatePhoneInputStrict = (phone: string): { valid: boolean; error?: string } => {
+    const basicValidation = validatePhoneInput(phone)
+    if (!basicValidation.valid) {
+      return basicValidation
+    }
+
+    const phoneStr = String(phone).trim()
+    const digitsOnly = phoneStr.slice(1)
+
+    // Check length only on form submission
+    if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+      return { valid: false, error: "Phone must be 10-15 digits after +" }
+    }
+
+    return { valid: true }
+  }
+
   const handleDeletePatient = async (patientId: string) => {
+    setLoading(prev => ({ ...prev, deletePatient: true }))
     try {
       const res = await fetch(`/api/patients/${patientId}`, {
         method: "DELETE",
@@ -116,14 +178,19 @@ export default function PatientsPage() {
       })
 
       if (res.ok) {
+        const data = await res.json()
         setPatients(patients.filter((p) => p._id !== patientId))
-        toast.success("Patient deleted successfully")
+        toast.success(
+          `Patient deleted successfully.`,
+        )
       } else {
         const error = await res.json()
         toast.error(error.error || "Failed to delete patient")
       }
     } catch (error) {
       toast.error("Error deleting patient")
+    } finally {
+      setLoading(prev => ({ ...prev, deletePatient: false }))
     }
   }
 
@@ -138,15 +205,17 @@ export default function PatientsPage() {
       doctorId = assignedDoctor?.id || patient.assignedDoctorId._id?.toString() || ""
     }
 
+    const displayPhone = formatPhoneForDisplay(patient.phone)
+
     setFormData({
       name: patient.name,
-      phone: patient.phone,
+      phone: displayPhone,
       email: patient.email,
       dob: patient.dob,
-      idNumber: patient.idNumber || "", // populate ID number
-      address: patient.address || "", // populate address
+      idNumber: patient.idNumber || "",
+      address: patient.address || "",
       insuranceProvider: patient.insuranceProvider,
-      insuranceNumber: patient.insuranceNumber || "", // populate insurance number
+      insuranceNumber: patient.insuranceNumber || "",
       allergies: patient.allergies?.join(", ") || "",
       medicalConditions: patient.medicalConditions?.join(", ") || "",
       assignedDoctorId: doctorId,
@@ -157,34 +226,60 @@ export default function PatientsPage() {
   const handleAddPatient = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const validation = validatePatientCredentials(formData)
+    // Set loading state based on whether we're adding or updating
+    const loadingKey = editingPatient ? 'updatePatient' : 'addPatient'
+    setLoading(prev => ({ ...prev, [loadingKey]: true }))
+
+    // Ensure phone number starts with +
+    let phoneNumber = formData.phone
+    if (phoneNumber && !phoneNumber.startsWith('+')) {
+      // Add + if missing and clean the number
+      phoneNumber = '+' + phoneNumber.replace(/\D/g, '')
+      console.log("[v0] Fixed phone number format:", phoneNumber)
+    }
+
+    const phoneValidation = validatePhoneInputStrict(phoneNumber)
+    if (!phoneValidation.valid) {
+      toast.error(phoneValidation.error)
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
+      return
+    }
+
+    const validation = validatePatientCredentials({...formData, phone: phoneNumber})
 
     if (validation.missingCredentials.length > 0) {
       toast.error(`Missing critical credentials: ${validation.missingCredentials.join(", ")}`)
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
       return
     }
 
     if (!formData.assignedDoctorId) {
       toast.error("Please select a doctor")
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
       return
     }
 
     const selectedDoctor = doctors.find((doc) => doc.id === formData.assignedDoctorId)
     if (!selectedDoctor) {
       toast.error("Invalid doctor selection. Please select a doctor from the list.")
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
       return
     }
 
     if (validation.warnings.length > 0) {
       const proceed = window.confirm(`Warning: Missing ${validation.warnings.join(", ")}. Do you want to continue?`)
-      if (!proceed) return
+      if (!proceed) {
+        setLoading(prev => ({ ...prev, [loadingKey]: false }))
+        return
+      }
     }
 
     try {
       const method = editingPatient ? "PUT" : "POST"
       const url = editingPatient ? `/api/patients/${editingPatient}` : "/api/patients"
 
-      const tempPassword = editingPatient ? undefined : `${formData.name.split(" ")[0]}@${formData.dob.split("-")[0]}`
+      const formattedPhone = formatPhoneForDatabase(phoneNumber)
+      console.log("[v0] Submitting phone:", phoneNumber, "Formatted:", formattedPhone)
 
       const res = await fetch(url, {
         method,
@@ -194,7 +289,7 @@ export default function PatientsPage() {
         },
         body: JSON.stringify({
           ...formData,
-          ...(tempPassword && { password: tempPassword }),
+          phone: formattedPhone,
           allergies: formData.allergies
             .split(",")
             .map((a) => a.trim())
@@ -214,7 +309,7 @@ export default function PatientsPage() {
           setEditingPatient(null)
         } else {
           setPatients([...patients, data.patient])
-          toast.success(`Patient added successfully!`)
+          toast.success("Patient added successfully! Strong password sent to email.")
         }
 
         setShowForm(false)
@@ -236,13 +331,17 @@ export default function PatientsPage() {
         try {
           const error = await res.json()
           errorMessage = error.error || error.message || errorMessage
+          console.log("[v0] API error response:", error)
         } catch (parseError) {
           errorMessage = `Failed to save patient (${res.status})`
         }
         toast.error(errorMessage)
       }
     } catch (error) {
+      console.log("[v0] Fetch error:", error)
       toast.error(error instanceof Error ? error.message : "Error saving patient")
+    } finally {
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
     }
   }
 
@@ -250,6 +349,8 @@ export default function PatientsPage() {
     e.preventDefault()
     if (!selectedPatient) return
 
+    setLoading(prev => ({ ...prev, updateMedicalInfo: true }))
+    
     try {
       const res = await fetch(`/api/patients/${selectedPatient._id}`, {
         method: "PUT",
@@ -288,6 +389,8 @@ export default function PatientsPage() {
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error updating medical info")
+    } finally {
+      setLoading(prev => ({ ...prev, updateMedicalInfo: false }))
     }
   }
 
@@ -299,7 +402,6 @@ export default function PatientsPage() {
         <Sidebar />
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
           <div className="p-4 sm:p-6 lg:p-8">
-            {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Patients</h1>
@@ -326,9 +428,14 @@ export default function PatientsPage() {
                       })
                     }
                   }}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer"
+                  disabled={loading.patients || loading.doctors}
+                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed"
                 >
-                  <Plus className="w-4 h-4" />
+                  {loading.patients || loading.doctors ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
                   {showForm ? "Cancel" : "Add Patient"}
                 </button>
               )}
@@ -347,7 +454,6 @@ export default function PatientsPage() {
               </div>
             )}
 
-            {/* Add/Edit Form */}
             {showForm && user?.role !== "doctor" && (
               <div className="bg-card rounded-lg shadow-md border border-border p-6 mb-8">
                 <h2 className="text-lg sm:text-xl font-bold mb-6 text-foreground">
@@ -360,68 +466,95 @@ export default function PatientsPage() {
                       placeholder="Full Name *"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
                       required
+                      disabled={loading.addPatient || loading.updatePatient}
                     />
                     <input
                       type="text"
                       placeholder="ID Number *"
                       value={formData.idNumber}
                       onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
                       required
+                      disabled={loading.addPatient || loading.updatePatient}
                     />
-                    <input
-                      type="tel"
-                      placeholder="Phone *"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
-                      required
-                    />
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">Phone Number *</label>
+                      <PhoneInput
+                        international
+                        countryCallingCodeEditable={false}
+                        defaultCountry="US"
+                        value={formData.phone}
+                        onChange={(value) => {
+                          console.log("PhoneInput onChange:", value)
+                          setFormData({ ...formData, phone: value || "" })
+                        }}
+                        onBlur={() => {
+                          console.log("PhoneInput onBlur:", formData.phone)
+                          if (formData.phone && formData.phone.trim()) {
+                            const validation = validatePhoneInput(formData.phone)
+                            if (!validation.valid) {
+                              toast.error(validation.error)
+                            }
+                          }
+                        }}
+                        className="phone-input-wrapper"
+                        disabled={loading.addPatient || loading.updatePatient}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Format: + followed by country code and number (e.g., +1234567890)
+                      </p>
+                    </div>
                     <input
                       type="email"
                       placeholder="Email *"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
                       required
+                      disabled={loading.addPatient || loading.updatePatient}
                     />
                     <input
                       type="date"
                       placeholder="Date of Birth *"
                       value={formData.dob}
                       onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
                       required
+                      disabled={loading.addPatient || loading.updatePatient}
                     />
                     <input
                       type="text"
                       placeholder="Address"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
+                      disabled={loading.addPatient || loading.updatePatient}
                     />
                     <input
                       type="text"
                       placeholder="Insurance Provider *"
                       value={formData.insuranceProvider}
                       onChange={(e) => setFormData({ ...formData, insuranceProvider: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
                       required
+                      disabled={loading.addPatient || loading.updatePatient}
                     />
                     <input
                       type="text"
                       placeholder="Insurance Number"
                       value={formData.insuranceNumber}
                       onChange={(e) => setFormData({ ...formData, insuranceNumber: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
+                      disabled={loading.addPatient || loading.updatePatient}
                     />
                     <select
                       value={formData.assignedDoctorId}
                       onChange={(e) => setFormData({ ...formData, assignedDoctorId: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed"
                       required
+                      disabled={loading.addPatient || loading.updatePatient || loading.doctors}
                     >
                       <option value="">Select Doctor *</option>
                       {doctors.length > 0 ? (
@@ -439,21 +572,27 @@ export default function PatientsPage() {
                     placeholder="Allergies (comma-separated)"
                     value={formData.allergies}
                     onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
-                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
                     rows={2}
+                    disabled={loading.addPatient || loading.updatePatient}
                   />
                   <textarea
                     placeholder="Medical Conditions (comma-separated)"
                     value={formData.medicalConditions}
                     onChange={(e) => setFormData({ ...formData, medicalConditions: e.target.value })}
-                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
                     rows={2}
+                    disabled={loading.addPatient || loading.updatePatient}
                   />
                   <div className="flex gap-2 flex-wrap">
                     <button
                       type="submit"
-                      className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
+                      disabled={loading.addPatient || loading.updatePatient}
+                      className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
                     >
+                      {(loading.addPatient || loading.updatePatient) && (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      )}
                       {editingPatient ? "Update Patient" : "Add Patient"}
                     </button>
                     {editingPatient && (
@@ -463,7 +602,8 @@ export default function PatientsPage() {
                           setEditingPatient(null)
                           setShowForm(false)
                         }}
-                        className="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
+                        disabled={loading.addPatient || loading.updatePatient}
+                        className="bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
                       >
                         Cancel Edit
                       </button>
@@ -473,7 +613,6 @@ export default function PatientsPage() {
               </div>
             )}
 
-            {/* Patients Table */}
             <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -491,12 +630,21 @@ export default function PatientsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {patients.length > 0 ? (
+                    {loading.patients ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 sm:px-6 py-8 text-center text-muted-foreground">
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Loading patients...
+                          </div>
+                        </td>
+                      </tr>
+                    ) : patients.length > 0 ? (
                       patients.map((patient) => (
                         <tr key={patient._id} className="border-b border-border hover:bg-muted/50 transition-colors">
                           <td className="px-4 sm:px-6 py-3 font-medium text-foreground">{patient.name}</td>
                           <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell">
-                            {patient.phone}
+                            {formatPhoneForDisplay(patient.phone)}
                           </td>
                           <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell">
                             {patient.assignedDoctorId?.name || "Unassigned"}
@@ -522,7 +670,8 @@ export default function PatientsPage() {
                                     medicalConditions: patient.medicalConditions?.join(", ") || "",
                                   })
                                 }}
-                                className="text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                                disabled={loading.deletePatient}
+                                className="text-primary hover:text-primary/80 disabled:text-primary/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                                 title="View Details"
                               >
                                 <Eye className="w-4 h-4" />
@@ -531,7 +680,8 @@ export default function PatientsPage() {
                                 <>
                                   <button
                                     onClick={() => handleEditPatient(patient)}
-                                    className="text-accent hover:text-accent/80 transition-colors cursor-pointer"
+                                    disabled={loading.deletePatient || loading.addPatient || loading.updatePatient}
+                                    className="text-accent hover:text-accent/80 disabled:text-accent/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                                     title="Edit"
                                   >
                                     <Edit2 className="w-4 h-4" />
@@ -541,7 +691,8 @@ export default function PatientsPage() {
                                       setPatientToDelete(patient)
                                       setShowDeleteModal(true)
                                     }}
-                                    className="text-destructive hover:text-destructive/80 transition-colors cursor-pointer"
+                                    disabled={loading.deletePatient}
+                                    className="text-destructive hover:text-destructive/80 disabled:text-destructive/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                                     title="Delete"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -564,7 +715,6 @@ export default function PatientsPage() {
               </div>
             </div>
 
-            {/* Patient Detail Modal */}
             {selectedPatient && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                 <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -572,7 +722,8 @@ export default function PatientsPage() {
                     <h2 className="text-xl sm:text-2xl font-bold text-foreground">{selectedPatient.name}</h2>
                     <button
                       onClick={() => setSelectedPatient(null)}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      disabled={loading.updateMedicalInfo}
+                      className="text-muted-foreground hover:text-foreground disabled:text-muted-foreground/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
                       <X className="w-6 h-6" />
                     </button>
@@ -582,7 +733,7 @@ export default function PatientsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs font-semibold text-muted-foreground uppercase">Phone</p>
-                        <p className="text-foreground">{selectedPatient.phone}</p>
+                        <p className="text-foreground">{formatPhoneForDisplay(selectedPatient.phone)}</p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-muted-foreground uppercase">Email</p>
@@ -630,8 +781,10 @@ export default function PatientsPage() {
                   {user?.role === "doctor" && !editingMedicalInfo && (
                     <button
                       onClick={() => setEditingMedicalInfo(true)}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium mb-4 cursor-pointer"
+                      disabled={loading.updateMedicalInfo}
+                      className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium mb-4 cursor-pointer disabled:cursor-not-allowed"
                     >
+                      {loading.updateMedicalInfo && <Loader2 className="w-4 h-4 animate-spin" />}
                       Edit Medical Info
                     </button>
                   )}
@@ -642,32 +795,38 @@ export default function PatientsPage() {
                         placeholder="Medical History"
                         value={medicalFormData.medicalHistory}
                         onChange={(e) => setMedicalFormData({ ...medicalFormData, medicalHistory: e.target.value })}
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
                         rows={3}
+                        disabled={loading.updateMedicalInfo}
                       />
                       <textarea
                         placeholder="Allergies (comma-separated)"
                         value={medicalFormData.allergies}
                         onChange={(e) => setMedicalFormData({ ...medicalFormData, allergies: e.target.value })}
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
+                        disabled={loading.updateMedicalInfo}
                       />
                       <textarea
                         placeholder="Medical Conditions (comma-separated)"
                         value={medicalFormData.medicalConditions}
                         onChange={(e) => setMedicalFormData({ ...medicalFormData, medicalConditions: e.target.value })}
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
+                        disabled={loading.updateMedicalInfo}
                       />
                       <div className="flex gap-2 flex-wrap">
                         <button
                           type="submit"
-                          className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
+                          disabled={loading.updateMedicalInfo}
+                          className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
                         >
+                          {loading.updateMedicalInfo && <Loader2 className="w-4 h-4 animate-spin" />}
                           Save Changes
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingMedicalInfo(false)}
-                          className="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
+                          disabled={loading.updateMedicalInfo}
+                          className="bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
                         >
                           Cancel
                         </button>
@@ -677,7 +836,8 @@ export default function PatientsPage() {
 
                   <button
                     onClick={() => setSelectedPatient(null)}
-                    className="w-full bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
+                    disabled={loading.updateMedicalInfo}
+                    className="w-full bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
                   >
                     Close
                   </button>
@@ -688,7 +848,7 @@ export default function PatientsPage() {
             <ConfirmDeleteModal
               isOpen={showDeleteModal}
               title="Delete Patient"
-              description="Are you sure you want to delete this patient? This action cannot be undone and will remove all associated records."
+              description="Are you sure you want to delete this patient? This action cannot be undone and will remove all associated records including tooth charts, x-rays, medical reports, and appointments."
               itemName={patientToDelete?.name}
               onConfirm={() => {
                 handleDeletePatient(patientToDelete._id)
@@ -699,6 +859,7 @@ export default function PatientsPage() {
                 setShowDeleteModal(false)
                 setPatientToDelete(null)
               }}
+              isLoading={loading.deletePatient}
             />
           </div>
         </main>

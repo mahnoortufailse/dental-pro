@@ -64,9 +64,52 @@ export function validatePassword(password: string): boolean {
   return re.test(password)
 }
 
+export function generateStrongPassword(): string {
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  const lowercase = "abcdefghijklmnopqrstuvwxyz"
+  const numbers = "0123456789"
+  const special = "@$!%*?&"
+
+  const allChars = uppercase + lowercase + numbers + special
+  let password = ""
+
+  // Ensure at least one of each required character type
+  password += uppercase[Math.floor(Math.random() * uppercase.length)]
+  password += lowercase[Math.floor(Math.random() * lowercase.length)]
+  password += numbers[Math.floor(Math.random() * numbers.length)]
+  password += special[Math.floor(Math.random() * special.length)]
+
+  // Fill the rest randomly (12 chars total for strong password)
+  for (let i = password.length; i < 12; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)]
+  }
+
+  // Shuffle the password
+  return password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("")
+}
+
 export function validatePhone(phone: string): boolean {
   const re = /^[\d\s\-+$$$$]{10,}$/
   return re.test(phone)
+}
+
+export function formatPhoneForDisplay(phone: string): string {
+  // Remove all non-digit characters except +
+  const cleaned = phone.replace(/[^\d+]/g, "")
+
+  // If it starts with +, keep it; otherwise add +
+  if (cleaned.startsWith("+")) {
+    return cleaned
+  }
+  return "+" + cleaned
+}
+
+export function formatPhoneForDatabase(phone: string): string {
+  // Remove all non-digit characters (remove the + sign)
+  return phone.replace(/[^\d]/g, "")
 }
 
 export function formatDate(date: Date | string): string {

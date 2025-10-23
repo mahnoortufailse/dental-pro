@@ -189,7 +189,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -209,6 +209,17 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
           </form>
+
+          {loginType === "staff" && (
+            <div className="text-center mt-4">
+              <Link
+                href="/forgot-password"
+                className="text-primary hover:text-primary/80 text-sm font-medium transition-colors cursor-pointer"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="my-6 border-t border-border"></div>
@@ -231,7 +242,7 @@ export default function LoginPage() {
             <div className="bg-accent/10 border border-accent/30 rounded-lg p-4 text-sm">
               <p className="text-accent font-medium mb-2">First time logging in?</p>
               <p className="text-accent/80 text-xs">
-                Use the temporary password sent to your email. You'll be prompted to change it on first login.
+                Use the password sent to your email. You'll be prompted to change it on first login.
               </p>
             </div>
           )}

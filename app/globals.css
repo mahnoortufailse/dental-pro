@@ -152,4 +152,29 @@
   .dashboard-title {
     @apply text-3xl font-bold text-foreground;
   }
+
+  /* Added custom styles for PhoneInput component to match other form inputs */
+  .phone-input-wrapper {
+    @apply w-full;
+  }
+
+  .phone-input-wrapper input {
+    @apply px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text w-full;
+  }
+
+  .phone-input-wrapper input:focus {
+    @apply ring-2 ring-primary border-primary;
+  }
+
+  .phone-input-wrapper .PhoneInputCountry {
+    @apply px-3 py-2 bg-input border-r border-border text-foreground;
+  }
+
+  .phone-input-wrapper .PhoneInputCountrySelect {
+    @apply cursor-pointer;
+  }
+
+  .phone-input-wrapper .PhoneInputCountrySelectOptionIcon {
+    @apply w-4 h-4;
+  }
 }

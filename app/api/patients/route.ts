@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { Patient, User, connectDB } from "@/lib/db"
 import { verifyToken } from "@/lib/auth"
 import { Types } from "mongoose"
+import { generateStrongPassword, formatPhoneForDatabase } from "@/lib/validation"
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,6 +65,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
+    // Enhanced phone validation with better error messages
+    console.log("[v0] Received phone:", phone, "Type:", typeof phone)
+    
+    if (!phone) {
+      return NextResponse.json({ error: "Phone number is required" }, { status: 400 })
+    }
+
+    const phoneStr = String(phone).trim()
+    
+    if (phoneStr === "") {
+      return NextResponse.json({ error: "Phone number is required" }, { status: 400 })
+    }
+
+   
+
+    const phoneDigits = phoneStr.slice(1)
+    if (!/^\d+$/.test(phoneDigits)) {
+      return NextResponse.json({ error: "Phone number must contain only digits after +" }, { status: 400 })
+    }
+
+    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+      return NextResponse.json({ error: "Phone number must be 10-15 digits after +" }, { status: 400 })
+    }
+
+    const existingPatient = await Patient.findOne({ email: email.toLowerCase() })
+    if (existingPatient) {
+      console.log("[v0] Duplicate email attempt:", email)
+      return NextResponse.json({ error: "Email already exists. Please use a different email." }, { status: 409 })
+    }
+
+    const existingUser = await User.findOne({ email: email.toLowerCase() })
+    if (existingUser) {
+      console.log("[v0] Email exists in staff records:", email)
+      return NextResponse.json(
+        { error: "Email already exists in staff records. Please use a different email." },
+        { status: 409 },
+      )
+    }
+
     if (!assignedDoctorId) {
       return NextResponse.json({ error: "Doctor assignment is required" }, { status: 400 })
     }
@@ -90,12 +130,13 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Creating patient with doctor:", doctor._id, "doctor name:", doctor.name)
 
-    const tempPassword = `${name.split(" ")[0]}@${dob.split("-")[0]}`
+    const strongPassword = generateStrongPassword()
+    const formattedPhone = formatPhoneForDatabase(phone)
 
     const newPatient = await Patient.create({
       name,
-      phone,
-      email,
+      phone: formattedPhone,
+      email: email.toLowerCase(),
       dob,
       idNumber,
       address,
@@ -105,7 +146,7 @@ export async function POST(request: NextRequest) {
       medicalConditions,
       status: "active",
       balance: 0,
-      password: tempPassword,
+      password: strongPassword,
       assignedDoctorId: doctor._id,
       doctorHistory: [{ doctorId: doctor._id, doctorName: doctor.name, startDate: new Date() }],
       medicalHistory: "",
@@ -115,15 +156,14 @@ export async function POST(request: NextRequest) {
 
     try {
       const { sendPatientCredentials } = await import("@/lib/email")
-      await sendPatientCredentials(email, name, tempPassword)
-      console.log("[v0] Credentials email sent to patient:", email)
+      await sendPatientCredentials(email, name, strongPassword)
+      console.log("[v0] Strong password email sent to patient:", email)
     } catch (emailError) {
       console.error("[v0] Failed to send email:", emailError)
-      // Continue even if email fails - patient can still login with temp password
     }
 
     await newPatient.populate("assignedDoctorId", "name email specialty")
-    console.log("[v0] Patient created successfully:", newPatient._id, "assigned to:", newPatient.assignedDoctorId?._id)
+    console.log("[v0] Patient created successfully:", newPatient._id)
 
     return NextResponse.json({ success: true, patient: newPatient })
   } catch (error) {

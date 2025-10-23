@@ -13,13 +13,15 @@ if (!MONGODB_URI) {
 // Define Schemas
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true, sparse: true },
   password: { type: String, required: true }, // Will be hashed
   name: { type: String, required: true },
   role: { type: String, enum: ["admin", "doctor", "receptionist"], required: true },
   phone: String,
   specialty: String,
   active: { type: Boolean, default: true },
+  resetToken: { type: String, default: null },
+  resetTokenExpiry: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
 })
 
@@ -36,7 +38,7 @@ userSchema.pre("save", async function (next) {
 const patientSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true },
-  email: { type: String, required: true },
+  email: { type: String, required: true, unique: true, sparse: true },
   dob: { type: String, required: true },
   idNumber: { type: String },
   address: { type: String },
@@ -61,6 +63,8 @@ const patientSchema = new mongoose.Schema({
   medicalHistory: String,
   credentialStatus: { type: String, enum: ["complete", "incomplete"], default: "incomplete" },
   missingCredentials: [String],
+  resetToken: { type: String, default: null },
+  resetTokenExpiry: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
 })
 
