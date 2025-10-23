@@ -4,12 +4,12 @@ import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-context"
-import { PatientSidebar } from "@/components/patient-sidebar"
 import { ProtectedRoute } from "@/components/protected-route"
+import { ToothChartVisual } from "@/components/tooth-chart-visual"
 
 interface ToothChartData {
   _id: string
-  teeth: Record<string, any>
+  teeth: Record<number, { status: string; notes?: string }>
   overallNotes: string
   lastReview: string
 }
@@ -18,6 +18,8 @@ export default function ToothChartPage() {
   const { patient, patientToken } = useAuth()
   const [toothChart, setToothChart] = useState<ToothChartData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedToothNotes, setSelectedToothNotes] = useState<string>("")
   const { toast } = useToast()
 
   useEffect(() => {
@@ -28,25 +30,54 @@ export default function ToothChartPage() {
 
   const fetchToothChart = async (token: string, patientId: string) => {
     try {
+      setError(null)
+      console.log("[v0] Fetching tooth chart for patient:", patientId)
+
       const response = await fetch(`/api/tooth-chart?patientId=${patientId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
 
-      if (!response.ok) throw new Error("Failed to fetch tooth chart")
+      console.log("[v0] Tooth chart response status:", response.status)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("[v0] Tooth chart error response:", errorData)
+        throw new Error(errorData.error || "Failed to fetch tooth chart")
+      }
 
       const data = await response.json()
+      console.log("[v0] Tooth chart data received:", data)
       setToothChart(data.toothChart || null)
+
+      if (!data.toothChart) {
+        setError("No tooth chart data available yet. Please contact your dentist.")
+      }
     } catch (error) {
-      console.error("[v0] Error fetching tooth chart:", error)
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+      console.error("[v0] Error fetching tooth chart:", errorMessage)
+      setError(errorMessage)
+      toast({
+        description: `Failed to load tooth chart: ${errorMessage}`,
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleToothClick = (toothNumber: number) => {
+    const toothData = toothChart?.teeth?.[toothNumber]
+    if (toothData?.notes) {
+      setSelectedToothNotes(`Tooth #${toothNumber}: ${toothData.notes}`)
+    } else {
+      setSelectedToothNotes(`Tooth #${toothNumber}: No notes available`)
     }
   }
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">Loading tooth chart...</p>
       </div>
     )
   }
@@ -54,9 +85,8 @@ export default function ToothChartPage() {
   return (
     <ProtectedRoute patientOnly={true}>
       <div className="flex h-screen bg-background">
-    
-        <main className="flex-1 overflow-auto lg:ml-0">
-          <div className="">
+        <main className="flex-1  lg:ml-0">
+          <div className="p-6 md:p-8">
             {/* Header */}
             <div className="dashboard-header mb-8">
               <div>
@@ -66,66 +96,31 @@ export default function ToothChartPage() {
             </div>
 
             {/* Content */}
+            {error && (
+              <Card className="p-6 mb-6 border-red-200 bg-red-50">
+                <p className="text-red-700">{error}</p>
+              </Card>
+            )}
+
             {!toothChart ? (
               <Card className="p-8 text-center">
                 <p className="text-muted-foreground">No tooth chart data available yet</p>
               </Card>
             ) : (
               <div className="space-y-6">
-                {/* Tooth Chart Visualization */}
                 <Card className="p-6">
                   <h2 className="text-xl font-bold text-foreground mb-6">Dental Chart</h2>
-                  <div className="bg-muted/50 p-8 rounded-lg">
-                    <div className="grid grid-cols-8 gap-2 mb-8">
-                      {/* Upper teeth */}
-                      {Array.from({ length: 16 }).map((_, i) => {
-                        const toothNum = i + 1
-                        const toothData = toothChart.teeth?.[toothNum] || {}
-                        const status = toothData.status || "healthy"
-                        const statusColors: Record<string, string> = {
-                          healthy: "bg-green-100 border-green-300 text-green-700",
-                          treated: "bg-blue-100 border-blue-300 text-blue-700",
-                          cavity: "bg-red-100 border-red-300 text-red-700",
-                          missing: "bg-gray-100 border-gray-300 text-gray-700",
-                          pending: "bg-yellow-100 border-yellow-300 text-yellow-700",
-                        }
-
-                        return (
-                          <div
-                            key={toothNum}
-                            className={`p-3 border-2 rounded-lg text-center font-semibold text-sm ${statusColors[status] || statusColors.healthy}`}
-                          >
-                            {toothNum}
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* Legend */}
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-                        <span className="text-muted-foreground">Healthy</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded"></div>
-                        <span className="text-muted-foreground">Treated</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
-                        <span className="text-muted-foreground">Cavity</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
-                        <span className="text-muted-foreground">Missing</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
-                        <span className="text-muted-foreground">Pending</span>
-                      </div>
-                    </div>
+                  <div className="bg-muted/50 p-6 rounded-lg overflow-x-auto">
+                    <ToothChartVisual teeth={toothChart.teeth || {}} onToothClick={handleToothClick} readOnly={true} />
                   </div>
                 </Card>
+
+                {selectedToothNotes && (
+                  <Card className="p-6 border-blue-200 bg-blue-50">
+                    <h3 className="font-semibold text-foreground mb-2">Tooth Details</h3>
+                    <p className="text-foreground">{selectedToothNotes}</p>
+                  </Card>
+                )}
 
                 {/* Overall Notes */}
                 {toothChart.overallNotes && (

@@ -60,7 +60,7 @@ export default function XRaysPage() {
     <ProtectedRoute patientOnly={true}>
       <div className="flex h-screen bg-background">
        
-        <main className="flex-1 overflow-auto lg:ml-0">
+        <main className="flex-1 lg:ml-0">
           <div className="">
             {/* Header */}
             <div className="dashboard-header mb-8">
@@ -80,7 +80,7 @@ export default function XRaysPage() {
                 {images.map((image) => (
                   <Card
                     key={image._id}
-                    className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                    className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer !py-0"
                     onClick={() => setSelectedImage(image)}
                   >
                     <div className="relative w-full h-48 bg-muted">

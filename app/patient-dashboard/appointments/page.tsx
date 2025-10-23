@@ -62,7 +62,7 @@ export default function AppointmentsPage() {
     <ProtectedRoute patientOnly={true}>
       <div className="flex h-screen bg-background">
      
-        <main className="flex-1 overflow-auto lg:ml-0">
+        <main className="flex-1  lg:ml-0">
           <div className="">
             {/* Header */}
             <div className="dashboard-header mb-8">

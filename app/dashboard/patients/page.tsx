@@ -326,7 +326,7 @@ export default function PatientsPage() {
                       })
                     }
                   }}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium"
+                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   {showForm ? "Cancel" : "Add Patient"}
@@ -452,7 +452,7 @@ export default function PatientsPage() {
                   <div className="flex gap-2 flex-wrap">
                     <button
                       type="submit"
-                      className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                      className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
                     >
                       {editingPatient ? "Update Patient" : "Add Patient"}
                     </button>
@@ -463,7 +463,7 @@ export default function PatientsPage() {
                           setEditingPatient(null)
                           setShowForm(false)
                         }}
-                        className="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                        className="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
                       >
                         Cancel Edit
                       </button>
@@ -522,7 +522,7 @@ export default function PatientsPage() {
                                     medicalConditions: patient.medicalConditions?.join(", ") || "",
                                   })
                                 }}
-                                className="text-primary hover:text-primary/80 transition-colors"
+                                className="text-primary hover:text-primary/80 transition-colors cursor-pointer"
                                 title="View Details"
                               >
                                 <Eye className="w-4 h-4" />
@@ -531,7 +531,7 @@ export default function PatientsPage() {
                                 <>
                                   <button
                                     onClick={() => handleEditPatient(patient)}
-                                    className="text-accent hover:text-accent/80 transition-colors"
+                                    className="text-accent hover:text-accent/80 transition-colors cursor-pointer"
                                     title="Edit"
                                   >
                                     <Edit2 className="w-4 h-4" />
@@ -541,7 +541,7 @@ export default function PatientsPage() {
                                       setPatientToDelete(patient)
                                       setShowDeleteModal(true)
                                     }}
-                                    className="text-destructive hover:text-destructive/80 transition-colors"
+                                    className="text-destructive hover:text-destructive/80 transition-colors cursor-pointer"
                                     title="Delete"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -630,7 +630,7 @@ export default function PatientsPage() {
                   {user?.role === "doctor" && !editingMedicalInfo && (
                     <button
                       onClick={() => setEditingMedicalInfo(true)}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium mb-4"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium mb-4 cursor-pointer"
                     >
                       Edit Medical Info
                     </button>
@@ -660,14 +660,14 @@ export default function PatientsPage() {
                       <div className="flex gap-2 flex-wrap">
                         <button
                           type="submit"
-                          className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                          className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
                         >
                           Save Changes
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingMedicalInfo(false)}
-                          className="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                          className="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
                         >
                           Cancel
                         </button>
@@ -677,7 +677,7 @@ export default function PatientsPage() {
 
                   <button
                     onClick={() => setSelectedPatient(null)}
-                    className="w-full bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                    className="w-full bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
                   >
                     Close
                   </button>
