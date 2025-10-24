@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectDB, User } from "@/lib/db"
-import { sendPatientCredentials } from "@/lib/email"
+import { sendStaffCredentials } from "@/lib/email"
 import { verifyToken } from "@/lib/auth"
 
 function generateSecurePassword(length = 12): string {
@@ -78,7 +78,16 @@ export async function POST(request: NextRequest) {
     await newUser.save()
 
     // Send credentials email
-    await sendPatientCredentials(email, name, generatedPassword)
+    try {
+      await sendStaffCredentials(email, name, generatedPassword, role)
+      console.log("[v0] Staff credentials email sent successfully to:", email)
+    } catch (emailError) {
+      console.error("[v0] Failed to send staff credentials email:", emailError)
+      // Don't fail the registration if email fails, but log it
+      console.warn(
+        "[v0] Staff registered but email delivery failed. Check EMAIL_USER and EMAIL_PASS environment variables.",
+      )
+    }
 
     return NextResponse.json(
       {
