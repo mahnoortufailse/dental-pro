@@ -205,63 +205,63 @@ export default function MedicalReportsPage() {
               )}
             </div>
 
-            {/* Report Detail Modal - Enhanced Design */}
+             {/* Report Detail Modal - Enhanced Design */}
             {showReportModal && selectedReport && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-                <div className="bg-card rounded-lg shadow-xl border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200">
+                <div className="bg-card rounded-lg shadow-xl border border-border w-full max-w-2xl max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-200">
                   {/* Modal Header */}
-                  <div className="flex justify-between items-start p-6 border-b border-border sticky top-0 bg-card">
-                    <div>
-                      <h2 className="text-2xl font-bold text-foreground">Medical Report</h2>
+                  <div className="flex justify-between items-start p-4 sm:p-6 border-b border-border sticky top-0 bg-card">
+                    <div className="min-w-0 pr-4">
+                      <h2 className="text-xl sm:text-2xl font-bold text-foreground truncate">Medical Report</h2>
                       <p className="text-sm text-muted-foreground mt-1">
                         {new Date(selectedReport.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                     <button
                       onClick={() => setShowReportModal(false)}
-                      className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-2 hover:bg-muted rounded-lg"
+                      className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-2 hover:bg-muted rounded-lg flex-shrink-0"
                     >
-                      <X className="w-6 h-6" />
+                      <X className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                   </div>
 
-                  <div className="p-6 space-y-6">
+                  <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                     {/* Patient Info */}
-                    <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                      <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-primary rounded-full" />
+                    <div className="bg-muted/50 rounded-lg p-3 sm:p-4 border border-border">
+                      <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2 text-sm sm:text-base">
+                       
                         Patient Information
                       </h3>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground text-xs font-medium uppercase">Name</p>
-                          <p className="text-foreground font-medium mt-1">{selectedReport.patientId?.name || "N/A"}</p>
+                          <p className="text-foreground font-medium mt-1 truncate">{selectedReport.patientId?.name || "N/A"}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground text-xs font-medium uppercase">Email</p>
-                          <p className="text-foreground font-medium mt-1">{selectedReport.patientId?.email || "N/A"}</p>
+                          <p className="text-foreground font-medium mt-1 truncate">{selectedReport.patientId?.email || "N/A"}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground text-xs font-medium uppercase">Phone</p>
-                          <p className="text-foreground font-medium mt-1">{selectedReport.patientId?.phone || "N/A"}</p>
+                          <p className="text-foreground font-medium mt-1 truncate">{selectedReport.patientId?.phone || "N/A"}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Doctor Info */}
-                    <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                      <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-accent rounded-full" />
+                    <div className="bg-muted/50 rounded-lg p-3 sm:p-4 border border-border">
+                      <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2 text-sm sm:text-base">
+                        
                         Doctor Information
                       </h3>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground text-xs font-medium uppercase">Name</p>
-                          <p className="text-foreground font-medium mt-1">{selectedReport.doctorId?.name || "N/A"}</p>
+                          <p className="text-foreground font-medium mt-1 truncate">{selectedReport.doctorId?.name || "N/A"}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground text-xs font-medium uppercase">Specialty</p>
-                          <p className="text-foreground font-medium mt-1">
+                          <p className="text-foreground font-medium mt-1 truncate">
                             {selectedReport.doctorId?.specialty || "N/A"}
                           </p>
                         </div>
@@ -270,37 +270,37 @@ export default function MedicalReportsPage() {
 
                     {/* Report Details */}
                     <div className="space-y-4">
-                      <h3 className="font-semibold text-foreground flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
+                        
                         Report Details
                       </h3>
 
-                      <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                      <div className="bg-muted/50 rounded-lg p-3 sm:p-4 border border-border">
                         <p className="text-muted-foreground text-xs font-medium uppercase mb-2">Procedures</p>
                         <ul className="text-foreground space-y-2">
                           {selectedReport.procedures?.map((p: any, idx: number) => (
                             <li key={idx} className="flex items-start gap-2 text-sm">
-                              <span className="text-primary font-bold">•</span>
-                              <span>{p.name}</span>
+                              <span className="text-primary font-bold flex-shrink-0">•</span>
+                              <span className="break-words">{p.name}</span>
                             </li>
                           )) || <li className="text-muted-foreground text-sm">N/A</li>}
                         </ul>
                       </div>
 
-                      <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                      <div className="bg-muted/50 rounded-lg p-3 sm:p-4 border border-border">
                         <p className="text-muted-foreground text-xs font-medium uppercase mb-2">Findings</p>
-                        <p className="text-foreground text-sm whitespace-pre-wrap">
+                        <p className="text-foreground text-sm whitespace-pre-wrap break-words">
                           {selectedReport.findings || "N/A"}
                         </p>
                       </div>
 
-                      <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                      <div className="bg-muted/50 rounded-lg p-3 sm:p-4 border border-border">
                         <p className="text-muted-foreground text-xs font-medium uppercase mb-2">Notes</p>
-                        <p className="text-foreground text-sm whitespace-pre-wrap">{selectedReport.notes || "N/A"}</p>
+                        <p className="text-foreground text-sm whitespace-pre-wrap break-words">{selectedReport.notes || "N/A"}</p>
                       </div>
 
                       {selectedReport.nextVisit && (
-                        <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                        <div className="bg-muted/50 rounded-lg p-3 sm:p-4 border border-border">
                           <p className="text-muted-foreground text-xs font-medium uppercase mb-2">Next Visit</p>
                           <p className="text-foreground text-sm">
                             {new Date(selectedReport.nextVisit).toLocaleDateString()}
@@ -309,9 +309,9 @@ export default function MedicalReportsPage() {
                       )}
 
                       {selectedReport.followUpDetails && (
-                        <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                        <div className="bg-muted/50 rounded-lg p-3 sm:p-4 border border-border">
                           <p className="text-muted-foreground text-xs font-medium uppercase mb-2">Follow-up Details</p>
-                          <p className="text-foreground text-sm whitespace-pre-wrap">
+                          <p className="text-foreground text-sm whitespace-pre-wrap break-words">
                             {selectedReport.followUpDetails}
                           </p>
                         </div>
@@ -320,17 +320,17 @@ export default function MedicalReportsPage() {
                   </div>
 
                   {/* Modal Footer */}
-                  <div className="flex gap-2 p-6 border-t border-border bg-muted/30">
+                  <div className="flex flex-col xs:flex-row gap-2 p-4 sm:p-6 border-t border-border bg-muted/30">
                     <button
                       onClick={() => handleDownloadReport(selectedReport)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer"
+                      className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer text-sm sm:text-base"
                     >
                       <Download className="w-4 h-4" />
                       Download
                     </button>
                     <button
                       onClick={() => setShowReportModal(false)}
-                      className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer"
+                      className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer text-sm sm:text-base"
                     >
                       Close
                     </button>

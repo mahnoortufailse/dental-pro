@@ -60,9 +60,7 @@ export async function sendPatientCredentials(email: string, patientName: string,
               Please use these credentials to log in to your Dental Clinic Portal at <a href="${appUrl}" style="color: #667eea; text-decoration: none;">${appUrl}</a>.
             </p>
             
-            <p style="color: #999; font-size: 12px; margin: 20px 0;">
-              This is a one-time password. Please change your password immediately after your first login.
-            </p>
+           
           </div>
         </div>
       `,

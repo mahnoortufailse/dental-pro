@@ -138,61 +138,62 @@ export default function PatientsPage() {
   }
 
   // Enhanced handleAddPatient function with credential warnings modal
-  const handleAddPatient = async (e: React.FormEvent) => {
-    e.preventDefault()
+ // Enhanced handleAddPatient function with credential warnings modal
+const handleAddPatient = async (e: React.FormEvent) => {
+  e.preventDefault()
 
-    const loadingKey = editingPatient ? 'updatePatient' : 'addPatient'
-    setLoading(prev => ({ ...prev, [loadingKey]: true }))
+  const loadingKey = editingPatient ? 'updatePatient' : 'addPatient'
+  setLoading(prev => ({ ...prev, [loadingKey]: true }))
 
-    // Ensure phone number starts with +
-    let phoneNumber = formData.phone
-    if (phoneNumber && !phoneNumber.startsWith('+')) {
-      phoneNumber = '+' + phoneNumber.replace(/\D/g, '')
-      console.log("[v0] Fixed phone number format:", phoneNumber)
-    }
-
-    const phoneValidation = validatePhoneInputStrict(phoneNumber)
-    if (!phoneValidation.valid) {
-      toast.error(phoneValidation.error)
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
-      return
-    }
-
-    // Validate credentials
-    const validation = validatePatientCredentials({...formData, phone: phoneNumber})
-
-    // Block if critical credentials are missing
-    if (validation.criticalCredentials.length > 0) {
-      toast.error(`Missing critical credentials: ${validation.criticalCredentials.join(", ")}`)
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
-      return
-    }
-
-    if (!formData.assignedDoctorId) {
-      toast.error("Please select a doctor")
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
-      return
-    }
-
-    const selectedDoctor = doctors.find((doc) => doc.id === formData.assignedDoctorId)
-    if (!selectedDoctor) {
-      toast.error("Invalid doctor selection. Please select a doctor from the list.")
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
-      return
-    }
-
-    // Show modal for missing non-critical credentials instead of confirm
-    if (validation.warningCredentials.length > 0) {
-      setCredentialWarnings(validation.warningCredentials)
-      setPendingSubmit(() => () => submitPatientData(loadingKey, phoneNumber))
-      setShowCredentialWarning(true)
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
-      return
-    }
-
-    // If no warnings, proceed directly
-    await submitPatientData(loadingKey, phoneNumber)
+  // Ensure phone number starts with +
+  let phoneNumber = formData.phone
+  if (phoneNumber && !phoneNumber.startsWith('+')) {
+    phoneNumber = '+' + phoneNumber.replace(/\D/g, '')
+    console.log("[v0] Fixed phone number format:", phoneNumber)
   }
+
+  const phoneValidation = validatePhoneInputStrict(phoneNumber)
+  if (!phoneValidation.valid) {
+    toast.error(phoneValidation.error)
+    setLoading(prev => ({ ...prev, [loadingKey]: false }))
+    return
+  }
+
+  // Validate credentials
+  const validation = validatePatientCredentials({...formData, phone: phoneNumber})
+
+  // Block if critical credentials are missing
+  if (validation.criticalCredentials.length > 0) {
+    toast.error(`Missing critical credentials: ${validation.criticalCredentials.join(", ")}`)
+    setLoading(prev => ({ ...prev, [loadingKey]: false }))
+    return
+  }
+
+  if (!formData.assignedDoctorId) {
+    toast.error("Please select a doctor")
+    setLoading(prev => ({ ...prev, [loadingKey]: false }))
+    return
+  }
+
+  const selectedDoctor = doctors.find((doc) => doc.id === formData.assignedDoctorId)
+  if (!selectedDoctor) {
+    toast.error("Invalid doctor selection. Please select a doctor from the list.")
+    setLoading(prev => ({ ...prev, [loadingKey]: false }))
+    return
+  }
+
+  // Show modal for missing non-critical credentials - DON'T reset loading here
+  if (validation.warningCredentials.length > 0) {
+    setCredentialWarnings(validation.warningCredentials)
+    setPendingSubmit(() => () => submitPatientData(loadingKey, phoneNumber))
+    setShowCredentialWarning(true)
+    // DON'T reset loading state here - keep it true so the button shows loading
+    return
+  }
+
+  // If no warnings, proceed directly
+  await submitPatientData(loadingKey, phoneNumber)
+}
 
   // Separate function to handle the actual submission
   const submitPatientData = async (loadingKey: string, phoneNumber: string) => {
@@ -271,6 +272,9 @@ export default function PatientsPage() {
   const handleProceedWithWarnings = () => {
     setShowCredentialWarning(false)
     if (pendingSubmit) {
+      // Re-enable loading state when proceeding with warnings
+      const loadingKey = editingPatient ? 'updatePatient' : 'addPatient'
+      setLoading(prev => ({ ...prev, [loadingKey]: true }))
       pendingSubmit()
     }
     setPendingSubmit(null)
@@ -471,10 +475,10 @@ export default function PatientsPage() {
                       })
                     }
                   }}
-                  disabled={loading.patients || loading.doctors}
+                  disabled={loading.patients || loading.doctors || loading.addPatient || loading.updatePatient}
                   className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed"
                 >
-                  {loading.patients || loading.doctors ? (
+                  {(loading.addPatient || loading.updatePatient) ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <Plus className="w-4 h-4" />
@@ -713,7 +717,7 @@ export default function PatientsPage() {
                                     medicalConditions: patient.medicalConditions?.join(", ") || "",
                                   })
                                 }}
-                                disabled={loading.deletePatient}
+                                disabled={loading.deletePatient || loading.addPatient || loading.updatePatient}
                                 className="text-primary hover:text-primary/80 disabled:text-primary/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                                 title="View Details"
                               >
@@ -734,7 +738,7 @@ export default function PatientsPage() {
                                       setPatientToDelete(patient)
                                       setShowDeleteModal(true)
                                     }}
-                                    disabled={loading.deletePatient}
+                                    disabled={loading.deletePatient || loading.addPatient || loading.updatePatient}
                                     className="text-destructive hover:text-destructive/80 disabled:text-destructive/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                                     title="Delete"
                                   >

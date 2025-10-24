@@ -9,8 +9,8 @@ export default function PatientDashboardLayout({ children }: { children: React.R
     <ProtectedRoute patientOnly={true}>
       <div className="flex h-screen bg-background">
         <PatientSidebar />
-        <main className="flex-1 overflow-auto lg:ml-0">
-          <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+        <main className="flex-1 overflow-auto lg:ml-0 ">
+          <div className="p-4 sm:p-6 lg:p-8 pt-20 sm:pt-6 lg:pt-8">{children}</div>
         </main>
       </div>
     </ProtectedRoute>

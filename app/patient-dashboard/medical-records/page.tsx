@@ -62,7 +62,7 @@ export default function MedicalRecordsPage() {
             {/* Header */}
             <div className="dashboard-header mb-8">
               <div>
-                <h1 className="dashboard-title">Medical Records</h1>
+                <h1 className="dashboard-title sm:text-3xl text-2xl">Medical Records</h1>
                 <p className="text-muted-foreground mt-1 text-sm sm:text-base">Your appointment reports and findings</p>
               </div>
             </div>

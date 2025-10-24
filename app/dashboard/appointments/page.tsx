@@ -544,22 +544,22 @@ export default function AppointmentsPage() {
               {/* Sidebar */}
               <div className="space-y-6">
                 {user?.role !== "doctor" && (
-                  <button
-                    onClick={() => {
-                      setEditingId(null)
-                      setShowForm(!showForm)
-                      setFormErrors({})
-                    }}
-                    disabled={loading.appointments || loading.patients || loading.doctors}
-                    className="w-full flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {(loading.appointments || loading.patients || loading.doctors) ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Plus className="w-4 h-4" />
-                    )}
-                    New Appointment
-                  </button>
+               <button
+  onClick={() => {
+    setEditingId(null)
+    setShowForm(!showForm)
+    setFormErrors({})
+  }}
+  disabled={loading.appointments || loading.patients || loading.doctors}
+  className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
+>
+  {(loading.appointments || loading.patients || loading.doctors) ? (
+    <Loader2 className="w-4 h-4 animate-spin" />
+  ) : (
+    <Plus className="w-4 h-4" />
+  )}
+  New Appointment
+</button>
                 )}
 
                 {selectedDate && (
