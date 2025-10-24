@@ -4,15 +4,14 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-context"
-import { Eye, EyeOff, Lock, Mail, User, MessageCircle } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { toast } from "react-hot-toast"
 import Link from "next/link"
 import { FaWhatsapp } from "react-icons/fa"
 
 export default function LoginPage() {
-  
   const [loginType, setLoginType] = useState<"staff" | "patient">("staff")
-  const [username, setUsername] = useState("")
+  const [staffEmail, setStaffEmail] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -26,12 +25,12 @@ export default function LoginPage() {
 
     try {
       if (loginType === "staff") {
-        if (!username.trim() || !password) {
-          toast.error("Username and password required")
+        if (!staffEmail.trim() || !password) {
+          toast.error("Email and password required")
           setIsLoading(false)
           return
         }
-        await login(username, password)
+        await login(staffEmail, password)
         toast.success("Login successful!")
         router.push("/dashboard")
       } else {
@@ -100,7 +99,7 @@ export default function LoginPage() {
           <button
             onClick={() => {
               setLoginType("staff")
-              setUsername("")
+              setStaffEmail("")
               setEmail("")
               setPassword("")
             }}
@@ -115,7 +114,7 @@ export default function LoginPage() {
           <button
             onClick={() => {
               setLoginType("patient")
-              setUsername("")
+              setStaffEmail("")
               setEmail("")
               setPassword("")
             }}
@@ -143,15 +142,15 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             {loginType === "staff" && (
               <div>
-                <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">Username</label>
+                <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">Email</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                   <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    type="email"
+                    value={staffEmail}
+                    onChange={(e) => setStaffEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
-                    placeholder="Enter your username"
+                    placeholder="your@email.com"
                     required
                   />
                 </div>
@@ -193,7 +192,11 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
+                  ) : (
+                    <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -218,45 +221,39 @@ export default function LoginPage() {
 
           <div className="my-6 border-t border-border"></div>
 
- {/* Staff Contact Info */}
-{loginType === "staff" && (
-<div className="text-center mt-4">
-      <p className="text-sm text-gray-700 mb-3">
-        Don’t have an account? Contact your admin to register.
-      </p>
+          {/* Staff Contact Info */}
+          {loginType === "staff" && (
+            <div className="text-center mt-4">
+              <p className="text-sm text-gray-700 mb-3">Don't have an account? Contact your admin to register.</p>
 
-      <div className="flex items-center justify-center gap-3 bg-gray-50 border rounded-xl px-4 py-3 shadow-sm w-fit mx-auto">
-        {/* Email */}
-        <a
-          href="mailto:admin@dentalcarepro.com"
-          className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow transition-all"
-        >
-          <Mail className="w-4 h-4 text-blue-600" />
-          <span className="text-sm font-medium text-gray-700">
-            admin@dentalcarepro.com
-          </span>
-        </a>
+              <div className="flex items-center justify-center gap-3 bg-gray-50 border rounded-xl px-4 py-3 shadow-sm w-fit mx-auto">
+                {/* Email */}
+                <a
+                  href="mailto:admin@dentalcarepro.com"
+                  className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow transition-all"
+                >
+                  <Mail className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700">admin@dentalcarepro.com</span>
+                </a>
 
-        {/* WhatsApp Icon with Tooltip */}
-        <div className="relative group">
-          <a
-            href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center w-9 h-9 bg-green-50 border border-green-500 rounded-full shadow-sm hover:bg-green-100 transition-all"
-          >
-            <FaWhatsapp className="w-5 h-5 text-green-600" />
-          </a>
-          {/* Tooltip */}
-          <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            Chat on WhatsApp
-          </span>
-        </div>
-      </div>
-    </div>
-)}
-
-
+                {/* WhatsApp Icon with Tooltip */}
+                <div className="relative group">
+                  <a
+                    href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-9 h-9 bg-green-50 border border-green-500 rounded-full shadow-sm hover:bg-green-100 transition-all"
+                  >
+                    <FaWhatsapp className="w-5 h-5 text-green-600" />
+                  </a>
+                  {/* Tooltip */}
+                  <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    Chat on WhatsApp
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Patient Info */}
           {loginType === "patient" && (
@@ -269,9 +266,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2025 DentalCare Pro. All rights reserved.
-        </p>
+        <p className="text-center text-xs text-muted-foreground mt-6">© 2025 DentalCare Pro. All rights reserved.</p>
       </div>
     </div>
   )

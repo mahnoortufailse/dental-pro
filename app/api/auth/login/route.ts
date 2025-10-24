@@ -9,11 +9,11 @@ export async function POST(request: NextRequest) {
     const { username, password } = await request.json()
 
     if (!username || !password) {
-      return NextResponse.json({ error: "Username and password required" }, { status: 400 })
+      return NextResponse.json({ error: "Email and password required" }, { status: 400 })
     }
 
     const user = await User.findOne({
-      $or: [{ username }, { email: username }],
+      email: username,
     })
 
     if (!user) {

@@ -60,13 +60,9 @@ export async function POST(request: NextRequest) {
     // Generate secure password
     const generatedPassword = generateSecurePassword()
 
-    // Create username from email
-    const username = email.split("@")[0]
-
     // Create new staff user
     const newUser = new User({
       email,
-      username,
       password: generatedPassword,
       name,
       role,
