@@ -45,6 +45,10 @@ export async function POST(request: NextRequest) {
 
     const { name, email, phone, role, specialty } = await request.json()
 
+    if (!name || !email || !role) {
+      return NextResponse.json({ error: "Name, email, and role are required" }, { status: 400 })
+    }
+
     // Verify admin authorization
     const admin = await User.findById(adminId)
     if (!admin || admin.role !== "admin") {
@@ -100,6 +104,7 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error("[v0] Error registering staff:", error)
-    return NextResponse.json({ error: "Failed to register staff member" }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Failed to register staff member"
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

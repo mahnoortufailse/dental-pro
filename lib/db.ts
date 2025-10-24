@@ -12,7 +12,6 @@ if (!MONGODB_URI) {
 
 // Define Schemas
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true, sparse: true },
   password: { type: String, required: true }, // Will be hashed
   name: { type: String, required: true },
@@ -232,7 +231,6 @@ export async function initializeDB() {
     if (!adminExists) {
       const createdUsers = await User.create([
         {
-          username: "admin",
           email: "admin@dentalcare.com",
           password: "Admin@123456", // Will be hashed by pre-save hook
           name: "Admin User",
@@ -241,7 +239,6 @@ export async function initializeDB() {
           active: true,
         },
         {
-          username: "doctor1",
           email: "doctor@dentalcare.com",
           password: "Doctor@123456", // Will be hashed by pre-save hook
           name: "Dr. John Smith",
@@ -251,7 +248,6 @@ export async function initializeDB() {
           active: true,
         },
         {
-          username: "receptionist1",
           email: "receptionist@dentalcare.com",
           password: "Receptionist@123456", // Will be hashed by pre-save hook
           name: "Jane Doe",
