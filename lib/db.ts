@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, sparse: true },
   password: { type: String, required: true }, // Will be hashed
   name: { type: String, required: true },
-  role: { type: String, enum: ["admin", "doctor","patient", "receptionist"], required: true },
+  role: { type: String, enum: ["admin", "doctor","patient", "receptionist", "staff"], required: true },
   phone: String,
   specialty: String,
   active: { type: Boolean, default: true },
