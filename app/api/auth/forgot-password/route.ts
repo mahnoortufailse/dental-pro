@@ -17,7 +17,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid user type" }, { status: 400 })
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() })
+    // Add user type to the query
+    const user = await User.findOne({ 
+      email: email.toLowerCase(),
+      role: userType // This is the key fix - check user type
+    })
 
     if (!user) {
       // Don't reveal if email exists for security
@@ -37,9 +41,12 @@ export async function POST(request: NextRequest) {
     })
 
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${resetToken}&type=${userType}`
+    
+    console.log(`[v0] Attempting to send password reset to ${userType}:`, email)
+    
     await sendPasswordResetEmail(email, user.name, resetUrl)
 
-    console.log("[v0] Password reset email sent to", userType + ":", email)
+    console.log(`[v0] Password reset email sent successfully to ${userType}:`, email)
 
     return NextResponse.json({
       success: true,
