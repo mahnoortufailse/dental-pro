@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectDB, User } from "@/lib/db"
 import { sendPatientCredentials } from "@/lib/email"
+import { verifyToken } from "@/lib/auth"
 
 function generateSecurePassword(length = 12): string {
   const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -29,7 +30,20 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB()
 
-    const { email, firstName, lastName, role, adminId } = await request.json()
+    const authHeader = request.headers.get("authorization")
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Missing authorization token" }, { status: 401 })
+    }
+
+    const token = authHeader.substring(7)
+    const payload = verifyToken(token)
+    if (!payload) {
+      return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 })
+    }
+
+    const adminId = payload.userId
+
+    const { name, email, phone, role, specialty } = await request.json()
 
     // Verify admin authorization
     const admin = await User.findById(adminId)
@@ -54,19 +68,17 @@ export async function POST(request: NextRequest) {
       email,
       username,
       password: generatedPassword,
-      firstName,
-      lastName,
+      name,
       role,
-      userType: "staff",
-      isVerified: true,
-      createdBy: adminId,
+      phone,
+      specialty,
+      active: true,
     })
 
     await newUser.save()
 
-    // Send credentials email using the same template as patients
-    const staffName = `${firstName} ${lastName}`
-    await sendPatientCredentials(email, staffName, generatedPassword)
+    // Send credentials email
+    await sendPatientCredentials(email, name, generatedPassword)
 
     return NextResponse.json(
       {
@@ -76,8 +88,7 @@ export async function POST(request: NextRequest) {
           id: newUser._id,
           email: newUser.email,
           role: newUser.role,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
+          name: newUser.name,
         },
       },
       { status: 201 },

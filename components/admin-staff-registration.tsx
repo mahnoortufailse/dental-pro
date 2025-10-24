@@ -75,7 +75,13 @@ export function AdminStaffRegistration() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          specialty: formData.specialty,
+        }),
       })
 
       const data = await res.json()
