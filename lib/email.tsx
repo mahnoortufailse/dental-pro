@@ -97,6 +97,7 @@ export async function sendPatientCredentials(email: string, patientName: string,
             <p style="color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #ddd; padding-top: 20px;">
               If you have any questions or need assistance, please contact the clinic administrator.
             </p>
+            
           </div>
         </div>
       `,
@@ -211,11 +212,7 @@ export async function sendPasswordResetEmail(email: string, userName: string, re
             <p style="color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #ddd; padding-top: 20px;">
               If you did not request this password reset, please contact our clinic immediately.
             </p>
-             <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0;">
-              <p style="margin: 0; color: #856404; font-size: 14px;">
-                ⚠️ Please change your password after logging in.
-              </p>
-            </div>
+            
           </div>
         </div>
       `,
