@@ -7,6 +7,7 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { ToothChart } from "@/components/tooth-chart"
 import { PatientImagesSection } from "@/components/patient-images-section"
+import { MedicalHistorySection } from "@/components/medical-history-section"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
 import { ArrowLeft } from "lucide-react"
@@ -110,7 +111,7 @@ export default function PatientDetailPage() {
             {/* Tabs */}
             <div className="bg-card border border-border rounded-lg">
               <div className="flex border-b border-border overflow-x-auto">
-                {["overview", "tooth-chart", "images"].map((tab) => (
+                {["overview", "medical-history", "tooth-chart", "images"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -121,6 +122,7 @@ export default function PatientDetailPage() {
                     }`}
                   >
                     {tab === "overview" && "Overview"}
+                    {tab === "medical-history" && "Medical History"}
                     {tab === "tooth-chart" && "Tooth Chart"}
                     {tab === "images" && "X-Rays & Images"}
                   </button>
@@ -171,6 +173,11 @@ export default function PatientDetailPage() {
                       </div>
                     </div>
                   </div>
+                )}
+
+                {/* Medical History Tab */}
+                {activeTab === "medical-history" && (
+                  <MedicalHistorySection patientId={patientId} token={token!} isDoctor={user?.role === "doctor"} />
                 )}
 
                 {/* Tooth Chart Tab */}

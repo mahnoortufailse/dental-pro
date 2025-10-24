@@ -42,6 +42,11 @@ export default function PatientsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [patientToDelete, setPatientToDelete] = useState<any>(null)
   
+  // New state for credential warning modal
+  const [showCredentialWarning, setShowCredentialWarning] = useState(false)
+  const [credentialWarnings, setCredentialWarnings] = useState<string[]>([])
+  const [pendingSubmit, setPendingSubmit] = useState<(() => void) | null>(null)
+  
   // Loading states
   const [loading, setLoading] = useState({
     patients: false,
@@ -109,20 +114,174 @@ export default function PatientsPage() {
     }
   }
 
+  // Add this enhanced validation function
   const validatePatientCredentials = (data: any) => {
-    const missingCredentials: string[] = []
-    const warnings: string[] = []
+    const criticalCredentials: string[] = []
+    const warningCredentials: string[] = []
 
-    if (!data.idNumber?.trim()) missingCredentials.push("ID Number")
-    if (!data.phone?.trim()) missingCredentials.push("Phone Number")
-    if (!data.email?.trim()) missingCredentials.push("Email Address")
-    if (!data.dob?.trim()) missingCredentials.push("Date of Birth")
+    // Critical credentials - will block saving if missing
+    if (!data.idNumber?.trim()) criticalCredentials.push("ID Number")
+    if (!data.phone?.trim()) criticalCredentials.push("Phone Number")
+    if (!data.email?.trim()) criticalCredentials.push("Email Address")
+    if (!data.dob?.trim()) criticalCredentials.push("Date of Birth")
+    if (!data.insuranceProvider?.trim()) criticalCredentials.push("Insurance Provider")
 
-    if (!data.insuranceProvider?.trim()) warnings.push("Insurance Provider")
-    if (!data.insuranceNumber?.trim()) warnings.push("Insurance Number")
-    if (!data.address?.trim()) warnings.push("Address")
+    // Warning credentials - will show alert but allow proceeding
+    if (!data.insuranceNumber?.trim()) warningCredentials.push("Insurance Number")
+    if (!data.address?.trim()) warningCredentials.push("Address")
 
-    return { isComplete: missingCredentials.length === 0, missingCredentials, warnings }
+    return { 
+      isComplete: criticalCredentials.length === 0, 
+      criticalCredentials, 
+      warningCredentials 
+    }
+  }
+
+  // Enhanced handleAddPatient function with credential warnings modal
+  const handleAddPatient = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const loadingKey = editingPatient ? 'updatePatient' : 'addPatient'
+    setLoading(prev => ({ ...prev, [loadingKey]: true }))
+
+    // Ensure phone number starts with +
+    let phoneNumber = formData.phone
+    if (phoneNumber && !phoneNumber.startsWith('+')) {
+      phoneNumber = '+' + phoneNumber.replace(/\D/g, '')
+      console.log("[v0] Fixed phone number format:", phoneNumber)
+    }
+
+    const phoneValidation = validatePhoneInputStrict(phoneNumber)
+    if (!phoneValidation.valid) {
+      toast.error(phoneValidation.error)
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
+      return
+    }
+
+    // Validate credentials
+    const validation = validatePatientCredentials({...formData, phone: phoneNumber})
+
+    // Block if critical credentials are missing
+    if (validation.criticalCredentials.length > 0) {
+      toast.error(`Missing critical credentials: ${validation.criticalCredentials.join(", ")}`)
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
+      return
+    }
+
+    if (!formData.assignedDoctorId) {
+      toast.error("Please select a doctor")
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
+      return
+    }
+
+    const selectedDoctor = doctors.find((doc) => doc.id === formData.assignedDoctorId)
+    if (!selectedDoctor) {
+      toast.error("Invalid doctor selection. Please select a doctor from the list.")
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
+      return
+    }
+
+    // Show modal for missing non-critical credentials instead of confirm
+    if (validation.warningCredentials.length > 0) {
+      setCredentialWarnings(validation.warningCredentials)
+      setPendingSubmit(() => () => submitPatientData(loadingKey, phoneNumber))
+      setShowCredentialWarning(true)
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
+      return
+    }
+
+    // If no warnings, proceed directly
+    await submitPatientData(loadingKey, phoneNumber)
+  }
+
+  // Separate function to handle the actual submission
+  const submitPatientData = async (loadingKey: string, phoneNumber: string) => {
+    try {
+      const method = editingPatient ? "PUT" : "POST"
+      const url = editingPatient ? `/api/patients/${editingPatient}` : "/api/patients"
+
+      const formattedPhone = formatPhoneForDatabase(phoneNumber)
+      console.log("[v0] Submitting phone:", phoneNumber, "Formatted:", formattedPhone)
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...formData,
+          phone: formattedPhone,
+          allergies: formData.allergies
+            .split(",")
+            .map((a) => a.trim())
+            .filter(Boolean),
+          medicalConditions: formData.medicalConditions
+            .split(",")
+            .map((c) => c.trim())
+            .filter(Boolean),
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        if (editingPatient) {
+          setPatients(patients.map((p) => (p._id === editingPatient ? data.patient : p)))
+          toast.success("Patient updated successfully")
+          setEditingPatient(null)
+        } else {
+          setPatients([...patients, data.patient])
+          toast.success("Patient added successfully! Strong password sent to email.")
+        }
+
+        setShowForm(false)
+        setFormData({
+          name: "",
+          phone: "",
+          email: "",
+          dob: "",
+          idNumber: "",
+          address: "",
+          insuranceProvider: "",
+          insuranceNumber: "",
+          allergies: "",
+          medicalConditions: "",
+          assignedDoctorId: "",
+        })
+      } else {
+        let errorMessage = "Failed to save patient"
+        try {
+          const error = await res.json()
+          errorMessage = error.error || error.message || errorMessage
+          console.log("[v0] API error response:", error)
+        } catch (parseError) {
+          errorMessage = `Failed to save patient (${res.status})`
+        }
+        toast.error(errorMessage)
+      }
+    } catch (error) {
+      console.log("[v0] Fetch error:", error)
+      toast.error(error instanceof Error ? error.message : "Error saving patient")
+    } finally {
+      setLoading(prev => ({ ...prev, [loadingKey]: false }))
+    }
+  }
+
+  // Handle proceed with warnings
+  const handleProceedWithWarnings = () => {
+    setShowCredentialWarning(false)
+    if (pendingSubmit) {
+      pendingSubmit()
+    }
+    setPendingSubmit(null)
+    setCredentialWarnings([])
+  }
+
+  // Handle cancel with warnings
+  const handleCancelWithWarnings = () => {
+    setShowCredentialWarning(false)
+    setPendingSubmit(null)
+    setCredentialWarnings([])
   }
 
   const validatePhoneInput = (phone: string): { valid: boolean; error?: string } => {
@@ -194,156 +353,40 @@ export default function PatientsPage() {
     }
   }
 
-  const handleEditPatient = (patient: any) => {
-    setEditingPatient(patient._id)
-    let doctorId = ""
-    if (patient.assignedDoctorId) {
-      const assignedDoctor = doctors.find(
-        (doc) =>
-          doc.id === patient.assignedDoctorId._id?.toString() || doc._id === patient.assignedDoctorId._id?.toString(),
-      )
-      doctorId = assignedDoctor?.id || patient.assignedDoctorId._id?.toString() || ""
-    }
-
-    const displayPhone = formatPhoneForDisplay(patient.phone)
-
-    setFormData({
-      name: patient.name,
-      phone: displayPhone,
-      email: patient.email,
-      dob: patient.dob,
-      idNumber: patient.idNumber || "",
-      address: patient.address || "",
-      insuranceProvider: patient.insuranceProvider,
-      insuranceNumber: patient.insuranceNumber || "",
-      allergies: patient.allergies?.join(", ") || "",
-      medicalConditions: patient.medicalConditions?.join(", ") || "",
-      assignedDoctorId: doctorId,
-    })
-    setShowForm(true)
+ const handleEditPatient = (patient: any) => {
+  setEditingPatient(patient._id)
+  let doctorId = ""
+  if (patient.assignedDoctorId) {
+    const assignedDoctor = doctors.find(
+      (doc) =>
+        doc.id === patient.assignedDoctorId._id?.toString() || doc._id === patient.assignedDoctorId._id?.toString(),
+    )
+    doctorId = assignedDoctor?.id || patient.assignedDoctorId._id?.toString() || ""
   }
 
-  const handleAddPatient = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const displayPhone = formatPhoneForDisplay(patient.phone)
 
-    // Set loading state based on whether we're adding or updating
-    const loadingKey = editingPatient ? 'updatePatient' : 'addPatient'
-    setLoading(prev => ({ ...prev, [loadingKey]: true }))
+  console.log("Editing patient data:", { // Debug log
+    insuranceNumber: patient.insuranceNumber,
+    insuranceProvider: patient.insuranceProvider,
+    address: patient.address
+  })
 
-    // Ensure phone number starts with +
-    let phoneNumber = formData.phone
-    if (phoneNumber && !phoneNumber.startsWith('+')) {
-      // Add + if missing and clean the number
-      phoneNumber = '+' + phoneNumber.replace(/\D/g, '')
-      console.log("[v0] Fixed phone number format:", phoneNumber)
-    }
-
-    const phoneValidation = validatePhoneInputStrict(phoneNumber)
-    if (!phoneValidation.valid) {
-      toast.error(phoneValidation.error)
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
-      return
-    }
-
-    const validation = validatePatientCredentials({...formData, phone: phoneNumber})
-
-    if (validation.missingCredentials.length > 0) {
-      toast.error(`Missing critical credentials: ${validation.missingCredentials.join(", ")}`)
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
-      return
-    }
-
-    if (!formData.assignedDoctorId) {
-      toast.error("Please select a doctor")
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
-      return
-    }
-
-    const selectedDoctor = doctors.find((doc) => doc.id === formData.assignedDoctorId)
-    if (!selectedDoctor) {
-      toast.error("Invalid doctor selection. Please select a doctor from the list.")
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
-      return
-    }
-
-    if (validation.warnings.length > 0) {
-      const proceed = window.confirm(`Warning: Missing ${validation.warnings.join(", ")}. Do you want to continue?`)
-      if (!proceed) {
-        setLoading(prev => ({ ...prev, [loadingKey]: false }))
-        return
-      }
-    }
-
-    try {
-      const method = editingPatient ? "PUT" : "POST"
-      const url = editingPatient ? `/api/patients/${editingPatient}` : "/api/patients"
-
-      const formattedPhone = formatPhoneForDatabase(phoneNumber)
-      console.log("[v0] Submitting phone:", phoneNumber, "Formatted:", formattedPhone)
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ...formData,
-          phone: formattedPhone,
-          allergies: formData.allergies
-            .split(",")
-            .map((a) => a.trim())
-            .filter(Boolean),
-          medicalConditions: formData.medicalConditions
-            .split(",")
-            .map((c) => c.trim())
-            .filter(Boolean),
-        }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        if (editingPatient) {
-          setPatients(patients.map((p) => (p._id === editingPatient ? data.patient : p)))
-          toast.success("Patient updated successfully")
-          setEditingPatient(null)
-        } else {
-          setPatients([...patients, data.patient])
-          toast.success("Patient added successfully! Strong password sent to email.")
-        }
-
-        setShowForm(false)
-        setFormData({
-          name: "",
-          phone: "",
-          email: "",
-          dob: "",
-          idNumber: "",
-          address: "",
-          insuranceProvider: "",
-          insuranceNumber: "",
-          allergies: "",
-          medicalConditions: "",
-          assignedDoctorId: "",
-        })
-      } else {
-        let errorMessage = "Failed to save patient"
-        try {
-          const error = await res.json()
-          errorMessage = error.error || error.message || errorMessage
-          console.log("[v0] API error response:", error)
-        } catch (parseError) {
-          errorMessage = `Failed to save patient (${res.status})`
-        }
-        toast.error(errorMessage)
-      }
-    } catch (error) {
-      console.log("[v0] Fetch error:", error)
-      toast.error(error instanceof Error ? error.message : "Error saving patient")
-    } finally {
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
-    }
-  }
+  setFormData({
+    name: patient.name,
+    phone: displayPhone,
+    email: patient.email,
+    dob: patient.dob,
+    idNumber: patient.idNumber || "",
+    address: patient.address || "",
+    insuranceProvider: patient.insuranceProvider || "",
+    insuranceNumber: patient.insuranceNumber || "", // Ensure this is set
+    allergies: patient.allergies?.join(", ") || "",
+    medicalConditions: patient.medicalConditions?.join(", ") || "",
+    assignedDoctorId: doctorId,
+  })
+  setShowForm(true)
+}
 
   const handleUpdateMedicalInfo = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -714,6 +757,52 @@ export default function PatientsPage() {
                 </table>
               </div>
             </div>
+
+            {/* Credential Warning Modal */}
+            {showCredentialWarning && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-md w-full">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-shrink-0 w-10 h-10 bg-warning/20 rounded-full flex items-center justify-center">
+                      <AlertCircle className="w-6 h-6 text-warning" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">Missing Patient Information</h3>
+                      <p className="text-sm text-muted-foreground">The following information is missing:</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-6">
+                    <ul className="space-y-2">
+                      {credentialWarnings.map((warning, index) => (
+                        <li key={index} className="flex items-center gap-2 text-warning">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm">{warning}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-sm text-muted-foreground mt-4">
+                      You can proceed to save the patient record, but it's recommended to complete all information for better patient management.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={handleCancelWithWarnings}
+                      className="px-4 py-2 bg-muted hover:bg-muted/80 text-muted-foreground rounded-lg transition-colors text-sm font-medium cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleProceedWithWarnings}
+                      className="px-4 py-2 bg-warning hover:bg-warning/90 text-warning-foreground rounded-lg transition-colors text-sm font-medium cursor-pointer"
+                    >
+                      Proceed Anyway
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {selectedPatient && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">

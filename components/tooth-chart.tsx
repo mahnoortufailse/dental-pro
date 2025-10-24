@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { Save, RotateCcw } from "lucide-react"
+import { Save, RotateCcw, History } from "lucide-react"
 
 interface ToothStatus {
   status: "healthy" | "cavity" | "filling" | "root-canal" | "missing" | "implant"
@@ -31,6 +31,8 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null)
+  const [chartHistory, setChartHistory] = useState<any[]>([])
+  const [showHistory, setShowHistory] = useState(false)
 
   useEffect(() => {
     fetchToothChart()
@@ -38,14 +40,14 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
 
   const fetchToothChart = async () => {
     try {
-      const res = await fetch(`/api/tooth-chart/${patientId}`, {
+      const res = await fetch(`/api/tooth-chart?patientId=${patientId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
         const data = await res.json()
-        if (data.chart) {
-          setTeeth(data.chart.teeth || {})
-          setOverallNotes(data.chart.overallNotes || "")
+        if (data.toothChart) {
+          setTeeth(data.toothChart.teeth || {})
+          setOverallNotes(data.toothChart.overallNotes || "")
         } else {
           // Initialize empty chart
           const newTeeth: Record<number, ToothStatus> = {}
@@ -54,6 +56,7 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
           }
           setTeeth(newTeeth)
         }
+        setChartHistory(data.chartHistory || [])
       }
     } catch (error) {
       console.error("Error fetching tooth chart:", error)
@@ -102,6 +105,7 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
 
       if (res.ok) {
         toast.success("Tooth chart saved successfully")
+        fetchToothChart()
         onSave?.()
       } else {
         const error = await res.json()
@@ -139,6 +143,28 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
         </div>
       </div>
 
+      {chartHistory.length > 1 && (
+        <div className="bg-card border border-border rounded-lg p-4">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="flex items-center gap-2 text-primary hover:text-primary/80 font-medium text-sm"
+          >
+            <History className="w-4 h-4" />
+            View Chart History ({chartHistory.length} versions)
+          </button>
+          {showHistory && (
+            <div className="mt-4 space-y-2 max-h-48 overflow-y-auto">
+              {chartHistory.map((chart, idx) => (
+                <div key={chart._id} className="p-2 bg-muted rounded text-sm">
+                  <p className="font-medium text-foreground">Version {chartHistory.length - idx}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(chart.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tooth Grid */}
       <div className="space-y-4">
         <h3 className="font-semibold text-foreground">Tooth Chart</h3>
@@ -151,13 +177,20 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
               <button
                 key={toothNum}
                 onClick={() => setSelectedTooth(selectedTooth === toothNum ? null : toothNum)}
-                className={`aspect-square rounded-lg border-2 flex items-center justify-center font-bold text-sm transition-all ${
+                className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center font-bold text-xs transition-all relative group overflow-hidden ${
                   teeth[toothNum]
                     ? TOOTH_STATUSES.find((s) => s.value === teeth[toothNum].status)?.color || "bg-gray-100"
                     : "bg-gray-100"
                 } ${selectedTooth === toothNum ? "ring-2 ring-primary" : ""}`}
               >
-                {toothNum}
+                <img
+                  src={`/teeth/tooth${toothNum}.jpg`}
+                  alt={`Tooth ${toothNum}`}
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute bottom-0.5 text-[10px] font-bold bg-black/50 text-white px-1 rounded">
+                  {toothNum}
+                </span>
               </button>
             ))}
           </div>
@@ -171,13 +204,20 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
               <button
                 key={toothNum}
                 onClick={() => setSelectedTooth(selectedTooth === toothNum ? null : toothNum)}
-                className={`aspect-square rounded-lg border-2 flex items-center justify-center font-bold text-sm transition-all ${
+                className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center font-bold text-xs transition-all relative group overflow-hidden ${
                   teeth[toothNum]
                     ? TOOTH_STATUSES.find((s) => s.value === teeth[toothNum].status)?.color || "bg-gray-100"
                     : "bg-gray-100"
                 } ${selectedTooth === toothNum ? "ring-2 ring-primary" : ""}`}
               >
-                {toothNum}
+                <img
+                  src={`/teeth/tooth${toothNum}.jpg`}
+                  alt={`Tooth ${toothNum}`}
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute bottom-0.5 text-[10px] font-bold bg-black/50 text-white px-1 rounded">
+                  {toothNum}
+                </span>
               </button>
             ))}
           </div>
@@ -187,7 +227,19 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
       {/* Selected Tooth Details */}
       {selectedTooth && teeth[selectedTooth] && (
         <div className="bg-card border border-border rounded-lg p-4 space-y-4">
-          <h4 className="font-semibold text-foreground">Tooth #{selectedTooth} Details</h4>
+          <div className="flex items-center gap-4">
+            <div className="w-24 h-24 rounded-lg border-2 border-border overflow-hidden bg-gray-100">
+              <img
+                src={`/teeth/tooth${selectedTooth}.jpg`}
+                alt={`Tooth ${selectedTooth}`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground">Tooth #{selectedTooth} Details</h4>
+              <p className="text-sm text-muted-foreground">Status: {teeth[selectedTooth].status}</p>
+            </div>
+          </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Status</label>

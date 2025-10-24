@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react"
+
 interface ToothStatus {
   status: string
   notes?: string
@@ -12,6 +14,50 @@ interface ToothChartProps {
 }
 
 export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: ToothChartProps) {
+  const [selectedTooth, setSelectedTooth] = useState<number | null>(null)
+
+  const getToothImageNumber = (toothNumber: number): number => {
+    const toothImageMap: Record<number, number> = {
+      // Upper Right (11-18) -> images 1-8
+      18: 1,
+      17: 2,
+      16: 3,
+      15: 4,
+      14: 5,
+      13: 6,
+      12: 7,
+      11: 8,
+      // Upper Left (21-28) -> images 9-16
+      21: 9,
+      22: 10,
+      23: 11,
+      24: 12,
+      25: 13,
+      26: 14,
+      27: 15,
+      28: 16,
+      // Lower Left (31-38) -> images 17-24
+      31: 17,
+      32: 18,
+      33: 19,
+      34: 20,
+      35: 21,
+      36: 22,
+      37: 23,
+      38: 24,
+      // Lower Right (41-48) -> images 25-32
+      41: 25,
+      42: 26,
+      43: 27,
+      44: 28,
+      45: 29,
+      46: 30,
+      47: 31,
+      48: 32,
+    }
+    return toothImageMap[toothNumber] || toothNumber
+  }
+
   const getToothColor = (status: string) => {
     const colors: Record<string, string> = {
       healthy: "#10b981",
@@ -63,135 +109,31 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
     return toothNames[toothNumber] || toothNumber.toString()
   }
 
-  const getToothType = (toothNumber: number) => {
-    const isMolar = [16, 17, 18, 26, 27, 28, 36, 37, 38, 46, 47, 48].includes(toothNumber)
-    const isPremolar = [14, 15, 24, 25, 34, 35, 44, 45].includes(toothNumber)
-    const isCanine = [13, 23, 33, 43].includes(toothNumber)
-    const isIncisor = [11, 12, 21, 22, 31, 32, 41, 42].includes(toothNumber)
-
-    return { isMolar, isPremolar, isCanine, isIncisor }
-  }
-
-  const ToothVisual = ({ toothNumber, status }: { toothNumber: number; status: string }) => {
-    const color = getToothColor(status)
-    const { isMolar, isPremolar, isCanine, isIncisor } = getToothType(toothNumber)
-    const isUpper = toothNumber <= 28
-    const isLower = toothNumber >= 31
-
-    const baseColor = status === "missing" ? "#9ca3af" : "#f8fafc"
-    const borderColor = color
-
-    const hasCavity = status === "cavity"
-    const hasFilling = status === "filling"
-    const hasRootCanal = status === "root_canal"
-    const hasCrown = status === "crown"
-    const isImplant = status === "implant"
-    const isMissing = status === "missing"
+  const ToothImage = ({ toothNumber, status }: { toothNumber: number; status: string }) => {
+    const [imageError, setImageError] = useState(false)
+    const imageNumber = getToothImageNumber(toothNumber)
 
     return (
-      <div className="relative w-full h-full">
-        {isMissing ? (
-          <div className="w-full h-full flex items-center justify-center border-4 border-dashed border-gray-400 rounded-lg bg-gray-100">
+      <div className="relative w-full h-full flex items-center justify-center bg-white rounded-lg overflow-hidden">
+        {status === "missing" ? (
+          <div className="w-full h-full flex items-center justify-center border-4 border-dashed border-gray-400 bg-gray-100">
             <div className="text-gray-600 text-2xl font-bold">✕</div>
           </div>
+        ) : imageError ? (
+          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+            <div className="text-gray-600 text-xs font-bold text-center px-1">{toothNumber}</div>
+          </div>
         ) : (
-          <svg viewBox="0 0 100 120" className="w-full h-full">
-            {/* Tooth Crown */}
-            <g>
-              {isMolar && (
-                <path
-                  d="M 20 20 L 80 20 L 85 50 Q 80 70 50 70 Q 20 70 15 50 Z"
-                  fill={hasCrown ? "#8b5cf6" : baseColor}
-                  stroke={borderColor}
-                  strokeWidth="3"
-                />
-              )}
-              {isPremolar && (
-                <path
-                  d="M 25 20 L 75 20 L 80 45 Q 75 65 50 65 Q 25 65 20 45 Z"
-                  fill={hasCrown ? "#8b5cf6" : baseColor}
-                  stroke={borderColor}
-                  strokeWidth="3"
-                />
-              )}
-              {isCanine && (
-                <path
-                  d="M 35 20 L 65 20 L 70 40 Q 65 60 50 60 Q 35 60 30 40 Z"
-                  fill={hasCrown ? "#8b5cf6" : baseColor}
-                  stroke={borderColor}
-                  strokeWidth="3"
-                />
-              )}
-              {isIncisor && (
-                <path
-                  d="M 40 20 L 60 20 L 62 35 Q 60 55 50 55 Q 40 55 38 35 Z"
-                  fill={hasCrown ? "#8b5cf6" : baseColor}
-                  stroke={borderColor}
-                  strokeWidth="3"
-                />
-              )}
-
-              {hasCavity && (
-                <>
-                  <circle cx="35" cy="35" r="4" fill="#ef4444" opacity="0.8" />
-                  <circle cx="65" cy="35" r="3" fill="#ef4444" opacity="0.8" />
-                  <circle cx="50" cy="45" r="2" fill="#ef4444" opacity="0.8" />
-                </>
-              )}
-
-              {hasFilling && <rect x="40" y="30" width="20" height="15" fill="#f59e0b" opacity="0.6" rx="2" />}
-
-              {hasRootCanal && (
-                <path d="M 50 20 L 50 70" stroke="#f97316" strokeWidth="3" strokeLinecap="round" opacity="0.8" />
-              )}
-
-              {hasCrown && (
-                <path
-                  d="M 25 25 L 75 25 L 78 40 L 75 55 L 25 55 L 22 40 Z"
-                  fill="none"
-                  stroke="#8b5cf6"
-                  strokeWidth="2"
-                  strokeDasharray="4,2"
-                />
-              )}
-            </g>
-
-            {/* Tooth Roots */}
-            <g>
-              {isMolar && (
-                <>
-                  <path d="M 30 70 L 25 120" stroke="#d1d5db" strokeWidth="4" fill="none" />
-                  <path d="M 50 70 L 50 120" stroke="#d1d5db" strokeWidth="4" fill="none" />
-                  <path d="M 70 70 L 75 120" stroke="#d1d5db" strokeWidth="4" fill="none" />
-                </>
-              )}
-              {(isPremolar || isCanine) && (
-                <>
-                  <path d="M 40 65 L 35 120" stroke="#d1d5db" strokeWidth="3" fill="none" />
-                  <path d="M 60 65 L 65 120" stroke="#d1d5db" strokeWidth="3" fill="none" />
-                </>
-              )}
-              {isIncisor && (
-                <>
-                  <path d="M 50 55 L 50 120" stroke="#d1d5db" strokeWidth="3" fill="none" />
-                </>
-              )}
-
-              {isImplant && <rect x="45" y="80" width="10" height="25" fill="#3b82f6" opacity="0.7" rx="2" />}
-            </g>
-
-            {/* Gum Line */}
-            <line
-              x1="10"
-              y1={isUpper ? "75" : "45"}
-              x2="90"
-              y2={isUpper ? "75" : "45"}
-              stroke="#dc2626"
-              strokeWidth="2"
-              strokeDasharray="3,2"
-              opacity="0.6"
+          <>
+            <img
+              src={`/teeth/teeth${imageNumber}.png`}
+              alt={`Tooth ${toothNumber}`}
+              className="w-full h-full object-contain p-2"
+              onError={(e) => {
+                setImageError(true)
+              }}
             />
-          </svg>
+          </>
         )}
       </div>
     )
@@ -202,28 +144,26 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
       {/* Upper Teeth */}
       <div>
         <h3 className="font-semibold text-foreground mb-3 text-sm">Upper Teeth</h3>
-        <div className="grid grid-cols-8 gap-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="grid grid-cols-8 gap-3 p-6 bg-blue-50 rounded-lg border border-blue-200">
           {[18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28].map((toothNum) => (
             <button
               key={toothNum}
-              onClick={() => !readOnly && onToothClick(toothNum)}
+              onClick={() => {
+                setSelectedTooth(toothNum)
+                !readOnly && onToothClick(toothNum)
+              }}
               disabled={readOnly}
-              className={`aspect-[0.8] rounded-lg flex flex-col items-center justify-center font-bold text-xs transition-all overflow-hidden ${
+              className={`h-28 w-full rounded-lg flex flex-col items-center justify-center font-bold text-xs transition-all overflow-hidden border-4 ${
                 readOnly ? "cursor-default" : "hover:shadow-md cursor-pointer hover:scale-105"
-              }`}
+              } ${selectedTooth === toothNum ? "ring-2 ring-offset-2 ring-primary" : ""}`}
               title={`${getToothLabel(toothNum)} - ${teeth[toothNum]?.status || "healthy"}`}
               style={{
-                borderWidth: "3px",
                 borderColor: getToothColor(teeth[toothNum]?.status || "healthy"),
-                backgroundColor: "white",
               }}
             >
-              <div className="w-full h-full p-1">
-                <ToothVisual toothNumber={toothNum} status={teeth[toothNum]?.status || "healthy"} />
+              <div className="w-full h-full">
+                <ToothImage toothNumber={toothNum} status={teeth[toothNum]?.status || "healthy"} />
               </div>
-              <span className="text-[10px] font-semibold text-foreground bg-white/90 px-1 rounded mt-1">
-                {getToothLabel(toothNum)}
-              </span>
             </button>
           ))}
         </div>
@@ -232,28 +172,26 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
       {/* Lower Teeth */}
       <div>
         <h3 className="font-semibold text-foreground mb-3 text-sm">Lower Teeth</h3>
-        <div className="grid grid-cols-8 gap-2 p-4 bg-green-50 rounded-lg border border-green-200">
+        <div className="grid grid-cols-8 gap-3 p-6 bg-green-50 rounded-lg border border-green-200">
           {[38, 37, 36, 35, 34, 33, 32, 31, 41, 42, 43, 44, 45, 46, 47, 48].map((toothNum) => (
             <button
               key={toothNum}
-              onClick={() => !readOnly && onToothClick(toothNum)}
+              onClick={() => {
+                setSelectedTooth(toothNum)
+                !readOnly && onToothClick(toothNum)
+              }}
               disabled={readOnly}
-              className={`aspect-[0.8] rounded-lg flex flex-col items-center justify-center font-bold text-xs transition-all overflow-hidden !p-0 ${
+              className={`h-28 w-full rounded-lg flex flex-col items-center justify-center font-bold text-xs transition-all overflow-hidden border-4 ${
                 readOnly ? "cursor-default" : "hover:shadow-md cursor-pointer hover:scale-105"
-              }`}
+              } ${selectedTooth === toothNum ? "ring-2 ring-offset-2 ring-primary" : ""}`}
               title={`${getToothLabel(toothNum)} - ${teeth[toothNum]?.status || "healthy"}`}
               style={{
-                borderWidth: "3px",
                 borderColor: getToothColor(teeth[toothNum]?.status || "healthy"),
-                backgroundColor: "white",
               }}
             >
-              <div className="w-full h-full ">
-                <ToothVisual toothNumber={toothNum} status={teeth[toothNum]?.status || "healthy"} />
+              <div className="w-full h-full">
+                <ToothImage toothNumber={toothNum} status={teeth[toothNum]?.status || "healthy"} />
               </div>
-              <span className="text-[10px] font-semibold text-foreground bg-white/90 px-1 rounded mt-0">
-                {getToothLabel(toothNum)}
-              </span>
             </button>
           ))}
         </div>

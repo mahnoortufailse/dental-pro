@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { ToothChart, connectDB } from "@/lib/db"
+import { ToothChart, connectDB, Patient } from "@/lib/db"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
@@ -37,10 +37,10 @@ export async function GET(request: NextRequest) {
     }
 
     const queryPatientId = patientId || payload.userId
-    const chart = await ToothChart.findOne({ patientId: queryPatientId.toString() })
+    const charts = await ToothChart.find({ patientId: queryPatientId.toString() }).sort({ createdAt: -1 })
 
-    console.log("[v0] Tooth chart query result:", { patientId: queryPatientId, found: !!chart })
-    return NextResponse.json({ success: true, toothChart: chart || null })
+    console.log("[v0] Tooth chart query result:", { patientId: queryPatientId, found: charts.length > 0 })
+    return NextResponse.json({ success: true, toothChart: charts[0] || null, chartHistory: charts })
   } catch (error) {
     console.error("[v0] Tooth chart API error:", error)
     return NextResponse.json({ error: "Failed to fetch tooth charts", details: String(error) }, { status: 500 })
@@ -81,22 +81,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
-    const { patientId, overallNotes } = await request.json()
+    const { patientId, teeth, overallNotes } = await request.json()
     if (!patientId) {
       return NextResponse.json({ error: "Patient ID is required" }, { status: 400 })
     }
 
-    const teeth: Record<number, any> = {}
-    for (let i = 1; i <= 32; i++) {
-      teeth[i] = { status: "healthy", notes: "", lastUpdated: new Date() }
+    const patient = await Patient.findById(patientId)
+    if (!patient) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 404 })
     }
 
     const newChart = await ToothChart.create({
       patientId: patientId.toString(),
       doctorId: payload.userId,
-      teeth,
+      teeth: teeth || {},
       overallNotes: overallNotes || "",
       lastReview: new Date(),
+      createdAt: new Date(),
     })
 
     return NextResponse.json({ success: true, chart: newChart })

@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { Plus, Save, AlertCircle, History, Trash2 } from "lucide-react"
+import { AlertCircle, History, Trash2, Loader2 } from "lucide-react"
 import { ToothChartVisual } from "@/components/tooth-chart-visual"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 
@@ -19,7 +19,17 @@ export default function ClinicalToolsPage() {
   const [toothChart, setToothChart] = useState(null)
   const [medicalHistory, setMedicalHistory] = useState(null)
   const [patientImages, setPatientImages] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState({
+    patients: false,
+    toothChart: false,
+    medicalHistory: false,
+    patientImages: false,
+    createChart: false,
+    saveChart: false,
+    addMedical: false,
+    uploadImage: false,
+    deleteImage: false,
+  })
   const [showHistory, setShowHistory] = useState(false)
   const [doctorHistory, setDoctorHistory] = useState([])
   const [activeTab, setActiveTab] = useState("tooth-chart")
@@ -46,6 +56,7 @@ export default function ClinicalToolsPage() {
   }, [token])
 
   const fetchPatients = async () => {
+    setLoading((prev) => ({ ...prev, patients: true }))
     try {
       const res = await fetch("/api/patients", {
         headers: { Authorization: `Bearer ${token}` },
@@ -57,6 +68,8 @@ export default function ClinicalToolsPage() {
     } catch (error) {
       console.error(error)
       toast.error("Failed to fetch patients")
+    } finally {
+      setLoading((prev) => ({ ...prev, patients: false }))
     }
   }
 
@@ -68,21 +81,28 @@ export default function ClinicalToolsPage() {
     setPatientImages([])
     setDoctorHistory(patient?.doctorHistory || [])
 
-    // Fetch tooth chart
+    setLoading((prev) => ({ ...prev, toothChart: true, medicalHistory: true, patientImages: true }))
+
     try {
-      const res = await fetch("/api/tooth-chart", {
+      const res = await fetch(`/api/tooth-chart?patientId=${patientId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
         const data = await res.json()
-        const chart = data.charts?.find((c: any) => c.patientId.toString() === patientId)
-        setToothChart(chart || null)
+        const chart = data.toothChart || (data.charts && data.charts[0])
+        if (chart && chart.patientId.toString() === patientId) {
+          setToothChart(chart)
+          console.log("[v0] Tooth chart loaded:", chart)
+        }
+      } else {
+        console.log("[v0] No tooth chart found for patient:", patientId)
       }
     } catch (error) {
-      console.error(error)
+      console.error("[v0] Error fetching tooth chart:", error)
+    } finally {
+      setLoading((prev) => ({ ...prev, toothChart: false }))
     }
 
-    // Fetch medical history
     try {
       const res = await fetch(`/api/medical-history?patientId=${patientId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -93,9 +113,10 @@ export default function ClinicalToolsPage() {
       }
     } catch (error) {
       console.error(error)
+    } finally {
+      setLoading((prev) => ({ ...prev, medicalHistory: false }))
     }
 
-    // Fetch patient images
     try {
       const res = await fetch(`/api/patient-images?patientId=${patientId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -106,12 +127,14 @@ export default function ClinicalToolsPage() {
       }
     } catch (error) {
       console.error(error)
+    } finally {
+      setLoading((prev) => ({ ...prev, patientImages: false }))
     }
   }
 
   const handleCreateToothChart = async () => {
     if (!selectedPatient) return toast.error("Please select a patient first")
-    setLoading(true)
+    setLoading((prev) => ({ ...prev, createChart: true }))
 
     try {
       const patientId = selectedPatient._id || selectedPatient.id
@@ -138,22 +161,23 @@ export default function ClinicalToolsPage() {
       console.error(error)
       toast.error("Failed to create tooth chart")
     } finally {
-      setLoading(false)
+      setLoading((prev) => ({ ...prev, createChart: false }))
     }
   }
 
   const handleToothClick = (toothNumber: number) => {
     if (!toothChart) return
     const statuses = ["healthy", "cavity", "missing", "treated", "root_canal", "crown"]
-    const currentStatus = toothChart.teeth[toothNumber]?.status || "healthy"
+    const currentTeeth = toothChart.teeth || {}
+    const currentStatus = currentTeeth[toothNumber]?.status || "healthy"
     const nextStatus = statuses[(statuses.indexOf(currentStatus) + 1) % statuses.length]
 
     setToothChart({
       ...toothChart,
       teeth: {
-        ...toothChart.teeth,
+        ...currentTeeth,
         [toothNumber]: {
-          ...toothChart.teeth[toothNumber],
+          ...(currentTeeth[toothNumber] || {}),
           status: nextStatus,
           lastUpdated: new Date(),
         },
@@ -163,7 +187,7 @@ export default function ClinicalToolsPage() {
 
   const handleSaveToothChart = async () => {
     if (!toothChart) return
-    setLoading(true)
+    setLoading((prev) => ({ ...prev, saveChart: true }))
 
     try {
       const chartId = toothChart._id || toothChart.id
@@ -189,7 +213,7 @@ export default function ClinicalToolsPage() {
       console.error(error)
       toast.error("Failed to save tooth chart")
     } finally {
-      setLoading(false)
+      setLoading((prev) => ({ ...prev, saveChart: false }))
     }
   }
 
@@ -219,7 +243,7 @@ export default function ClinicalToolsPage() {
       return
     }
 
-    setLoading(true)
+    setLoading((prev) => ({ ...prev, addMedical: true }))
     try {
       const res = await fetch("/api/medical-history", {
         method: "POST",
@@ -260,7 +284,7 @@ export default function ClinicalToolsPage() {
       console.error(error)
       toast.error("Error adding medical entry")
     } finally {
-      setLoading(false)
+      setLoading((prev) => ({ ...prev, addMedical: false }))
     }
   }
 
@@ -287,7 +311,7 @@ export default function ClinicalToolsPage() {
       return
     }
 
-    setLoading(true)
+    setLoading((prev) => ({ ...prev, uploadImage: true }))
     try {
       const res = await fetch("/api/patient-images", {
         method: "POST",
@@ -321,11 +345,12 @@ export default function ClinicalToolsPage() {
       console.error(error)
       toast.error("Error uploading image")
     } finally {
-      setLoading(false)
+      setLoading((prev) => ({ ...prev, uploadImage: false }))
     }
   }
 
   const handleDeleteImage = async (imageId: string) => {
+    setLoading((prev) => ({ ...prev, deleteImage: true }))
     try {
       const res = await fetch(`/api/patient-images/${imageId}`, {
         method: "DELETE",
@@ -341,6 +366,8 @@ export default function ClinicalToolsPage() {
     } catch (error) {
       console.error(error)
       toast.error("Error deleting image")
+    } finally {
+      setLoading((prev) => ({ ...prev, deleteImage: false }))
     }
   }
 
@@ -363,14 +390,19 @@ export default function ClinicalToolsPage() {
                 <div className="bg-card rounded-lg shadow-md border border-border p-6">
                   <h2 className="text-lg sm:text-xl font-bold mb-4 text-foreground">Your Patients</h2>
                   <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                    {patients.length === 0 ? (
+                    {loading.patients ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : patients.length === 0 ? (
                       <p className="text-muted-foreground text-sm">No patients assigned</p>
                     ) : (
                       patients.map((patient) => (
                         <button
                           key={patient._id || patient.id}
                           onClick={() => handleSelectPatient(patient._id || patient.id)}
-                          className={`w-full text-left px-4 py-3 rounded-lg transition-colors text-sm sm:text-base font-medium ${
+                          disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
+                          className={`w-full text-left px-4 py-3 rounded-lg transition-colors text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
                             selectedPatient?._id === (patient._id || patient.id)
                               ? "bg-primary text-primary-foreground"
                               : "bg-muted hover:bg-muted/80 text-foreground"
@@ -398,7 +430,8 @@ export default function ClinicalToolsPage() {
                         </div>
                         <button
                           onClick={() => setShowHistory(!showHistory)}
-                          className="flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground px-3 py-2 rounded-lg transition-colors text-sm font-medium"
+                          disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
+                          className="flex items-center gap-2 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground px-3 py-2 rounded-lg transition-colors text-sm font-medium disabled:cursor-not-allowed"
                         >
                           <History className="w-4 h-4" />
                           History
@@ -427,7 +460,8 @@ export default function ClinicalToolsPage() {
                         <button
                           key={tab}
                           onClick={() => setActiveTab(tab)}
-                          className={`px-4 py-2 font-medium text-sm transition-colors ${
+                          disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
+                          className={`px-4 py-2 font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                             activeTab === tab
                               ? "text-primary border-b-2 border-primary"
                               : "text-muted-foreground hover:text-foreground"
@@ -443,17 +477,21 @@ export default function ClinicalToolsPage() {
                     {/* Tooth Chart Tab */}
                     {activeTab === "tooth-chart" && (
                       <>
-                        {!toothChart ? (
+                        {loading.toothChart ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : !toothChart ? (
                           <div className="text-center py-12">
                             <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
                             <p className="text-muted-foreground mb-4">No tooth chart created yet</p>
                             <button
                               onClick={handleCreateToothChart}
-                              disabled={loading}
-                              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={loading.createChart}
+                              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <Plus className="w-4 h-4" />
-                              {loading ? "Creating..." : "Create Tooth Chart"}
+                              {loading.createChart && <Loader2 className="w-4 h-4 animate-spin" />}
+                              {loading.createChart ? "Creating..." : "Create Tooth Chart"}
                             </button>
                           </div>
                         ) : (
@@ -470,7 +508,8 @@ export default function ClinicalToolsPage() {
                                     overallNotes: e.target.value,
                                   })
                                 }
-                                className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                                disabled={loading.saveChart}
+                                className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 rows={4}
                                 placeholder="Add clinical notes about the patient's dental condition..."
                               />
@@ -478,11 +517,11 @@ export default function ClinicalToolsPage() {
 
                             <button
                               onClick={handleSaveToothChart}
-                              disabled={loading}
-                              className="mt-6 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={loading.saveChart}
+                              className="mt-6 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <Save className="w-4 h-4" />
-                              {loading ? "Saving..." : "Save Chart"}
+                              {loading.saveChart && <Loader2 className="w-4 h-4 animate-spin" />}
+                              {loading.saveChart ? "Saving..." : "Save Chart"}
                             </button>
                           </>
                         )}
@@ -492,7 +531,11 @@ export default function ClinicalToolsPage() {
                     {/* Medical History Tab */}
                     {activeTab === "medical-history" && (
                       <div className="space-y-6">
-                        {medicalHistory && medicalHistory.entries && medicalHistory.entries.length > 0 ? (
+                        {loading.medicalHistory ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : medicalHistory && medicalHistory.entries && medicalHistory.entries.length > 0 ? (
                           <div className="space-y-3">
                             <h3 className="font-semibold text-foreground">Medical History Entries</h3>
                             {medicalHistory.entries.map((entry, idx) => (
@@ -542,7 +585,8 @@ export default function ClinicalToolsPage() {
                                     notes: "",
                                   })
                                 }}
-                                className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm ${
+                                disabled={loading.addMedical}
+                                className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                                   medicalErrors.notes ? "border-destructive" : "border-border"
                                 }`}
                                 rows={2}
@@ -566,7 +610,8 @@ export default function ClinicalToolsPage() {
                                     findings: "",
                                   })
                                 }}
-                                className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm ${
+                                disabled={loading.addMedical}
+                                className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                                   medicalErrors.findings ? "border-destructive" : "border-border"
                                 }`}
                                 rows={2}
@@ -590,7 +635,8 @@ export default function ClinicalToolsPage() {
                                     treatment: "",
                                   })
                                 }}
-                                className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm ${
+                                disabled={loading.addMedical}
+                                className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                                   medicalErrors.treatment ? "border-destructive" : "border-border"
                                 }`}
                                 rows={2}
@@ -609,14 +655,16 @@ export default function ClinicalToolsPage() {
                                   medications: e.target.value,
                                 })
                               }
-                              className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                              disabled={loading.addMedical}
+                              className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <button
                               type="submit"
-                              disabled={loading}
-                              className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50"
+                              disabled={loading.addMedical}
+                              className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {loading ? "Adding..." : "Add Entry"}
+                              {loading.addMedical && <Loader2 className="w-4 h-4 animate-spin" />}
+                              {loading.addMedical ? "Adding..." : "Add Entry"}
                             </button>
                           </form>
                         )}
@@ -626,7 +674,11 @@ export default function ClinicalToolsPage() {
                     {/* Images Tab */}
                     {activeTab === "images" && (
                       <div className="space-y-6">
-                        {patientImages.length > 0 ? (
+                        {loading.patientImages ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : patientImages.length > 0 ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {patientImages.map((image) => (
                               <div key={image._id} className="p-4 bg-muted rounded-lg">
@@ -648,7 +700,8 @@ export default function ClinicalToolsPage() {
                                     setImageToDelete(image)
                                     setShowDeleteModal(true)
                                   }}
-                                  className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1"
+                                  disabled={loading.deleteImage}
+                                  className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                   Delete
@@ -669,7 +722,8 @@ export default function ClinicalToolsPage() {
                                 type: e.target.value,
                               })
                             }
-                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                            disabled={loading.uploadImage}
+                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <option value="xray">X-Ray</option>
                             <option value="photo">Photo</option>
@@ -688,7 +742,8 @@ export default function ClinicalToolsPage() {
                                 })
                                 setImageErrors({ ...imageErrors, title: "" })
                               }}
-                              className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm ${
+                              disabled={loading.uploadImage}
+                              className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                                 imageErrors.title ? "border-destructive" : "border-border"
                               }`}
                             />
@@ -709,7 +764,8 @@ export default function ClinicalToolsPage() {
                                   imageUrl: "",
                                 })
                               }}
-                              className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm ${
+                              disabled={loading.uploadImage}
+                              className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                                 imageErrors.imageUrl ? "border-destructive" : "border-border"
                               }`}
                               rows={2}
@@ -727,15 +783,17 @@ export default function ClinicalToolsPage() {
                                 notes: e.target.value,
                               })
                             }
-                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                            disabled={loading.uploadImage}
+                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             rows={2}
                           />
                           <button
                             type="submit"
-                            disabled={loading || !imageUpload.imageUrl}
-                            className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50"
+                            disabled={loading.uploadImage || !imageUpload.imageUrl}
+                            className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {loading ? "Uploading..." : "Upload Image"}
+                            {loading.uploadImage && <Loader2 className="w-4 h-4 animate-spin" />}
+                            {loading.uploadImage ? "Uploading..." : "Upload Image"}
                           </button>
                         </form>
                       </div>
@@ -765,6 +823,7 @@ export default function ClinicalToolsPage() {
             setShowDeleteModal(false)
             setImageToDelete(null)
           }}
+          isLoading={loading.deleteImage}
         />
       </div>
     </ProtectedRoute>

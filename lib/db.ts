@@ -99,6 +99,7 @@ const toothChartSchema = new mongoose.Schema({
   overallNotes: String,
   lastReview: Date,
   createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
 })
 
 const billingSchema = new mongoose.Schema({

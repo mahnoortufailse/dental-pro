@@ -51,99 +51,102 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
+// Also update the PUT endpoint for patient updates - FIXED VERSION
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await connectDB()
-    const token = request.headers.get("authorization")?.split(" ")[1]
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    await connectDB();
+    const token = request.headers.get("authorization")?.split(" ")[1];
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const payload = verifyToken(token)
-    if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    const payload = verifyToken(token);
+    if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
 
-    const patient = await Patient.findById(params.id)
-    if (!patient) return NextResponse.json({ error: "Patient not found" }, { status: 404 })
+    const { id } = params;
+    const updateData = await request.json();
 
-    const updates = await request.json()
-    console.log("[v0] Update request received:", { patientId: params.id, updates })
+    console.log("[v0] PUT update data received:", updateData); // Debug log
 
-    if (payload.role === "doctor") {
-      patient.medicalHistory = updates.medicalHistory || patient.medicalHistory
-      patient.allergies = updates.allergies || patient.allergies
-      patient.medicalConditions = updates.medicalConditions || patient.medicalConditions
-      console.log("[v0] Doctor updated medical info for patient:", params.id)
-    } else {
-      // Update basic fields
-      if (updates.name) patient.name = updates.name
-      if (updates.phone) patient.phone = updates.phone
-      if (updates.email) patient.email = updates.email
-      if (updates.dob) patient.dob = updates.dob
-      if (updates.insuranceProvider) patient.insuranceProvider = updates.insuranceProvider
-      if (updates.allergies) patient.allergies = updates.allergies
-      if (updates.medicalConditions) patient.medicalConditions = updates.medicalConditions
-      if (updates.medicalHistory) patient.medicalHistory = updates.medicalHistory
+    // Validate critical credentials if they're being updated
+    if (updateData.phone || updateData.email || updateData.dob || updateData.insuranceProvider || updateData.idNumber) {
+      const patient = await Patient.findById(id);
+      if (!patient) {
+        return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+      }
 
-      if (updates.assignedDoctorId) {
-        console.log(
-          "[v0] Attempting to update assignedDoctorId:",
-          updates.assignedDoctorId,
-          "type:",
-          typeof updates.assignedDoctorId,
-        )
+      const mergedData = { ...patient.toObject(), ...updateData };
+      
+      const missingCriticalCredentials = [];
+      if (!mergedData.name?.trim()) missingCriticalCredentials.push("Name");
+      if (!mergedData.phone?.trim()) missingCriticalCredentials.push("Phone");
+      if (!mergedData.email?.trim()) missingCriticalCredentials.push("Email");
+      if (!mergedData.dob?.trim()) missingCriticalCredentials.push("Date of Birth");
+      if (!mergedData.insuranceProvider?.trim()) missingCriticalCredentials.push("Insurance Provider");
+      if (!mergedData.idNumber?.trim()) missingCriticalCredentials.push("ID Number");
 
-        // Validate the doctor ID format
-        if (!Types.ObjectId.isValid(updates.assignedDoctorId)) {
-          console.error(
-            "[v0] Invalid doctor ID format:",
-            updates.assignedDoctorId,
-            "type:",
-            typeof updates.assignedDoctorId,
-          )
-          return NextResponse.json({ error: "Invalid doctor ID format" }, { status: 400 })
-        }
-
-        // Verify the doctor exists and is actually a doctor
-        const doctor = await User.findById(updates.assignedDoctorId)
-        if (!doctor) {
-          console.error("[v0] Doctor not found:", updates.assignedDoctorId)
-          return NextResponse.json({ error: "Selected doctor not found" }, { status: 404 })
-        }
-
-        if (doctor.role !== "doctor") {
-          console.error("[v0] Selected user is not a doctor:", updates.assignedDoctorId)
-          return NextResponse.json({ error: "Selected user is not a doctor" }, { status: 400 })
-        }
-
-        const newDoctorId = new Types.ObjectId(updates.assignedDoctorId)
-
-        // Only update doctorHistory if the doctor is actually changing
-        if (!patient.assignedDoctorId || !patient.assignedDoctorId.equals(newDoctorId)) {
-          patient.assignedDoctorId = newDoctorId
-
-          // Add to doctor history
-          if (!patient.doctorHistory) {
-            patient.doctorHistory = []
-          }
-
-          patient.doctorHistory.push({
-            doctorId: newDoctorId,
-            doctorName: doctor.name,
-            startDate: new Date(),
-          })
-
-          console.log("[v0] Updated assignedDoctorId to:", newDoctorId, "doctor name:", doctor.name)
-        }
+      if (missingCriticalCredentials.length > 0) {
+        return NextResponse.json(
+          { 
+            error: `Cannot update: Missing critical patient credentials: ${missingCriticalCredentials.join(", ")}` 
+          }, 
+          { status: 400 }
+        );
       }
     }
 
-    await patient.save()
-    await patient.populate("assignedDoctorId", "name email specialty")
+    // ALWAYS recalculate credential status on update - FIXED
+    const patient = await Patient.findById(id);
+    if (!patient) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+    }
 
-    console.log("[v0] Patient updated successfully:", patient._id, "assigned to:", patient.assignedDoctorId?._id)
-    return NextResponse.json({ success: true, patient })
+    // Merge existing data with update data to get complete picture
+    const mergedData = { ...patient.toObject(), ...updateData };
+    
+    console.log("[v0] Merged data for credential check:", { // Debug log
+      insuranceNumber: mergedData.insuranceNumber,
+      address: mergedData.address,
+      insuranceProvider: mergedData.insuranceProvider,
+      idNumber: mergedData.idNumber
+    });
+
+    // Check for missing non-critical credentials
+    const missingNonCriticalCredentials = [];
+    if (!mergedData.insuranceNumber?.trim()) missingNonCriticalCredentials.push("Insurance Number");
+    if (!mergedData.address?.trim()) missingNonCriticalCredentials.push("Address");
+
+    console.log("[v0] Missing non-critical credentials:", missingNonCriticalCredentials); // Debug log
+
+    // Update credential status based on non-critical fields
+    updateData.credentialStatus = missingNonCriticalCredentials.length === 0 ? "complete" : "incomplete";
+    updateData.missingCredentials = missingNonCriticalCredentials;
+
+    console.log("[v0] Final update data with credential status:", { // Debug log
+      credentialStatus: updateData.credentialStatus,
+      missingCredentials: updateData.missingCredentials
+    });
+
+    const updatedPatient = await Patient.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate("assignedDoctorId", "name email specialty");
+
+    if (!updatedPatient) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+    }
+
+    console.log("[v0] Patient updated successfully:", { // Debug log
+      id: updatedPatient._id,
+      credentialStatus: updatedPatient.credentialStatus,
+      missingCredentials: updatedPatient.missingCredentials,
+      insuranceNumber: updatedPatient.insuranceNumber
+    });
+
+    return NextResponse.json({ success: true, patient: updatedPatient });
   } catch (error) {
-    console.error("[v0] Update patient error:", error)
-    const errorMessage = error instanceof Error ? error.message : "Failed to update patient"
-    return NextResponse.json({ error: errorMessage }, { status: 500 })
+    console.error("[v0] PUT /api/patients error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to update patient";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
