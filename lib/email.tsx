@@ -26,6 +26,34 @@ function getTransporter() {
   return transporter
 }
 
+export async function sendEmail({
+  to,
+  subject,
+  html,
+}: {
+  to: string
+  subject: string
+  html: string
+}) {
+  try {
+    const transporter = getTransporter()
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      html,
+    }
+
+    await transporter.sendMail(mailOptions)
+    console.log("[v0] Email sent successfully to:", to)
+    return true
+  } catch (error) {
+    console.error("[v0] Error sending email:", error)
+    throw error
+  }
+}
+
 export async function sendPatientCredentials(email: string, patientName: string, strongPassword: string) {
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
@@ -60,7 +88,15 @@ export async function sendPatientCredentials(email: string, patientName: string,
               Please use these credentials to log in to your Dental Clinic Portal at <a href="${appUrl}" style="color: #667eea; text-decoration: none;">${appUrl}</a>.
             </p>
             
-           
+            <div style="background: #e8f4f8; border: 1px solid #b3e5fc; padding: 15px; border-radius: 4px; margin: 20px 0;">
+              <p style="margin: 0; color: #01579b; font-size: 13px;">
+                <strong>ℹ Security Tip:</strong> We recommend changing your password on your first login. You can do this from your account settings.
+              </p>
+            </div>
+            
+            <p style="color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #ddd; padding-top: 20px;">
+              If you have any questions or need assistance, please contact the clinic administrator.
+            </p>
           </div>
         </div>
       `,
@@ -71,6 +107,69 @@ export async function sendPatientCredentials(email: string, patientName: string,
     return true
   } catch (error) {
     console.error("[v0] Error sending patient credentials email:", error)
+    throw error
+  }
+}
+
+export async function sendStaffCredentials(email: string, staffName: string, strongPassword: string, role: string) {
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    const transporter = getTransporter()
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Your Dental Clinic Staff Portal Credentials",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0;">Welcome to Your Dental Clinic Staff Portal</h1>
+          </div>
+          
+          <div style="background: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 8px 8px;">
+            <p style="color: #333; font-size: 16px;">Dear <strong>${staffName}</strong>,</p>
+            
+            <p style="color: #555; font-size: 14px; line-height: 1.6;">
+              Your staff account has been created in our dental clinic management system. You have been registered as a <strong>${role}</strong>. You can now access patient records, appointments, clinical tools, and other administrative features.
+            </p>
+            
+            <div style="background: white; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0 0 10px 0; color: #333;"><strong>Login Credentials:</strong></p>
+              <p style="margin: 5px 0; color: #555;">
+                <strong>Email:</strong> <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">${email}</code><br>
+                <strong>Password:</strong> <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">${strongPassword}</code><br>
+                <strong>Role:</strong> <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">${role}</code>
+              </p>
+            </div>
+            
+            <p style="color: #555; font-size: 14px; line-height: 1.6; margin: 20px 0;">
+              Please use these credentials to log in to your Dental Clinic Staff Portal at <a href="${appUrl}" style="color: #667eea; text-decoration: none;">${appUrl}</a>.
+            </p>
+            
+            <div style="background: #e8f4f8; border: 1px solid #b3e5fc; padding: 15px; border-radius: 4px; margin: 20px 0;">
+              <p style="margin: 0; color: #01579b; font-size: 13px;">
+                <strong>ℹ Security Tip:</strong> We recommend changing your password on your first login. You can do this from your account settings.
+              </p>
+            </div>
+            
+            <p style="color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #ddd; padding-top: 20px;">
+              If you have any questions or need assistance, please contact the clinic administrator.
+            </p>
+             <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0;">
+              <p style="margin: 0; color: #856404; font-size: 14px;">
+                ⚠️ Please change your password after logging in.
+              </p>
+            </div>
+          </div>
+        </div>
+      `,
+    }
+
+    await transporter.sendMail(mailOptions)
+    console.log("[v0] Staff credentials email sent successfully to:", email)
+    return true
+  } catch (error) {
+    console.error("[v0] Error sending staff credentials email:", error)
     throw error
   }
 }
@@ -116,6 +215,11 @@ export async function sendPasswordResetEmail(email: string, userName: string, re
             <p style="color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #ddd; padding-top: 20px;">
               If you did not request this password reset, please contact our clinic immediately.
             </p>
+             <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0;">
+              <p style="margin: 0; color: #856404; font-size: 14px;">
+                ⚠️ Please change your password after logging in.
+              </p>
+            </div>
           </div>
         </div>
       `,

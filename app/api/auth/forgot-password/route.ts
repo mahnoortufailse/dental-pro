@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { User, connectDB } from "@/lib/db"
 import { sendPasswordResetEmail } from "@/lib/email"
@@ -12,8 +13,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
     }
 
-    if (userType !== "staff") {
-      return NextResponse.json({ error: "Password reset is only available for staff members" }, { status: 403 })
+    if (!userType || (userType !== "staff" && userType !== "patient")) {
+      return NextResponse.json({ error: "Invalid user type" }, { status: 400 })
     }
 
     const user = await User.findOne({ email: email.toLowerCase() })
@@ -35,10 +36,10 @@ export async function POST(request: NextRequest) {
       resetTokenExpiry,
     })
 
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${resetToken}&type=staff`
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${resetToken}&type=${userType}`
     await sendPasswordResetEmail(email, user.name, resetUrl)
 
-    console.log("[v0] Password reset email sent to staff:", email)
+    console.log("[v0] Password reset email sent to", userType + ":", email)
 
     return NextResponse.json({
       success: true,

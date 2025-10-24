@@ -81,6 +81,15 @@ export default function StaffPage() {
             </div>
 
             <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="flex justify-between items-center p-6 border-b">
+                <h2 className="text-lg font-semibold">Staff Members</h2>
+                <a
+                  href="/signup"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Register New Staff
+                </a>
+              </div>
               <table className="w-full">
                 <thead className="bg-gray-100 border-b">
                   <tr>

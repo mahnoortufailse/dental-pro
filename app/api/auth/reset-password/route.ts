@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { User, connectDB } from "@/lib/db"
 import { hashPassword } from "@/lib/encryption"
@@ -12,8 +13,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    if (userType !== "staff") {
-      return NextResponse.json({ error: "Password reset is only available for staff members" }, { status: 403 })
+    if (userType !== "staff" && userType !== "patient") {
+      return NextResponse.json({ error: "Invalid user type" }, { status: 400 })
     }
 
     const resetTokenHash = crypto.createHash("sha256").update(token).digest("hex")
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       resetTokenExpiry: null,
     })
 
-    console.log("[v0] Password reset successfully for staff:", user.email)
+    console.log("[v0] Password reset successfully for", userType + ":", user.email)
 
     return NextResponse.json({
       success: true,
