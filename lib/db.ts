@@ -141,6 +141,7 @@ const medicalHistorySchema = new mongoose.Schema({
       findings: String,
       treatment: String,
       medications: [String],
+      doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     },
   ],
   createdAt: { type: Date, default: Date.now },

@@ -177,7 +177,12 @@ export default function PatientDetailPage() {
 
                 {/* Medical History Tab */}
                 {activeTab === "medical-history" && (
-                  <MedicalHistorySection patientId={patientId} token={token!} isDoctor={user?.role === "doctor"} />
+                  <MedicalHistorySection
+                    patientId={patientId}
+                    token={token!}
+                    isDoctor={user?.role === "doctor"}
+                    currentDoctorId={user?._id}
+                  />
                 )}
 
                 {/* Tooth Chart Tab */}

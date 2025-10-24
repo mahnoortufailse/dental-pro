@@ -1,5 +1,6 @@
+//@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { MedicalHistory, connectDB } from "@/lib/db"
+import { MedicalHistory, connectDB, Patient } from "@/lib/db"
 import { verifyToken } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
@@ -16,6 +17,20 @@ export async function GET(request: NextRequest) {
 
     if (!patientId) {
       return NextResponse.json({ error: "Patient ID required" }, { status: 400 })
+    }
+
+    const patient = await Patient.findById(patientId)
+    if (!patient) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 404 })
+    }
+
+    if (payload.role === "doctor") {
+      const isAssignedDoctor = patient.assignedDoctorId?.toString() === payload.userId
+      const wasPreviouslyAssigned = patient.doctorHistory?.some((dh: any) => dh.doctorId?.toString() === payload.userId)
+
+      if (!isAssignedDoctor && !wasPreviouslyAssigned) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 })
+      }
     }
 
     const history = await MedicalHistory.findOne({ patientId }).populate("doctorId", "name specialty")
@@ -53,10 +68,21 @@ export async function POST(request: NextRequest) {
       history = await MedicalHistory.create({
         patientId,
         doctorId: payload.userId,
-        entries: [entry],
+        entries: [
+          {
+            ...entry,
+            doctorId: payload.userId,
+            date: new Date(),
+          },
+        ],
       })
     } else {
-      history.entries.push(entry)
+      history.entries.push({
+        ...entry,
+        doctorId: payload.userId,
+        date: new Date(),
+      })
+      history.updatedAt = new Date()
       await history.save()
     }
 

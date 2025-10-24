@@ -11,6 +11,7 @@ import { toast } from "react-hot-toast"
 import { AlertCircle, History, Trash2, Loader2 } from "lucide-react"
 import { ToothChartVisual } from "@/components/tooth-chart-visual"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
+import { Button } from "@/components/ui/button"
 
 export default function ClinicalToolsPage() {
   const { user, token } = useAuth()
@@ -40,6 +41,13 @@ export default function ClinicalToolsPage() {
     medications: "",
   })
   const [medicalErrors, setMedicalErrors] = useState<Record<string, string>>({})
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
+  const [editingEntry, setEditingEntry] = useState({
+    notes: "",
+    findings: "",
+    treatment: "",
+    medications: "",
+  })
   const [imageUpload, setImageUpload] = useState({
     type: "xray",
     title: "",
@@ -50,6 +58,8 @@ export default function ClinicalToolsPage() {
   const [imageErrors, setImageErrors] = useState<Record<string, string>>({})
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [imageToDelete, setImageToDelete] = useState<any>(null)
+  const [showMedicalDeleteModal, setShowMedicalDeleteModal] = useState(false)
+  const [medicalEntryToDelete, setMedicalEntryToDelete] = useState<number | null>(null)
 
   useEffect(() => {
     if (token) fetchPatients()
@@ -371,6 +381,102 @@ export default function ClinicalToolsPage() {
     }
   }
 
+  const handleEditMedicalEntry = (index: number, entry: any) => {
+    setEditingEntryId(index.toString())
+    setEditingEntry({
+      notes: entry.notes || "",
+      findings: entry.findings || "",
+      treatment: entry.treatment || "",
+      medications: (entry.medications || []).join(", "),
+    })
+  }
+
+  const handleSaveEditedEntry = async () => {
+    if (editingEntryId === null || !medicalHistory) return
+
+    if (!editingEntry.notes.trim() || !editingEntry.findings.trim() || !editingEntry.treatment.trim()) {
+      toast.error("Please fill in all required fields: Notes, Findings, and Treatment")
+      return
+    }
+
+    setLoading((prev) => ({ ...prev, addMedical: true }))
+    try {
+      const entryIndex = Number.parseInt(editingEntryId)
+      const res = await fetch(`/api/medical-history/${medicalHistory._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          entryIndex,
+          entry: {
+            notes: editingEntry.notes.trim(),
+            findings: editingEntry.findings.trim(),
+            treatment: editingEntry.treatment.trim(),
+            medications: editingEntry.medications
+              .split(",")
+              .map((m) => m.trim())
+              .filter(Boolean),
+          },
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setMedicalHistory(data.history)
+        setEditingEntryId(null)
+        setEditingEntry({
+          notes: "",
+          findings: "",
+          treatment: "",
+          medications: "",
+        })
+        toast.success("Medical entry updated successfully")
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to update medical entry")
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Error updating medical entry")
+    } finally {
+      setLoading((prev) => ({ ...prev, addMedical: false }))
+    }
+  }
+
+  const handleDeleteMedicalEntry = async (index: number) => {
+    if (!medicalHistory) return
+
+    setLoading((prev) => ({ ...prev, addMedical: true }))
+    try {
+      const res = await fetch(`/api/medical-history/${medicalHistory._id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ entryIndex: index }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setMedicalHistory(data.history)
+        toast.success("Medical entry deleted successfully")
+        setShowMedicalDeleteModal(false)
+        setMedicalEntryToDelete(null)
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to delete medical entry")
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Error deleting medical entry")
+    } finally {
+      setLoading((prev) => ({ ...prev, addMedical: false }))
+    }
+  }
+
   return (
     <ProtectedRoute allowedRoles={["admin", "doctor"]}>
       <div className="flex h-screen bg-background">
@@ -402,7 +508,7 @@ export default function ClinicalToolsPage() {
                           key={patient._id || patient.id}
                           onClick={() => handleSelectPatient(patient._id || patient.id)}
                           disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
-                          className={`w-full text-left px-4 py-3 rounded-lg transition-colors text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+                          className={`w-full text-left px-4 py-3 rounded-lg transition-colors text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                             selectedPatient?._id === (patient._id || patient.id)
                               ? "bg-primary text-primary-foreground"
                               : "bg-muted hover:bg-muted/80 text-foreground"
@@ -431,7 +537,7 @@ export default function ClinicalToolsPage() {
                         <button
                           onClick={() => setShowHistory(!showHistory)}
                           disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
-                          className="flex items-center gap-2 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground px-3 py-2 rounded-lg transition-colors text-sm font-medium disabled:cursor-not-allowed"
+                          className="flex items-center gap-2 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground px-3 py-2 rounded-lg transition-colors text-sm font-medium disabled:cursor-not-allowed cursor-pointer"
                         >
                           <History className="w-4 h-4" />
                           History
@@ -461,7 +567,7 @@ export default function ClinicalToolsPage() {
                           key={tab}
                           onClick={() => setActiveTab(tab)}
                           disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
-                          className={`px-4 py-2 font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                          className={`px-4 py-2 font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                             activeTab === tab
                               ? "text-primary border-b-2 border-primary"
                               : "text-muted-foreground hover:text-foreground"
@@ -488,7 +594,7 @@ export default function ClinicalToolsPage() {
                             <button
                               onClick={handleCreateToothChart}
                               disabled={loading.createChart}
-                              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                             >
                               {loading.createChart && <Loader2 className="w-4 h-4 animate-spin" />}
                               {loading.createChart ? "Creating..." : "Create Tooth Chart"}
@@ -518,7 +624,7 @@ export default function ClinicalToolsPage() {
                             <button
                               onClick={handleSaveToothChart}
                               disabled={loading.saveChart}
-                              className="mt-6 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="mt-6 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                             >
                               {loading.saveChart && <Loader2 className="w-4 h-4 animate-spin" />}
                               {loading.saveChart ? "Saving..." : "Save Chart"}
@@ -539,27 +645,172 @@ export default function ClinicalToolsPage() {
                           <div className="space-y-3">
                             <h3 className="font-semibold text-foreground">Medical History Entries</h3>
                             {medicalHistory.entries.map((entry, idx) => (
-                              <div key={idx} className="p-4 bg-muted rounded-lg">
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  {new Date(entry.date).toLocaleDateString()}
-                                </p>
-                                {entry.notes && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-foreground">Notes:</p>
-                                    <p className="text-sm text-foreground">{entry.notes}</p>
+                              <div key={idx} className="p-4 bg-muted rounded-lg border border-border">
+                                {editingEntryId === idx.toString() ? (
+                                  <div className="space-y-4">
+                                    <div>
+                                      <label className="block text-xs font-semibold text-foreground mb-2">
+                                        Notes *
+                                      </label>
+                                      <textarea
+                                        value={editingEntry.notes}
+                                        onChange={(e) =>
+                                          setEditingEntry({
+                                            ...editingEntry,
+                                            notes: e.target.value,
+                                          })
+                                        }
+                                        disabled={loading.addMedical}
+                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                        rows={2}
+                                        placeholder="Enter clinical notes..."
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-semibold text-foreground mb-2">
+                                        Findings *
+                                      </label>
+                                      <textarea
+                                        value={editingEntry.findings}
+                                        onChange={(e) =>
+                                          setEditingEntry({
+                                            ...editingEntry,
+                                            findings: e.target.value,
+                                          })
+                                        }
+                                        disabled={loading.addMedical}
+                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                        rows={2}
+                                        placeholder="Enter findings..."
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-semibold text-foreground mb-2">
+                                        Treatment *
+                                      </label>
+                                      <textarea
+                                        value={editingEntry.treatment}
+                                        onChange={(e) =>
+                                          setEditingEntry({
+                                            ...editingEntry,
+                                            treatment: e.target.value,
+                                          })
+                                        }
+                                        disabled={loading.addMedical}
+                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                        rows={2}
+                                        placeholder="Enter treatment..."
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-semibold text-foreground mb-2">
+                                        Medications
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={editingEntry.medications}
+                                        onChange={(e) =>
+                                          setEditingEntry({
+                                            ...editingEntry,
+                                            medications: e.target.value,
+                                          })
+                                        }
+                                        disabled={loading.addMedical}
+                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                        placeholder="Comma-separated medications"
+                                      />
+                                    </div>
+                                    <div className="flex gap-3 pt-2">
+                                      <Button
+                                        onClick={handleSaveEditedEntry}
+                                        disabled={loading.addMedical}
+                                        variant="default"
+                                        size="sm"
+                                        className="flex-1 cursor-pointer"
+                                      >
+                                        {loading.addMedical ? (
+                                          <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Saving...
+                                          </>
+                                        ) : (
+                                          "Save Changes"
+                                        )}
+                                      </Button>
+                                      <Button
+                                        onClick={() => setEditingEntryId(null)}
+                                        disabled={loading.addMedical}
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex-1 cursor-pointer"
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
                                   </div>
-                                )}
-                                {entry.findings && (
-                                  <div className="mt-2">
-                                    <p className="text-xs font-semibold text-foreground">Findings:</p>
-                                    <p className="text-sm text-foreground">{entry.findings}</p>
-                                  </div>
-                                )}
-                                {entry.treatment && (
-                                  <div className="mt-2">
-                                    <p className="text-xs font-semibold text-foreground">Treatment:</p>
-                                    <p className="text-sm text-foreground">{entry.treatment}</p>
-                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex justify-between items-start mb-3">
+                                      <p className="text-xs text-muted-foreground font-medium">
+                                        {new Date(entry.date).toLocaleDateString("en-US", {
+                                          year: "numeric",
+                                          month: "short",
+                                          day: "numeric",
+                                        })}
+                                      </p>
+                                      {user?.role === "doctor" &&
+                                        entry.doctorId &&
+                                        entry.doctorId.toString() === user.id && (
+                                          <div className="flex gap-2">
+                                            <Button
+                                              onClick={() => handleEditMedicalEntry(idx, entry)}
+                                              disabled={loading.addMedical}
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-7 px-3 text-xs cursor-pointer"
+                                            >
+                                              Edit
+                                            </Button>
+                                            <Button
+                                              onClick={() => {
+                                                setMedicalEntryToDelete(idx)
+                                                setShowMedicalDeleteModal(true)
+                                              }}
+                                              disabled={loading.addMedical}
+                                              variant="destructive"
+                                              size="sm"
+                                              className="h-7 px-3 text-xs cursor-pointer"
+                                            >
+                                              Delete
+                                            </Button>
+                                          </div>
+                                        )}
+                                    </div>
+                                    {entry.notes && (
+                                      <div className="mb-2">
+                                        <p className="text-xs font-semibold text-foreground mb-1">Notes:</p>
+                                        <p className="text-sm text-foreground">{entry.notes}</p>
+                                      </div>
+                                    )}
+                                    {entry.findings && (
+                                      <div className="mb-2">
+                                        <p className="text-xs font-semibold text-foreground mb-1">Findings:</p>
+                                        <p className="text-sm text-foreground">{entry.findings}</p>
+                                      </div>
+                                    )}
+                                    {entry.treatment && (
+                                      <div className="mb-2">
+                                        <p className="text-xs font-semibold text-foreground mb-1">Treatment:</p>
+                                        <p className="text-sm text-foreground">{entry.treatment}</p>
+                                      </div>
+                                    )}
+                                    {entry.medications && entry.medications.length > 0 && (
+                                      <div>
+                                        <p className="text-xs font-semibold text-foreground mb-1">Medications:</p>
+                                        <p className="text-sm text-foreground">{entry.medications.join(", ")}</p>
+                                      </div>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             ))}
@@ -568,10 +819,13 @@ export default function ClinicalToolsPage() {
                           <p className="text-muted-foreground text-sm">No medical history entries yet</p>
                         )}
                         {user?.role === "doctor" && (
-                          <form onSubmit={handleAddMedicalEntry} className="space-y-4 p-4 bg-muted rounded-lg">
+                          <form
+                            onSubmit={handleAddMedicalEntry}
+                            className="space-y-4 p-4 bg-muted rounded-lg border border-border"
+                          >
                             <h3 className="font-semibold text-foreground">Add Medical Entry</h3>
                             <div>
-                              <label className="block text-sm font-medium text-foreground mb-1">Notes *</label>
+                              <label className="block text-sm font-medium text-foreground mb-2">Notes *</label>
                               <textarea
                                 placeholder="Clinical notes..."
                                 value={medicalEntry.notes}
@@ -586,7 +840,7 @@ export default function ClinicalToolsPage() {
                                   })
                                 }}
                                 disabled={loading.addMedical}
-                                className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                                className={`w-full px-4 py-2 bg-input border rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                                   medicalErrors.notes ? "border-destructive" : "border-border"
                                 }`}
                                 rows={2}
@@ -596,7 +850,7 @@ export default function ClinicalToolsPage() {
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-foreground mb-1">Findings *</label>
+                              <label className="block text-sm font-medium text-foreground mb-2">Findings *</label>
                               <textarea
                                 placeholder="Findings..."
                                 value={medicalEntry.findings}
@@ -611,7 +865,7 @@ export default function ClinicalToolsPage() {
                                   })
                                 }}
                                 disabled={loading.addMedical}
-                                className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                                className={`w-full px-4 py-2 bg-input border rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                                   medicalErrors.findings ? "border-destructive" : "border-border"
                                 }`}
                                 rows={2}
@@ -621,7 +875,7 @@ export default function ClinicalToolsPage() {
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-foreground mb-1">Treatment *</label>
+                              <label className="block text-sm font-medium text-foreground mb-2">Treatment *</label>
                               <textarea
                                 placeholder="Treatment..."
                                 value={medicalEntry.treatment}
@@ -636,7 +890,7 @@ export default function ClinicalToolsPage() {
                                   })
                                 }}
                                 disabled={loading.addMedical}
-                                className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                                className={`w-full px-4 py-2 bg-input border rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                                   medicalErrors.treatment ? "border-destructive" : "border-border"
                                 }`}
                                 rows={2}
@@ -656,16 +910,18 @@ export default function ClinicalToolsPage() {
                                 })
                               }
                               disabled={loading.addMedical}
-                              className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full px-4 py-2 bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             />
-                            <button
+                            <Button
                               type="submit"
                               disabled={loading.addMedical}
-                              className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                              variant="default"
+                              size="sm"
+                              className="w-full cursor-pointer"
                             >
                               {loading.addMedical && <Loader2 className="w-4 h-4 animate-spin" />}
                               {loading.addMedical ? "Adding..." : "Add Entry"}
-                            </button>
+                            </Button>
                           </form>
                         )}
                       </div>
@@ -701,7 +957,7 @@ export default function ClinicalToolsPage() {
                                     setShowDeleteModal(true)
                                   }}
                                   disabled={loading.deleteImage}
-                                  className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                   Delete
@@ -790,7 +1046,7 @@ export default function ClinicalToolsPage() {
                           <button
                             type="submit"
                             disabled={loading.uploadImage || !imageUpload.imageUrl}
-                            className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                           >
                             {loading.uploadImage && <Loader2 className="w-4 h-4 animate-spin" />}
                             {loading.uploadImage ? "Uploading..." : "Upload Image"}
@@ -809,6 +1065,24 @@ export default function ClinicalToolsPage() {
             </div>
           </div>
         </main>
+        <ConfirmDeleteModal
+          isOpen={showMedicalDeleteModal}
+          title="Delete Medical Entry"
+          description="Are you sure you want to delete this medical history entry? This action cannot be undone."
+          itemName={
+            medicalHistory?.entries?.[medicalEntryToDelete || 0]?.notes?.substring(0, 50) + "..." || "Medical Entry"
+          }
+          onConfirm={() => {
+            if (medicalEntryToDelete !== null) {
+              handleDeleteMedicalEntry(medicalEntryToDelete)
+            }
+          }}
+          onCancel={() => {
+            setShowMedicalDeleteModal(false)
+            setMedicalEntryToDelete(null)
+          }}
+          isLoading={loading.addMedical}
+        />
         <ConfirmDeleteModal
           isOpen={showDeleteModal}
           title="Delete Image"

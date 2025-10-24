@@ -60,7 +60,7 @@ export default function AppointmentsPage() {
     deleteAppointment: false,
     cancelAppointment: false,
     completeAppointment: false,
-    createReport: false
+    createReport: false,
   })
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null)
@@ -76,7 +76,7 @@ export default function AppointmentsPage() {
   }, [token, user])
 
   const fetchAppointments = async () => {
-    setLoading(prev => ({ ...prev, appointments: true }))
+    setLoading((prev) => ({ ...prev, appointments: true }))
     try {
       const res = await fetch("/api/appointments", {
         headers: { Authorization: `Bearer ${token}` },
@@ -89,12 +89,12 @@ export default function AppointmentsPage() {
       console.error("Failed to fetch appointments:", error)
       toast.error("Failed to fetch appointments")
     } finally {
-      setLoading(prev => ({ ...prev, appointments: false }))
+      setLoading((prev) => ({ ...prev, appointments: false }))
     }
   }
 
   const fetchPatients = async () => {
-    setLoading(prev => ({ ...prev, patients: true }))
+    setLoading((prev) => ({ ...prev, patients: true }))
     try {
       const res = await fetch("/api/patients", {
         headers: { Authorization: `Bearer ${token}` },
@@ -107,12 +107,12 @@ export default function AppointmentsPage() {
       console.error("Failed to fetch patients:", error)
       toast.error("Failed to fetch patients")
     } finally {
-      setLoading(prev => ({ ...prev, patients: false }))
+      setLoading((prev) => ({ ...prev, patients: false }))
     }
   }
 
   const fetchDoctors = async () => {
-    setLoading(prev => ({ ...prev, doctors: true }))
+    setLoading((prev) => ({ ...prev, doctors: true }))
     try {
       const res = await fetch("/api/users?role=doctor", {
         headers: { Authorization: `Bearer ${token}` },
@@ -125,7 +125,7 @@ export default function AppointmentsPage() {
       console.error("Failed to fetch doctors:", error)
       toast.error("Failed to fetch doctors")
     } finally {
-      setLoading(prev => ({ ...prev, doctors: false }))
+      setLoading((prev) => ({ ...prev, doctors: false }))
     }
   }
 
@@ -161,7 +161,7 @@ export default function AppointmentsPage() {
   }
 
   const handleDeleteAppointment = async (appointmentId: string) => {
-    setLoading(prev => ({ ...prev, deleteAppointment: true }))
+    setLoading((prev) => ({ ...prev, deleteAppointment: true }))
     try {
       const res = await fetch(`/api/appointments/${appointmentId}`, {
         method: "DELETE",
@@ -178,12 +178,12 @@ export default function AppointmentsPage() {
       console.error("Failed to delete appointment:", error)
       toast.error("Error deleting appointment")
     } finally {
-      setLoading(prev => ({ ...prev, deleteAppointment: false }))
+      setLoading((prev) => ({ ...prev, deleteAppointment: false }))
     }
   }
 
   const handleCancelAppointment = async (appointmentId: string) => {
-    setLoading(prev => ({ ...prev, cancelAppointment: true }))
+    setLoading((prev) => ({ ...prev, cancelAppointment: true }))
     try {
       const res = await fetch(`/api/appointments/${appointmentId}`, {
         method: "PUT",
@@ -209,12 +209,12 @@ export default function AppointmentsPage() {
       console.error("Failed to cancel appointment:", error)
       toast.error("Error cancelling appointment")
     } finally {
-      setLoading(prev => ({ ...prev, cancelAppointment: false }))
+      setLoading((prev) => ({ ...prev, cancelAppointment: false }))
     }
   }
 
   const handleCompleteAppointment = async (appointmentId: string) => {
-    setLoading(prev => ({ ...prev, completeAppointment: true }))
+    setLoading((prev) => ({ ...prev, completeAppointment: true }))
     try {
       const res = await fetch(`/api/appointments/${appointmentId}`, {
         method: "PUT",
@@ -240,7 +240,7 @@ export default function AppointmentsPage() {
       console.error("Failed to complete appointment:", error)
       toast.error("Error completing appointment")
     } finally {
-      setLoading(prev => ({ ...prev, completeAppointment: false }))
+      setLoading((prev) => ({ ...prev, completeAppointment: false }))
     }
   }
 
@@ -301,8 +301,8 @@ export default function AppointmentsPage() {
       return
     }
 
-    const loadingKey = editingId ? 'updateAppointment' : 'addAppointment'
-    setLoading(prev => ({ ...prev, [loadingKey]: true }))
+    const loadingKey = editingId ? "updateAppointment" : "addAppointment"
+    setLoading((prev) => ({ ...prev, [loadingKey]: true }))
 
     try {
       const method = editingId ? "PUT" : "POST"
@@ -348,7 +348,7 @@ export default function AppointmentsPage() {
       console.error("Failed to add appointment:", error)
       toast.error("Error saving appointment")
     } finally {
-      setLoading(prev => ({ ...prev, [loadingKey]: false }))
+      setLoading((prev) => ({ ...prev, [loadingKey]: false }))
     }
   }
 
@@ -378,7 +378,7 @@ export default function AppointmentsPage() {
       return
     }
 
-    setLoading(prev => ({ ...prev, createReport: true }))
+    setLoading((prev) => ({ ...prev, createReport: true }))
     try {
       const proceduresArray = Array.isArray(reportData.procedures)
         ? reportData.procedures.filter((p) => p && p.trim())
@@ -426,7 +426,7 @@ export default function AppointmentsPage() {
       console.error("[v0] Failed to create report:", error)
       toast.error("Error creating report")
     } finally {
-      setLoading(prev => ({ ...prev, createReport: false }))
+      setLoading((prev) => ({ ...prev, createReport: false }))
     }
   }
 
@@ -513,7 +513,7 @@ export default function AppointmentsPage() {
                           key={idx}
                           onClick={() => day && !loading.appointments && handleDateClick(day)}
                           className={`aspect-square p-2 rounded-lg border-2 transition-colors ${
-                            day && !loading.appointments ? 'cursor-pointer' : 'cursor-not-allowed'
+                            day && !loading.appointments ? "cursor-pointer" : "cursor-not-allowed"
                           } ${
                             isSelected
                               ? "border-accent bg-accent/20"
@@ -522,7 +522,7 @@ export default function AppointmentsPage() {
                                   ? "border-primary bg-primary/10"
                                   : "border-border hover:border-primary"
                                 : "border-transparent"
-                          } ${loading.appointments ? 'opacity-50' : ''}`}
+                          } ${loading.appointments ? "opacity-50" : ""}`}
                         >
                           {day && (
                             <div className="h-full flex flex-col">
@@ -544,22 +544,22 @@ export default function AppointmentsPage() {
               {/* Sidebar */}
               <div className="space-y-6">
                 {user?.role !== "doctor" && (
-               <button
-  onClick={() => {
-    setEditingId(null)
-    setShowForm(!showForm)
-    setFormErrors({})
-  }}
-  disabled={loading.appointments || loading.patients || loading.doctors}
-  className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
->
-  {(loading.appointments || loading.patients || loading.doctors) ? (
-    <Loader2 className="w-4 h-4 animate-spin" />
-  ) : (
-    <Plus className="w-4 h-4" />
-  )}
-  New Appointment
-</button>
+                  <button
+                    onClick={() => {
+                      setEditingId(null)
+                      setShowForm(!showForm)
+                      setFormErrors({})
+                    }}
+                    disabled={loading.appointments || loading.patients || loading.doctors}
+                    className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {loading.appointments || loading.patients || loading.doctors ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                    New Appointment
+                  </button>
                 )}
 
                 {selectedDate && (
@@ -592,7 +592,9 @@ export default function AppointmentsPage() {
                                 <>
                                   <button
                                     onClick={() => handleEditAppointment(apt)}
-                                    disabled={loading.addAppointment || loading.updateAppointment || loading.deleteAppointment}
+                                    disabled={
+                                      loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                    }
                                     className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
                                   >
                                     Edit
@@ -684,20 +686,75 @@ export default function AppointmentsPage() {
                             {apt.date} at {apt.time}
                           </p>
                           <p className="text-xs text-muted-foreground">{apt.type}</p>
-                          {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "completed" && (
-                            <button
-                              onClick={() => {
-                                setSelectedAppointment(apt)
-                                setShowReportForm(true)
-                                setReportErrors({})
-                              }}
-                              disabled={loading.createReport}
-                              className="mt-2 text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                            >
-                              <FileText className="w-3 h-3" />
-                              Create Report
-                            </button>
-                          )}
+                          <div className="flex gap-2 mt-2 flex-wrap">
+                            {user?.role !== "doctor" && (
+                              <>
+                                <button
+                                  onClick={() => handleEditAppointment(apt)}
+                                  disabled={
+                                    loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                  }
+                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setAppointmentToDelete(apt)
+                                    setShowDeleteModal(true)
+                                  }}
+                                  disabled={loading.deleteAppointment}
+                                  className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                            {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "completed" && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setSelectedAppointment(apt)
+                                    setShowReportForm(true)
+                                    setReportErrors({})
+                                  }}
+                                  disabled={loading.createReport}
+                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  Report
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setAppointmentActionModal({
+                                      isOpen: true,
+                                      action: "close",
+                                      appointmentId: apt._id || apt.id,
+                                    })
+                                  }
+                                  disabled={loading.completeAppointment}
+                                  className="text-xs text-green-600 hover:underline disabled:text-green-600/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                >
+                                  <CheckCircle className="w-3 h-3" />
+                                  Close
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setAppointmentActionModal({
+                                      isOpen: true,
+                                      action: "cancel",
+                                      appointmentId: apt._id || apt.id,
+                                    })
+                                  }
+                                  disabled={loading.cancelAppointment}
+                                  className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                >
+                                  <X className="w-3 h-3" />
+                                  Cancel
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ))
                     )}
