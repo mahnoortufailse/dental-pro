@@ -262,11 +262,11 @@ export default function ClinicalToolsPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          patientId: selectedPatient._id,
+          patientId: selectedPatient._id || selectedPatient.id,
           entry: {
-            notes: medicalEntry.notes,
-            findings: medicalEntry.findings,
-            treatment: medicalEntry.treatment,
+            notes: medicalEntry.notes.trim(),
+    findings: medicalEntry.findings.trim(),
+    treatment: medicalEntry.treatment.trim(),
             medications: medicalEntry.medications
               .split(",")
               .map((m) => m.trim())
