@@ -64,14 +64,13 @@ export async function POST(request: NextRequest) {
     // Generate secure password
     const generatedPassword = generateSecurePassword()
 
-    // Create new staff user
     const newUser = new User({
       email,
       password: generatedPassword,
       name,
       role,
-      phone,
-      specialty,
+      phone: phone || "",
+      specialty: specialty || "",
       active: true,
     })
 
