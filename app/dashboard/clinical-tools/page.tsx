@@ -268,27 +268,27 @@ export default function ClinicalToolsPage() {
 			return;
 		}
 
-		setLoading((prev) => ({ ...prev, addMedical: true }));
-		try {
-			const res = await fetch("/api/medical-history", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({
-					patientId: selectedPatient._id,
-					entry: {
-						notes: medicalEntry.notes,
-						findings: medicalEntry.findings,
-						treatment: medicalEntry.treatment,
-						medications: medicalEntry.medications
-							.split(",")
-							.map((m) => m.trim())
-							.filter(Boolean),
-					},
-				}),
-			});
+    setLoading((prev) => ({ ...prev, addMedical: true }))
+    try {
+      const res = await fetch("/api/medical-history", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          patientId: selectedPatient._id || selectedPatient.id,
+          entry: {
+            notes: medicalEntry.notes.trim(),
+    findings: medicalEntry.findings.trim(),
+    treatment: medicalEntry.treatment.trim(),
+            medications: medicalEntry.medications
+              .split(",")
+              .map((m) => m.trim())
+              .filter(Boolean),
+          },
+        }),
+      })
 
 			if (res.ok) {
 				const data = await res.json();

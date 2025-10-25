@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { MedicalHistory, connectDB, Patient } from "@/lib/db"
+import { MedicalHistory, connectDB, Patient, User } from "@/lib/db"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
 
 // Modified GET endpoint - allow patients to view their own history
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get doctor details to store the name
-    const User = mongoose.models.User
+   
     const doctor = await User.findById(payload.userId)
     if (!doctor) {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 })
