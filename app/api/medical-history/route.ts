@@ -58,8 +58,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const history = await MedicalHistory.findOne({ patientId }).populate("doctorId", "name specialty")
+    const history = await MedicalHistory.findOne({ patientId })
+      .populate("entries.doctorId", "name specialty") // Populate doctor info in entries
+
     return NextResponse.json({ success: true, history })
+   
   } catch (error) {
     console.error("[v0] GET medical history error:", error)
     return NextResponse.json({ error: "Failed to fetch medical history" }, { status: 500 })
@@ -86,6 +89,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
+    // Get doctor details to store the name
+    const User = mongoose.models.User
+    const doctor = await User.findById(payload.userId)
+    if (!doctor) {
+      return NextResponse.json({ error: "Doctor not found" }, { status: 404 })
+    }
+
     let history = await MedicalHistory.findOne({ patientId })
 
     if (!history) {
@@ -96,6 +106,7 @@ export async function POST(request: NextRequest) {
           {
             ...entry,
             doctorId: payload.userId,
+            doctorName: doctor.name, // Store doctor name
             date: new Date(),
           },
         ],
@@ -104,6 +115,7 @@ export async function POST(request: NextRequest) {
       history.entries.push({
         ...entry,
         doctorId: payload.userId,
+        doctorName: doctor.name, // Store doctor name
         date: new Date(),
       })
       history.updatedAt = new Date()
