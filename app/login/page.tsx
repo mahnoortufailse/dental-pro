@@ -221,39 +221,46 @@ export default function LoginPage() {
 
           <div className="my-6 border-t border-border"></div>
 
-          {/* Staff Contact Info */}
-          {loginType === "staff" && (
-            <div className="text-center mt-4">
-              <p className="text-sm text-gray-700 mb-3">Don't have an account? Contact your admin to register.</p>
+         {/* Staff Contact Info - Gradient Design */}
+{loginType === "staff" && (
+  <div className="text-center mt-6">
+    <p className="text-sm text-gray-600 mb-4">Don't have an account? Contact your admin to register.</p>
 
-              <div className="flex items-center justify-center gap-3 bg-gray-50 border rounded-xl px-4 py-3 shadow-sm w-fit mx-auto">
-                {/* Email */}
-                <a
-                  href="mailto:admin@dentalcarepro.com"
-                  className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow transition-all"
-                >
-                  <Mail className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-gray-700">admin@dentalcarepro.com</span>
-                </a>
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mx-auto">
+      {/* Email Button */}
+      <div className="relative group">
+        <a
+          href="https://mail.google.com/mail/?view=cm&fs=1&to=admin@dentalcarepro.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+        >
+          <Mail className="w-4 h-4" />
+          <span>Email Admin</span>
+        </a>
+        <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+         admin@dentalcarepro.com
+        </span>
+      </div>
 
-                {/* WhatsApp Icon with Tooltip */}
-                <div className="relative group">
-                  <a
-                    href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center w-9 h-9 bg-green-50 border border-green-500 rounded-full shadow-sm hover:bg-green-100 transition-all"
-                  >
-                    <FaWhatsapp className="w-5 h-5 text-green-600" />
-                  </a>
-                  {/* Tooltip */}
-                  <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    Chat on WhatsApp
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+      {/* WhatsApp Button */}
+      <div className="relative group">
+        <a
+          href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+        >
+          <FaWhatsapp className="w-4 h-4" />
+          <span>WhatsApp</span>
+        </a>
+        <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+          Open WhatsApp
+        </span>
+      </div>
+    </div>
+  </div>
+)}
 
           {/* Patient Info */}
           {loginType === "patient" && (
