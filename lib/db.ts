@@ -24,8 +24,6 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 })
 
-userSchema.index({ email: 1 }, { unique: true, sparse: true })
-
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next()
   try {
@@ -209,7 +207,16 @@ export async function connectDB() {
       .connect(MONGODB_URI, {
         bufferCommands: false,
       })
-      .then((mongoose) => {
+      .then(async (mongoose) => {
+        try {
+          const userModel = mongoose.model("User", userSchema)
+          await userModel.collection.dropIndex("username_1").catch(() => {
+            // Index doesn't exist, which is fine
+          })
+          console.log("[v0] Cleaned up stale indexes")
+        } catch (err) {
+          // Silently ignore if index doesn't exist
+        }
         return mongoose
       })
   }
