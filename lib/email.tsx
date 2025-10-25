@@ -1,29 +1,37 @@
 //@ts-nocheck
-import nodemailer from "nodemailer"
+import nodemailer from "nodemailer";
 
-let transporter: any = null
+let transporter: any = null;
 
 function getTransporter() {
-  if (transporter) return transporter
+	if (transporter) return transporter;
 
-  const emailService = process.env.EMAIL_SERVICE || "gmail"
-  const emailUser = process.env.EMAIL_USER
-  const emailPassword = process.env.EMAIL_PASS
+	const emailService = process.env.EMAIL_SERVICE || "gmail";
+	const emailUser = process.env.EMAIL_USER;
+	const emailPassword = process.env.EMAIL_PASS;
 
+	if (!emailUser || !emailPassword) {
+		console.warn(
+			"  Email credentials not configured. Email sending will fail."
+		);
+		console.warn(
+			"  Please set EMAIL_USER and EMAIL_PASSWORD environment variables"
+		);
+	}
   if (!emailUser || !emailPassword) {
     console.warn("[v0] Email credentials not configured. Email sending will fail.")
     console.warn("[v0] Please set EMAIL_USER and EMAIL_PASS environment variables")
   }
 
-  transporter = nodemailer.createTransport({
-    service: emailService,
-    auth: {
-      user: emailUser,
-      pass: emailPassword,
-    },
-  })
+	transporter = nodemailer.createTransport({
+		service: emailService,
+		auth: {
+			user: emailUser,
+			pass: emailPassword,
+		},
+	});
 
-  return transporter
+	return transporter;
 }
 
 export async function sendEmail({
@@ -59,11 +67,11 @@ export async function sendPatientCredentials(email: string, patientName: string,
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
     const transporter = getTransporter()
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Your Dental Clinic Portal Credentials",
-      html: `
+		const mailOptions = {
+			from: process.env.EMAIL_USER,
+			to: email,
+			subject: "Your Dental Clinic Portal Credentials",
+			html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
             <h1 style="color: white; margin: 0;">Welcome to Your Dental Clinic Portal</h1>
@@ -98,15 +106,15 @@ export async function sendPatientCredentials(email: string, patientName: string,
           </div>
         </div>
       `,
-    }
+		};
 
-    await transporter.sendMail(mailOptions)
-    console.log("[v0] Patient credentials email sent successfully to:", email)
-    return true
-  } catch (error) {
-    console.error("[v0] Error sending patient credentials email:", error)
-    throw error
-  }
+		await transporter.sendMail(mailOptions);
+		console.log("  Patient credentials email sent successfully to:", email);
+		return true;
+	} catch (error) {
+		console.error("  Error sending patient credentials email:", error);
+		throw error;
+	}
 }
 
 export async function sendStaffCredentials(email: string, staffName: string, strongPassword: string, role: string) {

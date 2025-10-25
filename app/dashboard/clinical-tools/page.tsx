@@ -1,7 +1,7 @@
 //@ts-nocheck
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
 import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
@@ -61,197 +61,212 @@ export default function ClinicalToolsPage() {
   const [showMedicalDeleteModal, setShowMedicalDeleteModal] = useState(false)
   const [medicalEntryToDelete, setMedicalEntryToDelete] = useState<number | null>(null)
 
-  useEffect(() => {
-    if (token) fetchPatients()
-  }, [token])
+	useEffect(() => {
+		if (token) fetchPatients();
+	}, [token]);
 
-  const fetchPatients = async () => {
-    setLoading((prev) => ({ ...prev, patients: true }))
-    try {
-      const res = await fetch("/api/patients", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setPatients(data.patients || [])
-      }
-    } catch (error) {
-      console.error(error)
-      toast.error("Failed to fetch patients")
-    } finally {
-      setLoading((prev) => ({ ...prev, patients: false }))
-    }
-  }
+	const fetchPatients = async () => {
+		setLoading((prev) => ({ ...prev, patients: true }));
+		try {
+			const res = await fetch("/api/patients", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (res.ok) {
+				const data = await res.json();
+				setPatients(data.patients || []);
+			}
+		} catch (error) {
+			console.error(error);
+			toast.error("Failed to fetch patients");
+		} finally {
+			setLoading((prev) => ({ ...prev, patients: false }));
+		}
+	};
 
-  const handleSelectPatient = async (patientId: string) => {
-    const patient = patients.find((p) => (p._id || p.id).toString() === patientId)
-    setSelectedPatient(patient)
-    setToothChart(null)
-    setMedicalHistory(null)
-    setPatientImages([])
-    setDoctorHistory(patient?.doctorHistory || [])
+	const handleSelectPatient = async (patientId: string) => {
+		const patient = patients.find(
+			(p) => (p._id || p.id).toString() === patientId
+		);
+		setSelectedPatient(patient);
+		setToothChart(null);
+		setMedicalHistory(null);
+		setPatientImages([]);
+		setDoctorHistory(patient?.doctorHistory || []);
 
-    setLoading((prev) => ({ ...prev, toothChart: true, medicalHistory: true, patientImages: true }))
+		setLoading((prev) => ({
+			...prev,
+			toothChart: true,
+			medicalHistory: true,
+			patientImages: true,
+		}));
 
-    try {
-      const res = await fetch(`/api/tooth-chart?patientId=${patientId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const chart = data.toothChart || (data.charts && data.charts[0])
-        if (chart && chart.patientId.toString() === patientId) {
-          setToothChart(chart)
-          console.log("[v0] Tooth chart loaded:", chart)
-        }
-      } else {
-        console.log("[v0] No tooth chart found for patient:", patientId)
-      }
-    } catch (error) {
-      console.error("[v0] Error fetching tooth chart:", error)
-    } finally {
-      setLoading((prev) => ({ ...prev, toothChart: false }))
-    }
+		try {
+			const res = await fetch(`/api/tooth-chart?patientId=${patientId}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (res.ok) {
+				const data = await res.json();
+				const chart = data.toothChart || (data.charts && data.charts[0]);
+				if (chart && chart.patientId.toString() === patientId) {
+					setToothChart(chart);
+					console.log("  Tooth chart loaded:", chart);
+				}
+			} else {
+				console.log("  No tooth chart found for patient:", patientId);
+			}
+		} catch (error) {
+			console.error("  Error fetching tooth chart:", error);
+		} finally {
+			setLoading((prev) => ({ ...prev, toothChart: false }));
+		}
 
-    try {
-      const res = await fetch(`/api/medical-history?patientId=${patientId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setMedicalHistory(data.history || null)
-      }
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setLoading((prev) => ({ ...prev, medicalHistory: false }))
-    }
+		try {
+			const res = await fetch(`/api/medical-history?patientId=${patientId}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (res.ok) {
+				const data = await res.json();
+				setMedicalHistory(data.history || null);
+			}
+		} catch (error) {
+			console.error(error);
+		} finally {
+			setLoading((prev) => ({ ...prev, medicalHistory: false }));
+		}
 
-    try {
-      const res = await fetch(`/api/patient-images?patientId=${patientId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setPatientImages(data.images || [])
-      }
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setLoading((prev) => ({ ...prev, patientImages: false }))
-    }
-  }
+		try {
+			const res = await fetch(`/api/patient-images?patientId=${patientId}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (res.ok) {
+				const data = await res.json();
+				setPatientImages(data.images || []);
+			}
+		} catch (error) {
+			console.error(error);
+		} finally {
+			setLoading((prev) => ({ ...prev, patientImages: false }));
+		}
+	};
 
-  const handleCreateToothChart = async () => {
-    if (!selectedPatient) return toast.error("Please select a patient first")
-    setLoading((prev) => ({ ...prev, createChart: true }))
+	const handleCreateToothChart = async () => {
+		if (!selectedPatient) return toast.error("Please select a patient first");
+		setLoading((prev) => ({ ...prev, createChart: true }));
 
-    try {
-      const patientId = selectedPatient._id || selectedPatient.id
-      const res = await fetch("/api/tooth-chart", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          patientId,
-          overallNotes: "",
-        }),
-      })
+		try {
+			const patientId = selectedPatient._id || selectedPatient.id;
+			const res = await fetch("/api/tooth-chart", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					patientId,
+					overallNotes: "",
+				}),
+			});
 
-      const data = await res.json()
-      if (res.ok) {
-        setToothChart(data.chart)
-        toast.success("Tooth chart created successfully!")
-      } else {
-        toast.error(data.error || "Failed to create tooth chart")
-      }
-    } catch (error) {
-      console.error(error)
-      toast.error("Failed to create tooth chart")
-    } finally {
-      setLoading((prev) => ({ ...prev, createChart: false }))
-    }
-  }
+			const data = await res.json();
+			if (res.ok) {
+				setToothChart(data.chart);
+				toast.success("Tooth chart created successfully!");
+			} else {
+				toast.error(data.error || "Failed to create tooth chart");
+			}
+		} catch (error) {
+			console.error(error);
+			toast.error("Failed to create tooth chart");
+		} finally {
+			setLoading((prev) => ({ ...prev, createChart: false }));
+		}
+	};
 
-  const handleToothClick = (toothNumber: number) => {
-    if (!toothChart) return
-    const statuses = ["healthy", "cavity", "missing", "treated", "root_canal", "crown"]
-    const currentTeeth = toothChart.teeth || {}
-    const currentStatus = currentTeeth[toothNumber]?.status || "healthy"
-    const nextStatus = statuses[(statuses.indexOf(currentStatus) + 1) % statuses.length]
+	const handleToothClick = (toothNumber: number) => {
+		if (!toothChart) return;
+		const statuses = [
+			"healthy",
+			"cavity",
+			"missing",
+			"treated",
+			"root_canal",
+			"crown",
+		];
+		const currentTeeth = toothChart.teeth || {};
+		const currentStatus = currentTeeth[toothNumber]?.status || "healthy";
+		const nextStatus =
+			statuses[(statuses.indexOf(currentStatus) + 1) % statuses.length];
 
-    setToothChart({
-      ...toothChart,
-      teeth: {
-        ...currentTeeth,
-        [toothNumber]: {
-          ...(currentTeeth[toothNumber] || {}),
-          status: nextStatus,
-          lastUpdated: new Date(),
-        },
-      },
-    })
-  }
+		setToothChart({
+			...toothChart,
+			teeth: {
+				...currentTeeth,
+				[toothNumber]: {
+					...(currentTeeth[toothNumber] || {}),
+					status: nextStatus,
+					lastUpdated: new Date(),
+				},
+			},
+		});
+	};
 
-  const handleSaveToothChart = async () => {
-    if (!toothChart) return
-    setLoading((prev) => ({ ...prev, saveChart: true }))
+	const handleSaveToothChart = async () => {
+		if (!toothChart) return;
+		setLoading((prev) => ({ ...prev, saveChart: true }));
 
-    try {
-      const chartId = toothChart._id || toothChart.id
-      const res = await fetch(`/api/tooth-chart/${chartId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          teeth: toothChart.teeth,
-          overallNotes: toothChart.overallNotes,
-        }),
-      })
+		try {
+			const chartId = toothChart._id || toothChart.id;
+			const res = await fetch(`/api/tooth-chart/${chartId}`, {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					teeth: toothChart.teeth,
+					overallNotes: toothChart.overallNotes,
+				}),
+			});
 
-      const data = await res.json()
-      if (res.ok) {
-        toast.success("Tooth chart saved successfully!")
-      } else {
-        toast.error(data.error || "Failed to save tooth chart")
-      }
-    } catch (error) {
-      console.error(error)
-      toast.error("Failed to save tooth chart")
-    } finally {
-      setLoading((prev) => ({ ...prev, saveChart: false }))
-    }
-  }
+			const data = await res.json();
+			if (res.ok) {
+				toast.success("Tooth chart saved successfully!");
+			} else {
+				toast.error(data.error || "Failed to save tooth chart");
+			}
+		} catch (error) {
+			console.error(error);
+			toast.error("Failed to save tooth chart");
+		} finally {
+			setLoading((prev) => ({ ...prev, saveChart: false }));
+		}
+	};
 
-  const validateMedicalEntry = (): boolean => {
-    const errors: Record<string, string> = {}
+	const validateMedicalEntry = (): boolean => {
+		const errors: Record<string, string> = {};
 
-    if (!medicalEntry.notes.trim()) {
-      errors.notes = "Notes are required"
-    }
-    if (!medicalEntry.findings.trim()) {
-      errors.findings = "Findings are required"
-    }
-    if (!medicalEntry.treatment.trim()) {
-      errors.treatment = "Treatment is required"
-    }
+		if (!medicalEntry.notes.trim()) {
+			errors.notes = "Notes are required";
+		}
+		if (!medicalEntry.findings.trim()) {
+			errors.findings = "Findings are required";
+		}
+		if (!medicalEntry.treatment.trim()) {
+			errors.treatment = "Treatment is required";
+		}
 
-    setMedicalErrors(errors)
-    return Object.keys(errors).length === 0
-  }
+		setMedicalErrors(errors);
+		return Object.keys(errors).length === 0;
+	};
 
-  const handleAddMedicalEntry = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedPatient) return
+	const handleAddMedicalEntry = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!selectedPatient) return;
 
-    if (!validateMedicalEntry()) {
-      toast.error("Please fix the errors in the form")
-      return
-    }
+		if (!validateMedicalEntry()) {
+			toast.error("Please fix the errors in the form");
+			return;
+		}
 
     setLoading((prev) => ({ ...prev, addMedical: true }))
     try {
@@ -275,97 +290,97 @@ export default function ClinicalToolsPage() {
         }),
       })
 
-      if (res.ok) {
-        const data = await res.json()
-        setMedicalHistory(data.history)
-        setMedicalEntry({
-          notes: "",
-          findings: "",
-          treatment: "",
-          medications: "",
-        })
-        setMedicalErrors({})
-        toast.success("Medical entry added successfully")
-      } else {
-        const errorData = await res.json()
-        toast.error(errorData.error || "Failed to add medical entry")
-      }
-    } catch (error) {
-      console.error(error)
-      toast.error("Error adding medical entry")
-    } finally {
-      setLoading((prev) => ({ ...prev, addMedical: false }))
-    }
-  }
+			if (res.ok) {
+				const data = await res.json();
+				setMedicalHistory(data.history);
+				setMedicalEntry({
+					notes: "",
+					findings: "",
+					treatment: "",
+					medications: "",
+				});
+				setMedicalErrors({});
+				toast.success("Medical entry added successfully");
+			} else {
+				const errorData = await res.json();
+				toast.error(errorData.error || "Failed to add medical entry");
+			}
+		} catch (error) {
+			console.error(error);
+			toast.error("Error adding medical entry");
+		} finally {
+			setLoading((prev) => ({ ...prev, addMedical: false }));
+		}
+	};
 
-  const validateImageUpload = (): boolean => {
-    const errors: Record<string, string> = {}
+	const validateImageUpload = (): boolean => {
+		const errors: Record<string, string> = {};
 
-    if (!imageUpload.title.trim()) {
-      errors.title = "Image title is required"
-    }
-    if (!imageUpload.imageUrl.trim()) {
-      errors.imageUrl = "Image URL is required"
-    }
+		if (!imageUpload.title.trim()) {
+			errors.title = "Image title is required";
+		}
+		if (!imageUpload.imageUrl.trim()) {
+			errors.imageUrl = "Image URL is required";
+		}
 
-    setImageErrors(errors)
-    return Object.keys(errors).length === 0
-  }
+		setImageErrors(errors);
+		return Object.keys(errors).length === 0;
+	};
 
-  const handleUploadImage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedPatient) return
+	const handleUploadImage = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!selectedPatient) return;
 
-    if (!validateImageUpload()) {
-      toast.error("Please fix the errors in the form")
-      return
-    }
+		if (!validateImageUpload()) {
+			toast.error("Please fix the errors in the form");
+			return;
+		}
 
-    setLoading((prev) => ({ ...prev, uploadImage: true }))
-    try {
-      const res = await fetch("/api/patient-images", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          patientId: selectedPatient._id,
-          ...imageUpload,
-        }),
-      })
+		setLoading((prev) => ({ ...prev, uploadImage: true }));
+		try {
+			const res = await fetch("/api/patient-images", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					patientId: selectedPatient._id,
+					...imageUpload,
+				}),
+			});
 
-      if (res.ok) {
-        const data = await res.json()
-        setPatientImages([...patientImages, data.image])
-        setImageUpload({
-          type: "xray",
-          title: "",
-          description: "",
-          imageUrl: "",
-          notes: "",
-        })
-        setImageErrors({})
-        toast.success("Image uploaded successfully")
-      } else {
-        const errorData = await res.json()
-        toast.error(errorData.error || "Failed to upload image")
-      }
-    } catch (error) {
-      console.error(error)
-      toast.error("Error uploading image")
-    } finally {
-      setLoading((prev) => ({ ...prev, uploadImage: false }))
-    }
-  }
+			if (res.ok) {
+				const data = await res.json();
+				setPatientImages([...patientImages, data.image]);
+				setImageUpload({
+					type: "xray",
+					title: "",
+					description: "",
+					imageUrl: "",
+					notes: "",
+				});
+				setImageErrors({});
+				toast.success("Image uploaded successfully");
+			} else {
+				const errorData = await res.json();
+				toast.error(errorData.error || "Failed to upload image");
+			}
+		} catch (error) {
+			console.error(error);
+			toast.error("Error uploading image");
+		} finally {
+			setLoading((prev) => ({ ...prev, uploadImage: false }));
+		}
+	};
 
-  const handleDeleteImage = async (imageId: string) => {
-    setLoading((prev) => ({ ...prev, deleteImage: true }))
-    try {
-      const res = await fetch(`/api/patient-images/${imageId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      })
+	const handleDeleteImage = async (imageId: string) => {
+		setLoading((prev) => ({ ...prev, deleteImage: true }));
+		try {
+			const res = await fetch(`/api/patient-images/${imageId}`, {
+				method: "DELETE",
+				headers: { Authorization: `Bearer ${token}` },
+			});
 
       if (res.ok) {
         setPatientImages(patientImages.filter((img) => img._id !== imageId))
@@ -477,18 +492,20 @@ export default function ClinicalToolsPage() {
     }
   }
 
-  return (
-    <ProtectedRoute allowedRoles={["admin", "doctor"]}>
-      <div className="flex h-screen bg-background">
-        <Sidebar />
-        <main className="flex-1 overflow-auto md:pt-0 pt-16">
-          <div className="p-4 sm:p-6 lg:p-8">
-            <div className="mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Clinical Tools</h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Manage patient records, tooth charts, and medical history
-              </p>
-            </div>
+	return (
+		<ProtectedRoute allowedRoles={["admin", "doctor"]}>
+			<div className="flex h-screen bg-background">
+				<Sidebar />
+				<main className="flex-1 overflow-auto md:pt-0 pt-16">
+					<div className="p-4 sm:p-6 lg:p-8">
+						<div className="mb-8">
+							<h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+								Clinical Tools
+							</h1>
+							<p className="text-muted-foreground text-sm mt-1">
+								Manage patient records, tooth charts, and medical history
+							</p>
+						</div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Patients List */}
@@ -544,21 +561,31 @@ export default function ClinicalToolsPage() {
                         </button>
                       </div>
 
-                      {showHistory && doctorHistory.length > 0 && (
-                        <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
-                          <p className="font-semibold text-foreground mb-2">Doctor History:</p>
-                          <div className="space-y-1">
-                            {doctorHistory.map((history, idx) => (
-                              <div key={idx} className="text-muted-foreground">
-                                <span className="font-medium">{history.doctorName}</span> - From{" "}
-                                {new Date(history.startDate).toLocaleDateString()}
-                                {history.endDate && ` to ${new Date(history.endDate).toLocaleDateString()}`}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+											{showHistory && doctorHistory.length > 0 && (
+												<div className="mt-4 p-3 bg-muted rounded-lg text-sm">
+													<p className="font-semibold text-foreground mb-2">
+														Doctor History:
+													</p>
+													<div className="space-y-1">
+														{doctorHistory.map((history, idx) => (
+															<div key={idx} className="text-muted-foreground">
+																<span className="font-medium">
+																	{history.doctorName}
+																</span>{" "}
+																- From{" "}
+																{new Date(
+																	history.startDate
+																).toLocaleDateString()}
+																{history.endDate &&
+																	` to ${new Date(
+																		history.endDate
+																	).toLocaleDateString()}`}
+															</div>
+														))}
+													</div>
+												</div>
+											)}
+										</div>
 
                     {/* Tabs */}
                     <div className="flex gap-2 mb-6 border-b border-border">
@@ -604,22 +631,24 @@ export default function ClinicalToolsPage() {
                           <>
                             <ToothChartVisual teeth={toothChart.teeth || {}} onToothClick={handleToothClick} />
 
-                            <div className="mt-6">
-                              <label className="block text-sm font-semibold text-foreground mb-2">Overall Notes</label>
-                              <textarea
-                                value={toothChart.overallNotes || ""}
-                                onChange={(e) =>
-                                  setToothChart({
-                                    ...toothChart,
-                                    overallNotes: e.target.value,
-                                  })
-                                }
-                                disabled={loading.saveChart}
-                                className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                rows={4}
-                                placeholder="Add clinical notes about the patient's dental condition..."
-                              />
-                            </div>
+														<div className="mt-6">
+															<label className="block text-sm font-semibold text-foreground mb-2">
+																Overall Notes
+															</label>
+															<textarea
+																value={toothChart.overallNotes || ""}
+																onChange={(e) =>
+																	setToothChart({
+																		...toothChart,
+																		overallNotes: e.target.value,
+																	})
+																}
+																disabled={loading.saveChart}
+																className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+																rows={4}
+																placeholder="Add clinical notes about the patient's dental condition..."
+															/>
+														</div>
 
                             <button
                               onClick={handleSaveToothChart}
