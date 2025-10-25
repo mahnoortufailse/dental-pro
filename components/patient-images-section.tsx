@@ -4,8 +4,10 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { Upload, Trash2, Eye, X } from "lucide-react"
+import { Upload, Trash2, Eye, FileText } from "lucide-react"
 import { ConfirmDeleteModal } from "./confirm-delete-modal"
+import { XrayFileUpload } from "./xray-file-upload"
+import { XrayDisplayViewer } from "./xray-display-viewer"
 
 interface PatientImage {
   _id: string
@@ -40,6 +42,7 @@ export function PatientImagesSection({ patientId, token, isDoctor }: PatientImag
     imageUrl: "",
     notes: "",
   })
+  const [showFileUpload, setShowFileUpload] = useState(false)
 
   useEffect(() => {
     fetchImages()
@@ -59,6 +62,16 @@ export function PatientImagesSection({ patientId, token, isDoctor }: PatientImag
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleFileUploadSuccess = async (fileUrl: string, fileName: string) => {
+    setFormData({
+      ...formData,
+      imageUrl: fileUrl,
+      title: formData.title || fileName.split(".")[0],
+    })
+    setShowFileUpload(false)
+    
   }
 
   const handleImageUpload = async (e: React.FormEvent) => {
@@ -161,6 +174,28 @@ export function PatientImagesSection({ patientId, token, isDoctor }: PatientImag
           {showUploadForm && (
             <div className="mt-4 bg-card border border-border rounded-lg p-4 space-y-4 shadow-md">
               <h3 className="font-semibold text-foreground">Upload X-Ray or Image</h3>
+
+              {!formData.imageUrl && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-foreground mb-3">Step 1: Upload File</h4>
+                  <XrayFileUpload onUploadSuccess={handleFileUploadSuccess} isLoading={uploading} />
+                </div>
+              )}
+
+              {formData.imageUrl && (
+                <div className="mb-4 p-3 bg-accent/10 border border-accent rounded-lg">
+                  <p className="text-sm text-foreground">
+                    <span className="font-medium">File uploaded:</span> {formData.title}
+                  </p>
+                  <button
+                    onClick={() => setFormData({ ...formData, imageUrl: "", title: "" })}
+                    className="text-xs text-accent hover:underline mt-2 cursor-pointer"
+                  >
+                    Change file
+                  </button>
+                </div>
+              )}
+
               <form onSubmit={handleImageUpload} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -188,18 +223,6 @@ export function PatientImagesSection({ patientId, token, isDoctor }: PatientImag
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-foreground block mb-2">Image URL *</label>
-                  <input
-                    type="url"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
-                    required
-                  />
-                </div>
-
-                <div>
                   <label className="text-sm font-medium text-foreground block mb-2">Description</label>
                   <textarea
                     value={formData.description}
@@ -223,10 +246,10 @@ export function PatientImagesSection({ patientId, token, isDoctor }: PatientImag
 
                 <button
                   type="submit"
-                  disabled={uploading}
-                  className="w-full bg-accent hover:bg-accent/90 disabled:opacity-50 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer"
+                  disabled={uploading || !formData.imageUrl}
+                  className="w-full bg-accent hover:bg-accent/90 disabled:opacity-50 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
                 >
-                  {uploading ? "Uploading..." : "Upload Image"}
+                  {uploading ? "Saving..." : "Save X-Ray"}
                 </button>
               </form>
             </div>
@@ -242,124 +265,84 @@ export function PatientImagesSection({ patientId, token, isDoctor }: PatientImag
 
         {images.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {images.map((image) => (
-              <div
-                key={image._id}
-                className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
-              >
-                <div className="aspect-square bg-muted overflow-hidden relative">
-                  <img
-                    src={image.imageUrl || "/placeholder.svg"}
-                    alt={image.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    onError={(e) => {
-                      e.currentTarget.src = "/medical-image.jpg"
-                    }}
-                  />
-                </div>
-                <div className="p-3 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground text-sm">{image.title || "Untitled"}</p>
-                      <p className="text-xs text-muted-foreground">{getImageTypeLabel(image.type)}</p>
-                    </div>
-                  </div>
-                  {image.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">{image.description}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Uploaded by {image.uploadedBy?.name} on {new Date(image.uploadedAt).toLocaleDateString()}
-                  </p>
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={() => setSelectedImage(image)}
-                      className="flex-1 flex items-center justify-center gap-1 bg-primary hover:bg-primary/90 text-primary-foreground px-2 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
-                    >
-                      <Eye className="w-3 h-3" />
-                      View
-                    </button>
-                    {isDoctor && (
-                      <button
-                        onClick={() => {
-                          setImageToDelete(image)
-                          setShowDeleteModal(true)
+            {images.map((image) => {
+              const isPdf = image.imageUrl?.toLowerCase().includes(".pdf")
+              return (
+                <div
+                  key={image._id}
+                  className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
+                >
+                  <div className="aspect-square bg-muted overflow-hidden relative flex items-center justify-center">
+                    {isPdf ? (
+                      <div className="flex flex-col items-center justify-center w-full h-full bg-gradient-to-br from-muted to-muted/50">
+                        <FileText className="w-12 h-12 text-destructive/50 mb-2" />
+                        <p className="text-xs text-muted-foreground font-medium">PDF Document</p>
+                      </div>
+                    ) : (
+                      <img
+                        src={image.imageUrl || "/placeholder.svg"}
+                        alt={image.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg"
                         }}
-                        className="flex-1 flex items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground px-2 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Delete
-                      </button>
+                      />
                     )}
                   </div>
+                  <div className="p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground text-sm">{image.title || "Untitled"}</p>
+                        <p className="text-xs text-muted-foreground">{getImageTypeLabel(image.type)}</p>
+                      </div>
+                    </div>
+                    {image.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">{image.description}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Uploaded by {image.uploadedBy?.name} on {new Date(image.uploadedAt).toLocaleDateString()}
+                    </p>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={() => setSelectedImage(image)}
+                        className="flex-1 flex items-center justify-center gap-1 bg-primary hover:bg-primary/90 text-primary-foreground px-2 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        <Eye className="w-3 h-3" />
+                        View
+                      </button>
+                      {isDoctor && (
+                        <button
+                          onClick={() => {
+                            setImageToDelete(image)
+                            setShowDeleteModal(true)
+                          }}
+                          className="flex-1 flex items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground px-2 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
 
-      {/* Image Viewer Modal - Enhanced Design */}
+      {/* Image Viewer Modal - Using new XrayDisplayViewer */}
       {selectedImage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-card rounded-lg shadow-xl border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card">
-              <h3 className="font-semibold text-foreground">{selectedImage.title || "Image"}</h3>
-              <button
-                onClick={() => setSelectedImage(null)}
-                className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-2 hover:bg-muted rounded-lg"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-4 space-y-4">
-              <img
-                src={selectedImage.imageUrl || "/placeholder.svg"}
-                alt={selectedImage.title}
-                className="w-full rounded-lg border border-border"
-                onError={(e) => {
-                  e.currentTarget.src = "/medical-image.jpg"
-                }}
-              />
-              <div className="space-y-3">
-                <div className="bg-muted/50 rounded-lg p-3 border border-border">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">Type</p>
-                  <p className="text-foreground text-sm mt-1">{getImageTypeLabel(selectedImage.type)}</p>
-                </div>
-                {selectedImage.description && (
-                  <div className="bg-muted/50 rounded-lg p-3 border border-border">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Description</p>
-                    <p className="text-foreground text-sm mt-1">{selectedImage.description}</p>
-                  </div>
-                )}
-                {selectedImage.notes && (
-                  <div className="bg-muted/50 rounded-lg p-3 border border-border">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Clinical Notes</p>
-                    <p className="text-foreground text-sm mt-1">{selectedImage.notes}</p>
-                  </div>
-                )}
-                <div className="bg-muted/50 rounded-lg p-3 border border-border">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">Uploaded By</p>
-                  <p className="text-foreground text-sm mt-1">
-                    {selectedImage.uploadedBy?.name} on {new Date(selectedImage.uploadedAt).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-border bg-muted/30">
-              <button
-                onClick={() => setSelectedImage(null)}
-                className="w-full bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <XrayDisplayViewer
+          imageUrl={selectedImage.imageUrl}
+          title={selectedImage.title || "Document"}
+          type={selectedImage.type}
+          description={selectedImage.description}
+          notes={selectedImage.notes}
+          uploadedBy={selectedImage.uploadedBy?.name}
+          uploadedAt={selectedImage.uploadedAt}
+          onClose={() => setSelectedImage(null)}
+        />
       )}
 
       {/* Confirm Delete Modal */}
