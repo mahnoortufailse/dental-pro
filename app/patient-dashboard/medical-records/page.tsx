@@ -38,7 +38,12 @@ interface MedicalHistoryEntry {
   findings: string
   treatment: string
   medications: string[]
-  doctorId: { name: string; specialty: string }
+  doctorId: { 
+    _id?: string
+    name?: string 
+    specialty?: string 
+  } | string // Could be ObjectId string or populated object
+  doctorName?: string
 }
 
 interface MedicalHistory {
@@ -53,6 +58,31 @@ export default function MedicalRecordsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"reports" | "history">("reports")
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+  // Add this helper function in your component
+const getDoctorInfo = (entry: MedicalHistoryEntry) => {
+  // If doctorId is an object with name property
+  if (entry.doctorId && typeof entry.doctorId === 'object' && entry.doctorId.name) {
+    return {
+      name: entry.doctorId.name,
+      specialty: entry.doctorId.specialty || "General Dentistry"
+    }
+  }
+  
+  // If we have doctorName directly stored
+  if (entry.doctorName) {
+    return {
+      name: entry.doctorName,
+      specialty: "General Dentistry"
+    }
+  }
+  
+  // Fallback
+  return {
+    name: "Unknown Doctor",
+    specialty: "General Dentistry"
+  }
+}
 
   useEffect(() => {
     if (patient && patientToken) {
@@ -76,10 +106,13 @@ export default function MedicalRecordsPage() {
         setRecords(data.reports || [])
       }
 
-      if (historyRes.ok) {
-        const data = await historyRes.json()
-        setMedicalHistory(data.history || null)
-      }
+      // In your fetchAllRecords function, update the history response handling:
+if (historyRes.ok) {
+  const data = await historyRes.json()
+  console.log("Medical History API Response:", data) // Debug log
+  console.log("First entry doctor data:", data.history?.entries?.[0]?.doctorId) // Debug log
+  setMedicalHistory(data.history || null)
+}
     } catch (error) {
       console.error("[v0] Error fetching records:", error)
       toast.error("Failed to load medical records")
@@ -367,84 +400,94 @@ export default function MedicalRecordsPage() {
                   </div>
                 )}
 
-                {/* Medical History Tab */}
-                {activeTab === "history" && (
-                  <div className="space-y-6">
-                    {!hasHistory ? (
-                      <Card className="p-8 text-center">
-                        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                        <p className="text-muted-foreground">No medical history records found</p>
-                      </Card>
-                    ) : (
-                      medicalHistory!.entries.map((entry, idx) => (
-                        <Card key={idx} className="p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                                <AlertCircle className="w-5 h-5 text-primary" />
-                                {new Date(entry.date).toLocaleDateString()}
-                              </h3>
-                              {entry.doctorId && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  Doctor: {entry.doctorId.name} ({entry.doctorId.specialty})
-                                </p>
-                              )}
-                            </div>
-                            <Button
-                              onClick={() => handleDownloadHistoryEntry(entry, idx)}
-                              disabled={downloadingId === `history-${idx}`}
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2"
-                            >
-                              <Download className="w-4 h-4" />
-                              {downloadingId === `history-${idx}` ? "Downloading..." : "Download"}
-                            </Button>
-                          </div>
+             
 
-                          {/* Findings */}
-                          {entry.findings && (
-                            <div className="mb-4">
-                              <h4 className="font-semibold text-foreground mb-2 text-sm">Findings</h4>
-                              <p className="text-muted-foreground text-sm whitespace-pre-wrap">{entry.findings}</p>
-                            </div>
-                          )}
+{/* Medical History Tab */}
+{activeTab === "history" && (
+  <div className="space-y-6">
+    {!hasHistory ? (
+      <Card className="p-8 text-center">
+        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+        <p className="text-muted-foreground">No medical history records found</p>
+      </Card>
+    ) : (
+      medicalHistory!.entries.map((entry, idx) => {
+        const doctorInfo = getDoctorInfo(entry)
+        
+        return (
+          <Card key={idx} className="p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-primary" />
+                  {new Date(entry.date).toLocaleDateString()}
+                </h3>
+                {/* Doctor Information Display */}
+                <div className="text-sm text-muted-foreground mt-1">
+                  <p className="font-medium text-foreground">
+                     {doctorInfo.name}
+                  </p>
+                  <p className="text-xs">
+                    {doctorInfo.specialty}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => handleDownloadHistoryEntry(entry, idx)}
+                disabled={downloadingId === `history-${idx}`}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                {downloadingId === `history-${idx}` ? "Downloading..." : "Download"}
+              </Button>
+            </div>
 
-                          {/* Treatment */}
-                          {entry.treatment && (
-                            <div className="mb-4">
-                              <h4 className="font-semibold text-foreground mb-2 text-sm">Treatment</h4>
-                              <p className="text-muted-foreground text-sm whitespace-pre-wrap">{entry.treatment}</p>
-                            </div>
-                          )}
+            {/* Rest of your existing content... */}
+            {entry.findings && (
+              <div className="mb-4">
+                <h4 className="font-semibold text-foreground mb-2 text-sm">Findings</h4>
+                <p className="text-muted-foreground text-sm whitespace-pre-wrap">{entry.findings}</p>
+              </div>
+            )}
 
-                          {/* Medications */}
-                          {entry.medications && entry.medications.length > 0 && (
-                            <div className="mb-4">
-                              <h4 className="font-semibold text-foreground mb-2 text-sm">Medications</h4>
-                              <div className="space-y-1">
-                                {entry.medications.map((med, medIdx) => (
-                                  <p key={medIdx} className="text-muted-foreground text-sm flex items-center gap-2">
-                                    <span className="text-primary">•</span>
-                                    {med}
-                                  </p>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+            {/* Treatment */}
+            {entry.treatment && (
+              <div className="mb-4">
+                <h4 className="font-semibold text-foreground mb-2 text-sm">Treatment</h4>
+                <p className="text-muted-foreground text-sm whitespace-pre-wrap">{entry.treatment}</p>
+              </div>
+            )}
 
-                          {/* Notes */}
-                          {entry.notes && (
-                            <div className="bg-muted/50 p-3 rounded-lg border border-border">
-                              <h4 className="font-semibold text-foreground mb-2 text-sm">Notes</h4>
-                              <p className="text-muted-foreground text-sm whitespace-pre-wrap">{entry.notes}</p>
-                            </div>
-                          )}
-                        </Card>
-                      ))
-                    )}
-                  </div>
-                )}
+            {/* Medications */}
+            {entry.medications && entry.medications.length > 0 && (
+              <div className="mb-4">
+                <h4 className="font-semibold text-foreground mb-2 text-sm">Medications</h4>
+                <div className="space-y-1">
+                  {entry.medications.map((med, medIdx) => (
+                    <p key={medIdx} className="text-muted-foreground text-sm flex items-center gap-2">
+                      <span className="text-primary">•</span>
+                      {med}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            {entry.notes && (
+              <div className="bg-muted/50 p-3 rounded-lg border border-border">
+                <h4 className="font-semibold text-foreground mb-2 text-sm">Notes</h4>
+                <p className="text-muted-foreground text-sm whitespace-pre-wrap">{entry.notes}</p>
+              </div>
+            )}
+          </Card>
+        )
+      })
+    )}
+  </div>
+)}
               </>
             ) : (
               <Card className="p-8 text-center">
