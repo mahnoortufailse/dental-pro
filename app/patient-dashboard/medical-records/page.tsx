@@ -62,13 +62,13 @@ export default function MedicalRecordsPage() {
 
   const fetchAllRecords = async (token: string, patientId: string) => {
     try {
-      const [reportsRes] = await Promise.all([
+      const [reportsRes, historyRes] = await Promise.all([
         fetch(`/api/appointment-reports?patientId=${patientId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        // fetch(`/api/medical-history?patientId=${patientId}`, {
-        //   headers: { Authorization: `Bearer ${token}` },
-        // }),
+        fetch(`/api/medical-history?patientId=${patientId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ])
 
       if (reportsRes.ok) {
@@ -76,10 +76,10 @@ export default function MedicalRecordsPage() {
         setRecords(data.reports || [])
       }
 
-      // if (historyRes.ok) {
-      //   const data = await historyRes.json()
-      //   setMedicalHistory(data.history || null)
-      // }
+      if (historyRes.ok) {
+        const data = await historyRes.json()
+        setMedicalHistory(data.history || null)
+      }
     } catch (error) {
       console.error("[v0] Error fetching records:", error)
       toast.error("Failed to load medical records")
@@ -101,127 +101,127 @@ export default function MedicalRecordsPage() {
     }
   }
 
-  // const handleDownloadHistoryEntry = async (entry: MedicalHistoryEntry, index: number) => {
-  //   try {
-  //     setDownloadingId(`history-${index}`)
+  const handleDownloadHistoryEntry = async (entry: MedicalHistoryEntry, index: number) => {
+    try {
+      setDownloadingId(`history-${index}`)
 
-  //     // Create a PDF for the medical history entry
-  //     const jsPDF = (await import("jspdf")).jsPDF
-  //     const doc = new jsPDF()
-  //     const pageWidth = doc.internal.pageSize.getWidth()
-  //     let yPosition = 20
+      // Create a PDF for the medical history entry
+      const jsPDF = (await import("jspdf")).jsPDF
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      let yPosition = 20
 
-  //     // Header
-  //     doc.setFontSize(24)
-  //     doc.setTextColor(33, 150, 243)
-  //     doc.text("DENTAL CARE PRO", pageWidth / 2, yPosition, { align: "center" })
-  //     yPosition += 8
+      // Header
+      doc.setFontSize(24)
+      doc.setTextColor(33, 150, 243)
+      doc.text("DENTAL CARE PRO", pageWidth / 2, yPosition, { align: "center" })
+      yPosition += 8
 
-  //     doc.setFontSize(12)
-  //     doc.setTextColor(100, 100, 100)
-  //     doc.text("MEDICAL HISTORY RECORD", pageWidth / 2, yPosition, { align: "center" })
-  //     yPosition += 10
+      doc.setFontSize(12)
+      doc.setTextColor(100, 100, 100)
+      doc.text("MEDICAL HISTORY RECORD", pageWidth / 2, yPosition, { align: "center" })
+      yPosition += 10
 
-  //     // Separator line
-  //     doc.setDrawColor(33, 150, 243)
-  //     doc.setLineWidth(0.5)
-  //     doc.line(20, yPosition, pageWidth - 20, yPosition)
-  //     yPosition += 10
+      // Separator line
+      doc.setDrawColor(33, 150, 243)
+      doc.setLineWidth(0.5)
+      doc.line(20, yPosition, pageWidth - 20, yPosition)
+      yPosition += 10
 
-  //     // Date
-  //     doc.setFontSize(10)
-  //     doc.setTextColor(100, 100, 100)
-  //     doc.text(`Record Date: ${new Date(entry.date).toLocaleDateString()}`, 20, yPosition)
-  //     yPosition += 10
+      // Date
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      doc.text(`Record Date: ${new Date(entry.date).toLocaleDateString()}`, 20, yPosition)
+      yPosition += 10
 
-  //     // Doctor Information
-  //     doc.setFontSize(12)
-  //     doc.setTextColor(33, 150, 243)
-  //     doc.setFont(undefined, "bold")
-  //     doc.text("DOCTOR INFORMATION", 20, yPosition)
-  //     yPosition += 8
+      // Doctor Information
+      doc.setFontSize(12)
+      doc.setTextColor(33, 150, 243)
+      doc.setFont(undefined, "bold")
+      doc.text("DOCTOR INFORMATION", 20, yPosition)
+      yPosition += 8
 
-  //     doc.setFontSize(10)
-  //     doc.setTextColor(0, 0, 0)
-  //     doc.setFont(undefined, "normal")
-  //     doc.text(`Name: ${entry.doctorId?.name || "N/A"}`, 25, yPosition)
-  //     yPosition += 6
-  //     doc.text(`Specialty: ${entry.doctorId?.specialty || "N/A"}`, 25, yPosition)
-  //     yPosition += 10
+      doc.setFontSize(10)
+      doc.setTextColor(0, 0, 0)
+      doc.setFont(undefined, "normal")
+      doc.text(`Name: ${entry.doctorId?.name || "N/A"}`, 25, yPosition)
+      yPosition += 6
+      doc.text(`Specialty: ${entry.doctorId?.specialty || "N/A"}`, 25, yPosition)
+      yPosition += 10
 
-  //     // Findings
-  //     doc.setFontSize(12)
-  //     doc.setTextColor(33, 150, 243)
-  //     doc.setFont(undefined, "bold")
-  //     doc.text("FINDINGS", 20, yPosition)
-  //     yPosition += 8
+      // Findings
+      doc.setFontSize(12)
+      doc.setTextColor(33, 150, 243)
+      doc.setFont(undefined, "bold")
+      doc.text("FINDINGS", 20, yPosition)
+      yPosition += 8
 
-  //     doc.setFontSize(10)
-  //     doc.setTextColor(0, 0, 0)
-  //     doc.setFont(undefined, "normal")
-  //     const findingsLines = doc.splitTextToSize(entry.findings || "N/A", pageWidth - 40)
-  //     doc.text(findingsLines, 25, yPosition)
-  //     yPosition += findingsLines.length * 6 + 5
+      doc.setFontSize(10)
+      doc.setTextColor(0, 0, 0)
+      doc.setFont(undefined, "normal")
+      const findingsLines = doc.splitTextToSize(entry.findings || "N/A", pageWidth - 40)
+      doc.text(findingsLines, 25, yPosition)
+      yPosition += findingsLines.length * 6 + 5
 
-  //     // Treatment
-  //     if (entry.treatment) {
-  //       doc.setFontSize(12)
-  //       doc.setTextColor(33, 150, 243)
-  //       doc.setFont(undefined, "bold")
-  //       doc.text("TREATMENT", 20, yPosition)
-  //       yPosition += 8
+      // Treatment
+      if (entry.treatment) {
+        doc.setFontSize(12)
+        doc.setTextColor(33, 150, 243)
+        doc.setFont(undefined, "bold")
+        doc.text("TREATMENT", 20, yPosition)
+        yPosition += 8
 
-  //       doc.setFontSize(10)
-  //       doc.setTextColor(0, 0, 0)
-  //       doc.setFont(undefined, "normal")
-  //       const treatmentLines = doc.splitTextToSize(entry.treatment, pageWidth - 40)
-  //       doc.text(treatmentLines, 25, yPosition)
-  //       yPosition += treatmentLines.length * 6 + 5
-  //     }
+        doc.setFontSize(10)
+        doc.setTextColor(0, 0, 0)
+        doc.setFont(undefined, "normal")
+        const treatmentLines = doc.splitTextToSize(entry.treatment, pageWidth - 40)
+        doc.text(treatmentLines, 25, yPosition)
+        yPosition += treatmentLines.length * 6 + 5
+      }
 
-  //     // Medications
-  //     if (entry.medications && entry.medications.length > 0) {
-  //       doc.setFontSize(12)
-  //       doc.setTextColor(33, 150, 243)
-  //       doc.setFont(undefined, "bold")
-  //       doc.text("MEDICATIONS", 20, yPosition)
-  //       yPosition += 8
+      // Medications
+      if (entry.medications && entry.medications.length > 0) {
+        doc.setFontSize(12)
+        doc.setTextColor(33, 150, 243)
+        doc.setFont(undefined, "bold")
+        doc.text("MEDICATIONS", 20, yPosition)
+        yPosition += 8
 
-  //       doc.setFontSize(10)
-  //       doc.setTextColor(0, 0, 0)
-  //       doc.setFont(undefined, "normal")
-  //       entry.medications.forEach((med) => {
-  //         doc.text(`• ${med}`, 25, yPosition)
-  //         yPosition += 6
-  //       })
-  //       yPosition += 5
-  //     }
+        doc.setFontSize(10)
+        doc.setTextColor(0, 0, 0)
+        doc.setFont(undefined, "normal")
+        entry.medications.forEach((med) => {
+          doc.text(`• ${med}`, 25, yPosition)
+          yPosition += 6
+        })
+        yPosition += 5
+      }
 
-  //     // Notes
-  //     if (entry.notes) {
-  //       doc.setFontSize(12)
-  //       doc.setTextColor(33, 150, 243)
-  //       doc.setFont(undefined, "bold")
-  //       doc.text("NOTES", 20, yPosition)
-  //       yPosition += 8
+      // Notes
+      if (entry.notes) {
+        doc.setFontSize(12)
+        doc.setTextColor(33, 150, 243)
+        doc.setFont(undefined, "bold")
+        doc.text("NOTES", 20, yPosition)
+        yPosition += 8
 
-  //       doc.setFontSize(10)
-  //       doc.setTextColor(0, 0, 0)
-  //       doc.setFont(undefined, "normal")
-  //       const notesLines = doc.splitTextToSize(entry.notes, pageWidth - 40)
-  //       doc.text(notesLines, 25, yPosition)
-  //     }
+        doc.setFontSize(10)
+        doc.setTextColor(0, 0, 0)
+        doc.setFont(undefined, "normal")
+        const notesLines = doc.splitTextToSize(entry.notes, pageWidth - 40)
+        doc.text(notesLines, 25, yPosition)
+      }
 
-  //     // Save the PDF
-  //     doc.save(`medical-history-${new Date(entry.date).toISOString().split("T")[0]}.pdf`)
-  //     toast.success("Medical history record downloaded successfully")
-  //   } catch (error) {
-  //     console.error("[v0] Error downloading history entry:", error)
-  //     toast.error("Failed to download medical history record")
-  //   } finally {
-  //     setDownloadingId(null)
-  //   }
-  // }
+      // Save the PDF
+      doc.save(`medical-history-${new Date(entry.date).toISOString().split("T")[0]}.pdf`)
+      toast.success("Medical history record downloaded successfully")
+    } catch (error) {
+      console.error("[v0] Error downloading history entry:", error)
+      toast.error("Failed to download medical history record")
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -249,7 +249,7 @@ export default function MedicalRecordsPage() {
               </div>
             </div>
 
-            {hasReports ? (
+            {hasReports || hasHistory ? (
               <>
                 <div className="flex gap-2 mb-6 border-b border-border">
                   <button
@@ -265,7 +265,7 @@ export default function MedicalRecordsPage() {
                       Appointment Reports ({records.length})
                     </span>
                   </button>
-                  {/* <button
+                  <button
                     onClick={() => setActiveTab("history")}
                     className={`px-4 py-2 font-medium text-sm transition-colors ${
                       activeTab === "history"
@@ -277,7 +277,7 @@ export default function MedicalRecordsPage() {
                       <AlertCircle className="w-4 h-4" />
                       Medical History ({medicalHistory?.entries?.length || 0})
                     </span>
-                  </button> */}
+                  </button>
                 </div>
 
                 {/* Appointment Reports Tab */}
@@ -368,7 +368,7 @@ export default function MedicalRecordsPage() {
                 )}
 
                 {/* Medical History Tab */}
-                {/* {activeTab === "history" && (
+                {activeTab === "history" && (
                   <div className="space-y-6">
                     {!hasHistory ? (
                       <Card className="p-8 text-center">
@@ -402,7 +402,7 @@ export default function MedicalRecordsPage() {
                             </Button>
                           </div>
 
-                          
+                          {/* Findings */}
                           {entry.findings && (
                             <div className="mb-4">
                               <h4 className="font-semibold text-foreground mb-2 text-sm">Findings</h4>
@@ -410,7 +410,7 @@ export default function MedicalRecordsPage() {
                             </div>
                           )}
 
-                       
+                          {/* Treatment */}
                           {entry.treatment && (
                             <div className="mb-4">
                               <h4 className="font-semibold text-foreground mb-2 text-sm">Treatment</h4>
@@ -418,7 +418,7 @@ export default function MedicalRecordsPage() {
                             </div>
                           )}
 
-                   
+                          {/* Medications */}
                           {entry.medications && entry.medications.length > 0 && (
                             <div className="mb-4">
                               <h4 className="font-semibold text-foreground mb-2 text-sm">Medications</h4>
@@ -433,7 +433,7 @@ export default function MedicalRecordsPage() {
                             </div>
                           )}
 
-                        
+                          {/* Notes */}
                           {entry.notes && (
                             <div className="bg-muted/50 p-3 rounded-lg border border-border">
                               <h4 className="font-semibold text-foreground mb-2 text-sm">Notes</h4>
@@ -444,7 +444,7 @@ export default function MedicalRecordsPage() {
                       ))
                     )}
                   </div>
-                )} */}
+                )}
               </>
             ) : (
               <Card className="p-8 text-center">
