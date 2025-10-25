@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { User, connectDB } from "@/lib/db"
+import { User, Patient, connectDB } from "@/lib/db"
 import { sendPasswordResetEmail } from "@/lib/email"
 import crypto from "crypto"
 
@@ -17,11 +17,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid user type" }, { status: 400 })
     }
 
-    // Add user type to the query
-    const user = await User.findOne({ 
-      email: email.toLowerCase(),
-      role: userType // This is the key fix - check user type
-    })
+    let user
+    if (userType === "patient") {
+      user = await Patient.findOne({ email: email.toLowerCase() })
+    } else {
+      user = await User.findOne({
+        email: email.toLowerCase(),
+        role: userType,
+      })
+    }
 
     if (!user) {
       // Don't reveal if email exists for security
@@ -35,15 +39,22 @@ export async function POST(request: NextRequest) {
     const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex")
     const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
 
-    await User.findByIdAndUpdate(user._id, {
-      resetToken: resetTokenHash,
-      resetTokenExpiry,
-    })
+    if (userType === "patient") {
+      await Patient.findByIdAndUpdate(user._id, {
+        resetToken: resetTokenHash,
+        resetTokenExpiry,
+      })
+    } else {
+      await User.findByIdAndUpdate(user._id, {
+        resetToken: resetTokenHash,
+        resetTokenExpiry,
+      })
+    }
 
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${resetToken}&type=${userType}`
-    
+
     console.log(`[v0] Attempting to send password reset to ${userType}:`, email)
-    
+
     await sendPasswordResetEmail(email, user.name, resetUrl)
 
     console.log(`[v0] Password reset email sent successfully to ${userType}:`, email)
