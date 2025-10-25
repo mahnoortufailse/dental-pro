@@ -19,12 +19,11 @@ export async function POST(request: NextRequest) {
 
     let user
     if (userType === "patient") {
-      user = await Patient.findOne({ email: email.toLowerCase() })
-    } else {
-      user = await User.findOne({
-        email: email.toLowerCase(),
-      })
-    }
+  user = await Patient.findOne({ email })
+} else {
+  user = await User.findOne({ email })
+}
+
 
     if (!user) {
       // Don't reveal if email exists for security

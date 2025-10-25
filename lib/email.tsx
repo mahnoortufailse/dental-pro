@@ -94,9 +94,11 @@ export async function sendPatientCredentials(email: string, patientName: string,
               </p>
             </div>
             
-            <p style="color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #ddd; padding-top: 20px;">
-              If you have any questions or need assistance, please contact the clinic administrator.
-            </p>
+            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0;">
+              <p style="margin: 0; color: #856404; font-size: 14px;">
+                ⚠️ Please change your password after logging in.
+              </p>
+            </div>
           </div>
         </div>
       `,
@@ -152,7 +154,6 @@ export async function sendStaffCredentials(email: string, staffName: string, str
               </p>
             </div>
             
-            
           </div>
         </div>
       `,
@@ -169,10 +170,18 @@ export async function sendStaffCredentials(email: string, staffName: string, str
 
 export async function sendPasswordResetEmail(email: string, userName: string, resetUrl: string) {
   try {
+    const emailUser = process.env.EMAIL_USER
+    const emailPass = process.env.EMAIL_PASS
+
+    if (!emailUser || !emailPass) {
+      console.error("[v0] Email credentials not configured for password reset")
+      throw new Error("Email service not configured. Please contact administrator.")
+    }
+
     const transporter = getTransporter()
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: emailUser,
       to: email,
       subject: "Reset Your Dental Clinic Portal Password",
       html: `
@@ -208,14 +217,13 @@ export async function sendPasswordResetEmail(email: string, userName: string, re
             <p style="color: #999; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #ddd; padding-top: 20px;">
               If you did not request this password reset, please contact our clinic immediately.
             </p>
-           
           </div>
         </div>
       `,
     }
 
-    await transporter.sendMail(mailOptions)
-    console.log("[v0] Password reset email sent successfully to:", email)
+    const info = await transporter.sendMail(mailOptions)
+    console.log("[v0] Password reset email sent successfully to:", email, "Message ID:", info.messageId)
     return true
   } catch (error) {
     console.error("[v0] Error sending password reset email:", error)
