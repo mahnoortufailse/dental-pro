@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { User, connectDB } from "@/lib/db"
+import { User, Patient, connectDB } from "@/lib/db"
 import { hashPassword } from "@/lib/encryption"
 import crypto from "crypto"
 
@@ -19,10 +19,18 @@ export async function POST(request: NextRequest) {
 
     const resetTokenHash = crypto.createHash("sha256").update(token).digest("hex")
 
-    const user = await User.findOne({
-      resetToken: resetTokenHash,
-      resetTokenExpiry: { $gt: new Date() },
-    })
+    let user
+    if (userType === "patient") {
+      user = await Patient.findOne({
+        resetToken: resetTokenHash,
+        resetTokenExpiry: { $gt: new Date() },
+      })
+    } else {
+      user = await User.findOne({
+        resetToken: resetTokenHash,
+        resetTokenExpiry: { $gt: new Date() },
+      })
+    }
 
     if (!user) {
       return NextResponse.json({ error: "Invalid or expired reset token" }, { status: 400 })
@@ -40,11 +48,19 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hashPassword(password)
 
-    await User.findByIdAndUpdate(user._id, {
-      password: hashedPassword,
-      resetToken: null,
-      resetTokenExpiry: null,
-    })
+    if (userType === "patient") {
+      await Patient.findByIdAndUpdate(user._id, {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      })
+    } else {
+      await User.findByIdAndUpdate(user._id, {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      })
+    }
 
     console.log("[v0] Password reset successfully for", userType + ":", user.email)
 
