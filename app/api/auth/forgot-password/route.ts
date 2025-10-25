@@ -5,13 +5,13 @@ import { sendPasswordResetEmail } from "@/lib/email"
 import crypto from "crypto"
 
 export async function POST(request: NextRequest) {
-  try {
-    await connectDB()
-    const { email, userType } = await request.json()
+	try {
+		await connectDB();
+		const { email, userType } = await request.json();
 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 })
-    }
+		if (!email) {
+			return NextResponse.json({ error: "Email is required" }, { status: 400 });
+		}
 
     if (!userType || (userType !== "staff" && userType !== "patient")) {
       return NextResponse.json({ error: "Invalid user type" }, { status: 400 })
@@ -25,17 +25,21 @@ export async function POST(request: NextRequest) {
 }
 
 
-    if (!user) {
-      // Don't reveal if email exists for security
-      return NextResponse.json({
-        success: true,
-        message: "If an account exists with this email, a password reset link has been sent.",
-      })
-    }
+		if (!user) {
+			// Don't reveal if email exists for security
+			return NextResponse.json({
+				success: true,
+				message:
+					"If an account exists with this email, a password reset link has been sent.",
+			});
+		}
 
-    const resetToken = crypto.randomBytes(32).toString("hex")
-    const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex")
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+		const resetToken = crypto.randomBytes(32).toString("hex");
+		const resetTokenHash = crypto
+			.createHash("sha256")
+			.update(resetToken)
+			.digest("hex");
+		const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     if (userType === "patient") {
       await Patient.findByIdAndUpdate(user._id, {
@@ -64,12 +68,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "If an account exists with this email, a password reset link has been sent.",
-    })
-  } catch (error) {
-    console.error("[v0] Forgot password error:", error)
-    return NextResponse.json({ error: "Failed to process password reset request" }, { status: 500 })
-  }
+		return NextResponse.json({
+			success: true,
+			message:
+				"If an account exists with this email, a password reset link has been sent.",
+		});
+	} catch (error) {
+		console.error("  Forgot password error:", error);
+		return NextResponse.json(
+			{ error: "Failed to process password reset request" },
+			{ status: 500 }
+		);
+	}
 }

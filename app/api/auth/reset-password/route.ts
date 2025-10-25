@@ -5,19 +5,28 @@ import { hashPassword } from "@/lib/encryption"
 import crypto from "crypto"
 
 export async function POST(request: NextRequest) {
-  try {
-    await connectDB()
-    const { token, password, userType } = await request.json()
+	try {
+		await connectDB();
+		const { token, password, userType } = await request.json();
 
-    if (!token || !password || !userType) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
+		if (!token || !password || !userType) {
+			return NextResponse.json(
+				{ error: "Missing required fields" },
+				{ status: 400 }
+			);
+		}
 
-    if (userType !== "staff" && userType !== "patient") {
-      return NextResponse.json({ error: "Invalid user type" }, { status: 400 })
-    }
+		if (userType !== "staff") {
+			return NextResponse.json(
+				{ error: "Password reset is only available for staff members" },
+				{ status: 403 }
+			);
+		}
 
-    const resetTokenHash = crypto.createHash("sha256").update(token).digest("hex")
+		const resetTokenHash = crypto
+			.createHash("sha256")
+			.update(token)
+			.digest("hex");
 
     let user
     if (userType === "patient") {
@@ -32,21 +41,26 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "Invalid or expired reset token" }, { status: 400 })
-    }
+		if (!user) {
+			return NextResponse.json(
+				{ error: "Invalid or expired reset token" },
+				{ status: 400 }
+			);
+		}
 
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
-    if (!passwordRegex.test(password)) {
-      return NextResponse.json(
-        {
-          error: "Password must be at least 8 characters with uppercase, number, and special character",
-        },
-        { status: 400 },
-      )
-    }
+		const passwordRegex =
+			/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+		if (!passwordRegex.test(password)) {
+			return NextResponse.json(
+				{
+					error:
+						"Password must be at least 8 characters with uppercase, number, and special character",
+				},
+				{ status: 400 }
+			);
+		}
 
-    const hashedPassword = await hashPassword(password)
+		const hashedPassword = await hashPassword(password);
 
     if (userType === "patient") {
       await Patient.findByIdAndUpdate(user._id, {
@@ -64,12 +78,16 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Password reset successfully for", userType + ":", user.email)
 
-    return NextResponse.json({
-      success: true,
-      message: "Password has been reset successfully. You can now login with your new password.",
-    })
-  } catch (error) {
-    console.error("[v0] Reset password error:", error)
-    return NextResponse.json({ error: "Failed to reset password" }, { status: 500 })
-  }
+		return NextResponse.json({
+			success: true,
+			message:
+				"Password has been reset successfully. You can now login with your new password.",
+		});
+	} catch (error) {
+		console.error("  Reset password error:", error);
+		return NextResponse.json(
+			{ error: "Failed to reset password" },
+			{ status: 500 }
+		);
+	}
 }
