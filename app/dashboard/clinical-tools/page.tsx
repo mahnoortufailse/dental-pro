@@ -1,17 +1,19 @@
 //@ts-nocheck
-"use client";
+"use client"
 
-import type React from "react";
+import type React from "react"
 
 import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { AlertCircle, History, Trash2, Loader2 } from "lucide-react"
+import { AlertCircle, History, Trash2, Loader2, FileText } from "lucide-react"
 import { ToothChartVisual } from "@/components/tooth-chart-visual"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { Button } from "@/components/ui/button"
+import { XrayFileUpload } from "@/components/xray-file-upload"
+import { XrayDisplayViewer } from "@/components/xray-display-viewer"
 
 export default function ClinicalToolsPage() {
   const { user, token } = useAuth()
@@ -60,213 +62,205 @@ export default function ClinicalToolsPage() {
   const [imageToDelete, setImageToDelete] = useState<any>(null)
   const [showMedicalDeleteModal, setShowMedicalDeleteModal] = useState(false)
   const [medicalEntryToDelete, setMedicalEntryToDelete] = useState<number | null>(null)
+  const [showFileUpload, setShowFileUpload] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<any>(null)
 
-	useEffect(() => {
-		if (token) fetchPatients();
-	}, [token]);
+  useEffect(() => {
+    if (token) fetchPatients()
+  }, [token])
 
-	const fetchPatients = async () => {
-		setLoading((prev) => ({ ...prev, patients: true }));
-		try {
-			const res = await fetch("/api/patients", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			if (res.ok) {
-				const data = await res.json();
-				setPatients(data.patients || []);
-			}
-		} catch (error) {
-			console.error(error);
-			toast.error("Failed to fetch patients");
-		} finally {
-			setLoading((prev) => ({ ...prev, patients: false }));
-		}
-	};
+  const fetchPatients = async () => {
+    setLoading((prev) => ({ ...prev, patients: true }))
+    try {
+      const res = await fetch("/api/patients", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPatients(data.patients || [])
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to fetch patients")
+    } finally {
+      setLoading((prev) => ({ ...prev, patients: false }))
+    }
+  }
 
-	const handleSelectPatient = async (patientId: string) => {
-		const patient = patients.find(
-			(p) => (p._id || p.id).toString() === patientId
-		);
-		setSelectedPatient(patient);
-		setToothChart(null);
-		setMedicalHistory(null);
-		setPatientImages([]);
-		setDoctorHistory(patient?.doctorHistory || []);
+  const handleSelectPatient = async (patientId: string) => {
+    const patient = patients.find((p) => (p._id || p.id).toString() === patientId)
+    setSelectedPatient(patient)
+    setToothChart(null)
+    setMedicalHistory(null)
+    setPatientImages([])
+    setDoctorHistory(patient?.doctorHistory || [])
 
-		setLoading((prev) => ({
-			...prev,
-			toothChart: true,
-			medicalHistory: true,
-			patientImages: true,
-		}));
+    setLoading((prev) => ({
+      ...prev,
+      toothChart: true,
+      medicalHistory: true,
+      patientImages: true,
+    }))
 
-		try {
-			const res = await fetch(`/api/tooth-chart?patientId=${patientId}`, {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			if (res.ok) {
-				const data = await res.json();
-				const chart = data.toothChart || (data.charts && data.charts[0]);
-				if (chart && chart.patientId.toString() === patientId) {
-					setToothChart(chart);
-					console.log("  Tooth chart loaded:", chart);
-				}
-			} else {
-				console.log("  No tooth chart found for patient:", patientId);
-			}
-		} catch (error) {
-			console.error("  Error fetching tooth chart:", error);
-		} finally {
-			setLoading((prev) => ({ ...prev, toothChart: false }));
-		}
+    try {
+      const res = await fetch(`/api/tooth-chart?patientId=${patientId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const chart = data.toothChart || (data.charts && data.charts[0])
+        if (chart && chart.patientId.toString() === patientId) {
+          setToothChart(chart)
+          console.log("  Tooth chart loaded:", chart)
+        }
+      } else {
+        console.log("  No tooth chart found for patient:", patientId)
+      }
+    } catch (error) {
+      console.error("  Error fetching tooth chart:", error)
+    } finally {
+      setLoading((prev) => ({ ...prev, toothChart: false }))
+    }
 
-		try {
-			const res = await fetch(`/api/medical-history?patientId=${patientId}`, {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			if (res.ok) {
-				const data = await res.json();
-				setMedicalHistory(data.history || null);
-			}
-		} catch (error) {
-			console.error(error);
-		} finally {
-			setLoading((prev) => ({ ...prev, medicalHistory: false }));
-		}
+    try {
+      const res = await fetch(`/api/medical-history?patientId=${patientId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setMedicalHistory(data.history || null)
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading((prev) => ({ ...prev, medicalHistory: false }))
+    }
 
-		try {
-			const res = await fetch(`/api/patient-images?patientId=${patientId}`, {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			if (res.ok) {
-				const data = await res.json();
-				setPatientImages(data.images || []);
-			}
-		} catch (error) {
-			console.error(error);
-		} finally {
-			setLoading((prev) => ({ ...prev, patientImages: false }));
-		}
-	};
+    try {
+      const res = await fetch(`/api/patient-images?patientId=${patientId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPatientImages(data.images || [])
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading((prev) => ({ ...prev, patientImages: false }))
+    }
+  }
 
-	const handleCreateToothChart = async () => {
-		if (!selectedPatient) return toast.error("Please select a patient first");
-		setLoading((prev) => ({ ...prev, createChart: true }));
+  const handleCreateToothChart = async () => {
+    if (!selectedPatient) return toast.error("Please select a patient first")
+    setLoading((prev) => ({ ...prev, createChart: true }))
 
-		try {
-			const patientId = selectedPatient._id || selectedPatient.id;
-			const res = await fetch("/api/tooth-chart", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({
-					patientId,
-					overallNotes: "",
-				}),
-			});
+    try {
+      const patientId = selectedPatient._id || selectedPatient.id
+      const res = await fetch("/api/tooth-chart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          patientId,
+          overallNotes: "",
+        }),
+      })
 
-			const data = await res.json();
-			if (res.ok) {
-				setToothChart(data.chart);
-				toast.success("Tooth chart created successfully!");
-			} else {
-				toast.error(data.error || "Failed to create tooth chart");
-			}
-		} catch (error) {
-			console.error(error);
-			toast.error("Failed to create tooth chart");
-		} finally {
-			setLoading((prev) => ({ ...prev, createChart: false }));
-		}
-	};
+      const data = await res.json()
+      if (res.ok) {
+        setToothChart(data.chart)
+        toast.success("Tooth chart created successfully!")
+      } else {
+        toast.error(data.error || "Failed to create tooth chart")
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to create tooth chart")
+    } finally {
+      setLoading((prev) => ({ ...prev, createChart: false }))
+    }
+  }
 
-	const handleToothClick = (toothNumber: number) => {
-		if (!toothChart) return;
-		const statuses = [
-			"healthy",
-			"cavity",
-			"missing",
-			"treated",
-			"root_canal",
-			"crown",
-		];
-		const currentTeeth = toothChart.teeth || {};
-		const currentStatus = currentTeeth[toothNumber]?.status || "healthy";
-		const nextStatus =
-			statuses[(statuses.indexOf(currentStatus) + 1) % statuses.length];
+  const handleToothClick = (toothNumber: number) => {
+    if (!toothChart) return
+    const statuses = ["healthy", "cavity", "missing", "treated", "root_canal", "crown"]
+    const currentTeeth = toothChart.teeth || {}
+    const currentStatus = currentTeeth[toothNumber]?.status || "healthy"
+    const nextStatus = statuses[(statuses.indexOf(currentStatus) + 1) % statuses.length]
 
-		setToothChart({
-			...toothChart,
-			teeth: {
-				...currentTeeth,
-				[toothNumber]: {
-					...(currentTeeth[toothNumber] || {}),
-					status: nextStatus,
-					lastUpdated: new Date(),
-				},
-			},
-		});
-	};
+    setToothChart({
+      ...toothChart,
+      teeth: {
+        ...currentTeeth,
+        [toothNumber]: {
+          ...(currentTeeth[toothNumber] || {}),
+          status: nextStatus,
+          lastUpdated: new Date(),
+        },
+      },
+    })
+  }
 
-	const handleSaveToothChart = async () => {
-		if (!toothChart) return;
-		setLoading((prev) => ({ ...prev, saveChart: true }));
+  const handleSaveToothChart = async () => {
+    if (!toothChart) return
+    setLoading((prev) => ({ ...prev, saveChart: true }))
 
-		try {
-			const chartId = toothChart._id || toothChart.id;
-			const res = await fetch(`/api/tooth-chart/${chartId}`, {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({
-					teeth: toothChart.teeth,
-					overallNotes: toothChart.overallNotes,
-				}),
-			});
+    try {
+      const chartId = toothChart._id || toothChart.id
+      const res = await fetch(`/api/tooth-chart/${chartId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          teeth: toothChart.teeth,
+          overallNotes: toothChart.overallNotes,
+        }),
+      })
 
-			const data = await res.json();
-			if (res.ok) {
-				toast.success("Tooth chart saved successfully!");
-			} else {
-				toast.error(data.error || "Failed to save tooth chart");
-			}
-		} catch (error) {
-			console.error(error);
-			toast.error("Failed to save tooth chart");
-		} finally {
-			setLoading((prev) => ({ ...prev, saveChart: false }));
-		}
-	};
+      const data = await res.json()
+      if (res.ok) {
+        toast.success("Tooth chart saved successfully!")
+      } else {
+        toast.error(data.error || "Failed to save tooth chart")
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to save tooth chart")
+    } finally {
+      setLoading((prev) => ({ ...prev, saveChart: false }))
+    }
+  }
 
-	const validateMedicalEntry = (): boolean => {
-		const errors: Record<string, string> = {};
+  const validateMedicalEntry = (): boolean => {
+    const errors: Record<string, string> = {}
 
-		if (!medicalEntry.notes.trim()) {
-			errors.notes = "Notes are required";
-		}
-		if (!medicalEntry.findings.trim()) {
-			errors.findings = "Findings are required";
-		}
-		if (!medicalEntry.treatment.trim()) {
-			errors.treatment = "Treatment is required";
-		}
+    if (!medicalEntry.notes.trim()) {
+      errors.notes = "Notes are required"
+    }
+    if (!medicalEntry.findings.trim()) {
+      errors.findings = "Findings are required"
+    }
+    if (!medicalEntry.treatment.trim()) {
+      errors.treatment = "Treatment is required"
+    }
 
-		setMedicalErrors(errors);
-		return Object.keys(errors).length === 0;
-	};
+    setMedicalErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
-	const handleAddMedicalEntry = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!selectedPatient) return;
+  const handleAddMedicalEntry = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedPatient) return
 
-		if (!validateMedicalEntry()) {
-			toast.error("Please fix the errors in the form");
-			return;
-		}
+    if (!validateMedicalEntry()) {
+      toast.error("Please fix the errors in the form")
+      return
+    }
 
     setLoading((prev) => ({ ...prev, addMedical: true }))
     try {
@@ -280,8 +274,8 @@ export default function ClinicalToolsPage() {
           patientId: selectedPatient._id || selectedPatient.id,
           entry: {
             notes: medicalEntry.notes.trim(),
-    findings: medicalEntry.findings.trim(),
-    treatment: medicalEntry.treatment.trim(),
+            findings: medicalEntry.findings.trim(),
+            treatment: medicalEntry.treatment.trim(),
             medications: medicalEntry.medications
               .split(",")
               .map((m) => m.trim())
@@ -290,97 +284,97 @@ export default function ClinicalToolsPage() {
         }),
       })
 
-			if (res.ok) {
-				const data = await res.json();
-				setMedicalHistory(data.history);
-				setMedicalEntry({
-					notes: "",
-					findings: "",
-					treatment: "",
-					medications: "",
-				});
-				setMedicalErrors({});
-				toast.success("Medical entry added successfully");
-			} else {
-				const errorData = await res.json();
-				toast.error(errorData.error || "Failed to add medical entry");
-			}
-		} catch (error) {
-			console.error(error);
-			toast.error("Error adding medical entry");
-		} finally {
-			setLoading((prev) => ({ ...prev, addMedical: false }));
-		}
-	};
+      if (res.ok) {
+        const data = await res.json()
+        setMedicalHistory(data.history)
+        setMedicalEntry({
+          notes: "",
+          findings: "",
+          treatment: "",
+          medications: "",
+        })
+        setMedicalErrors({})
+        toast.success("Medical entry added successfully")
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to add medical entry")
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Error adding medical entry")
+    } finally {
+      setLoading((prev) => ({ ...prev, addMedical: false }))
+    }
+  }
 
-	const validateImageUpload = (): boolean => {
-		const errors: Record<string, string> = {};
+  const validateImageUpload = (): boolean => {
+    const errors: Record<string, string> = {}
 
-		if (!imageUpload.title.trim()) {
-			errors.title = "Image title is required";
-		}
-		if (!imageUpload.imageUrl.trim()) {
-			errors.imageUrl = "Image URL is required";
-		}
+    if (!imageUpload.title.trim()) {
+      errors.title = "Image title is required"
+    }
+    if (!imageUpload.imageUrl.trim()) {
+      errors.imageUrl = "Image URL is required"
+    }
 
-		setImageErrors(errors);
-		return Object.keys(errors).length === 0;
-	};
+    setImageErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
-	const handleUploadImage = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!selectedPatient) return;
+  const handleUploadImage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedPatient) return
 
-		if (!validateImageUpload()) {
-			toast.error("Please fix the errors in the form");
-			return;
-		}
+    if (!validateImageUpload()) {
+      toast.error("Please fix the errors in the form")
+      return
+    }
 
-		setLoading((prev) => ({ ...prev, uploadImage: true }));
-		try {
-			const res = await fetch("/api/patient-images", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({
-					patientId: selectedPatient._id,
-					...imageUpload,
-				}),
-			});
+    setLoading((prev) => ({ ...prev, uploadImage: true }))
+    try {
+      const res = await fetch("/api/patient-images", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          patientId: selectedPatient._id,
+          ...imageUpload,
+        }),
+      })
 
-			if (res.ok) {
-				const data = await res.json();
-				setPatientImages([...patientImages, data.image]);
-				setImageUpload({
-					type: "xray",
-					title: "",
-					description: "",
-					imageUrl: "",
-					notes: "",
-				});
-				setImageErrors({});
-				toast.success("Image uploaded successfully");
-			} else {
-				const errorData = await res.json();
-				toast.error(errorData.error || "Failed to upload image");
-			}
-		} catch (error) {
-			console.error(error);
-			toast.error("Error uploading image");
-		} finally {
-			setLoading((prev) => ({ ...prev, uploadImage: false }));
-		}
-	};
+      if (res.ok) {
+        const data = await res.json()
+        setPatientImages([...patientImages, data.image])
+        setImageUpload({
+          type: "xray",
+          title: "",
+          description: "",
+          imageUrl: "",
+          notes: "",
+        })
+        setImageErrors({})
+        toast.success("Image uploaded successfully")
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to upload image")
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Error uploading image")
+    } finally {
+      setLoading((prev) => ({ ...prev, uploadImage: false }))
+    }
+  }
 
-	const handleDeleteImage = async (imageId: string) => {
-		setLoading((prev) => ({ ...prev, deleteImage: true }));
-		try {
-			const res = await fetch(`/api/patient-images/${imageId}`, {
-				method: "DELETE",
-				headers: { Authorization: `Bearer ${token}` },
-			});
+  const handleDeleteImage = async (imageId: string) => {
+    setLoading((prev) => ({ ...prev, deleteImage: true }))
+    try {
+      const res = await fetch(`/api/patient-images/${imageId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
 
       if (res.ok) {
         setPatientImages(patientImages.filter((img) => img._id !== imageId))
@@ -492,20 +486,28 @@ export default function ClinicalToolsPage() {
     }
   }
 
-	return (
-		<ProtectedRoute allowedRoles={["admin", "doctor"]}>
-			<div className="flex h-screen bg-background">
-				<Sidebar />
-				<main className="flex-1 overflow-auto md:pt-0 pt-16">
-					<div className="p-4 sm:p-6 lg:p-8">
-						<div className="mb-8">
-							<h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-								Clinical Tools
-							</h1>
-							<p className="text-muted-foreground text-sm mt-1">
-								Manage patient records, tooth charts, and medical history
-							</p>
-						</div>
+  const handleFileUploadSuccess = (fileUrl: string, fileName: string) => {
+    setImageUpload({
+      ...imageUpload,
+      imageUrl: fileUrl,
+      title: imageUpload.title || fileName.split(".")[0],
+    })
+    setShowFileUpload(false)
+    
+  }
+
+  return (
+    <ProtectedRoute allowedRoles={["admin", "doctor"]}>
+      <div className="flex h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 overflow-auto md:pt-0 pt-16">
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="mb-8">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Clinical Tools</h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Manage patient records, tooth charts, and medical history
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Patients List */}
@@ -561,31 +563,21 @@ export default function ClinicalToolsPage() {
                         </button>
                       </div>
 
-											{showHistory && doctorHistory.length > 0 && (
-												<div className="mt-4 p-3 bg-muted rounded-lg text-sm">
-													<p className="font-semibold text-foreground mb-2">
-														Doctor History:
-													</p>
-													<div className="space-y-1">
-														{doctorHistory.map((history, idx) => (
-															<div key={idx} className="text-muted-foreground">
-																<span className="font-medium">
-																	{history.doctorName}
-																</span>{" "}
-																- From{" "}
-																{new Date(
-																	history.startDate
-																).toLocaleDateString()}
-																{history.endDate &&
-																	` to ${new Date(
-																		history.endDate
-																	).toLocaleDateString()}`}
-															</div>
-														))}
-													</div>
-												</div>
-											)}
-										</div>
+                      {showHistory && doctorHistory.length > 0 && (
+                        <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
+                          <p className="font-semibold text-foreground mb-2">Doctor History:</p>
+                          <div className="space-y-1">
+                            {doctorHistory.map((history, idx) => (
+                              <div key={idx} className="text-muted-foreground">
+                                <span className="font-medium">{history.doctorName}</span> - From{" "}
+                                {new Date(history.startDate).toLocaleDateString()}
+                                {history.endDate && ` to ${new Date(history.endDate).toLocaleDateString()}`}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Tabs */}
                     <div className="flex gap-2 mb-6 border-b border-border">
@@ -631,24 +623,22 @@ export default function ClinicalToolsPage() {
                           <>
                             <ToothChartVisual teeth={toothChart.teeth || {}} onToothClick={handleToothClick} />
 
-														<div className="mt-6">
-															<label className="block text-sm font-semibold text-foreground mb-2">
-																Overall Notes
-															</label>
-															<textarea
-																value={toothChart.overallNotes || ""}
-																onChange={(e) =>
-																	setToothChart({
-																		...toothChart,
-																		overallNotes: e.target.value,
-																	})
-																}
-																disabled={loading.saveChart}
-																className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-																rows={4}
-																placeholder="Add clinical notes about the patient's dental condition..."
-															/>
-														</div>
+                            <div className="mt-6">
+                              <label className="block text-sm font-semibold text-foreground mb-2">Overall Notes</label>
+                              <textarea
+                                value={toothChart.overallNotes || ""}
+                                onChange={(e) =>
+                                  setToothChart({
+                                    ...toothChart,
+                                    overallNotes: e.target.value,
+                                  })
+                                }
+                                disabled={loading.saveChart}
+                                className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                rows={4}
+                                placeholder="Add clinical notes about the patient's dental condition..."
+                              />
+                            </div>
 
                             <button
                               onClick={handleSaveToothChart}
@@ -965,40 +955,77 @@ export default function ClinicalToolsPage() {
                           </div>
                         ) : patientImages.length > 0 ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {patientImages.map((image) => (
-                              <div key={image._id} className="p-4 bg-muted rounded-lg">
-                                {image.imageUrl && (
-                                  <img
-                                    src={image.imageUrl || "/placeholder.svg"}
-                                    alt={image.title}
-                                    className="w-full h-40 object-cover rounded-lg mb-3"
-                                  />
-                                )}
-                                <p className="font-semibold text-foreground text-sm">{image.title}</p>
-                                <p className="text-xs text-muted-foreground">{image.type.toUpperCase()}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {new Date(image.uploadedAt).toLocaleDateString()}
-                                </p>
-                                {image.notes && <p className="text-xs text-foreground mt-2">{image.notes}</p>}
-                                <button
-                                  onClick={() => {
-                                    setImageToDelete(image)
-                                    setShowDeleteModal(true)
-                                  }}
-                                  disabled={loading.deleteImage}
-                                  className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            {patientImages.map((image) => {
+                              const isPdf = image.imageUrl?.toLowerCase().includes(".pdf")
+                              return (
+                                <div
+                                  key={image._id}
+                                  className="p-4 bg-muted rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                                  onClick={() => setSelectedImage(image)}
                                 >
-                                  <Trash2 className="w-3 h-3" />
-                                  Delete
-                                </button>
-                              </div>
-                            ))}
+                                  {isPdf ? (
+                                    <div className="w-full h-40 bg-gradient-to-br from-muted to-muted/50 rounded-lg mb-3 flex items-center justify-center">
+                                      <FileText className="w-12 h-12 text-destructive/50" />
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={image.imageUrl || "/placeholder.svg"}
+                                      alt={image.title}
+                                      className="w-full h-40 object-cover rounded-lg mb-3"
+                                    />
+                                  )}
+                                  <p className="font-semibold text-foreground text-sm">{image.title}</p>
+                                  <p className="text-xs text-muted-foreground">{image.type.toUpperCase()}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {new Date(image.uploadedAt).toLocaleDateString()}
+                                  </p>
+                                  {image.notes && <p className="text-xs text-foreground mt-2">{image.notes}</p>}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setImageToDelete(image)
+                                      setShowDeleteModal(true)
+                                    }}
+                                    disabled={loading.deleteImage}
+                                    className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    Delete
+                                  </button>
+                                </div>
+                              )
+                            })}
                           </div>
                         ) : (
                           <p className="text-muted-foreground text-sm">No images uploaded yet</p>
                         )}
                         <form onSubmit={handleUploadImage} className="space-y-4 p-4 bg-muted rounded-lg">
                           <h3 className="font-semibold text-foreground">Upload X-Ray or Image</h3>
+
+                          {!imageUpload.imageUrl && (
+                            <div className="mb-4">
+                              <h4 className="text-sm font-medium text-foreground mb-3">Step 1: Upload File</h4>
+                              <XrayFileUpload
+                                onUploadSuccess={handleFileUploadSuccess}
+                                isLoading={loading.uploadImage}
+                              />
+                            </div>
+                          )}
+
+                          {imageUpload.imageUrl && (
+                            <div className="mb-4 p-3 bg-accent/10 border border-accent rounded-lg">
+                              <p className="text-sm text-foreground">
+                                <span className="font-medium">File uploaded:</span> {imageUpload.title}
+                              </p>
+                              <button
+                                onClick={() => setImageUpload({ ...imageUpload, imageUrl: "", title: "" })}
+                                className="text-xs text-accent hover:underline mt-2 cursor-pointer"
+                              >
+                                Change file
+                              </button>
+                            </div>
+                          )}
+
                           <select
                             value={imageUpload.type}
                             onChange={(e) =>
@@ -1033,31 +1060,6 @@ export default function ClinicalToolsPage() {
                               }`}
                             />
                             {imageErrors.title && <p className="text-xs text-destructive mt-1">{imageErrors.title}</p>}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-foreground mb-1">Image URL *</label>
-                            <textarea
-                              placeholder="Image URL (paste image URL here)"
-                              value={imageUpload.imageUrl}
-                              onChange={(e) => {
-                                setImageUpload({
-                                  ...imageUpload,
-                                  imageUrl: e.target.value,
-                                })
-                                setImageErrors({
-                                  ...imageErrors,
-                                  imageUrl: "",
-                                })
-                              }}
-                              disabled={loading.uploadImage}
-                              className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                                imageErrors.imageUrl ? "border-destructive" : "border-border"
-                              }`}
-                              rows={2}
-                            />
-                            {imageErrors.imageUrl && (
-                              <p className="text-xs text-destructive mt-1">{imageErrors.imageUrl}</p>
-                            )}
                           </div>
                           <textarea
                             placeholder="Notes..."
@@ -1094,6 +1096,18 @@ export default function ClinicalToolsPage() {
             </div>
           </div>
         </main>
+        {selectedImage && (
+          <XrayDisplayViewer
+            imageUrl={selectedImage.imageUrl}
+            title={selectedImage.title || "Document"}
+            type={selectedImage.type}
+            description={selectedImage.description}
+            notes={selectedImage.notes}
+            uploadedBy={selectedImage.uploadedBy?.name}
+            uploadedAt={selectedImage.uploadedAt}
+            onClose={() => setSelectedImage(null)}
+          />
+        )}
         <ConfirmDeleteModal
           isOpen={showMedicalDeleteModal}
           title="Delete Medical Entry"

@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import toast from "react-hot-toast"
 import Image from "next/image"
 import { useAuth } from "@/components/auth-context"
 import { PatientSidebar } from "@/components/patient-sidebar"
 import { ProtectedRoute } from "@/components/protected-route"
+import { XrayDisplayViewer } from "@/components/xray-display-viewer"
+import { FileText } from "lucide-react" // Added import for FileText
 
 interface PatientImage {
   _id: string
@@ -48,6 +49,15 @@ export default function XRaysPage() {
     }
   }
 
+  const getImageTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      xray: "X-Ray",
+      photo: "Photo",
+      scan: "Scan",
+    }
+    return labels[type] || type
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -77,96 +87,58 @@ export default function XRaysPage() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {images.map((image) => (
-                  <Card
-                    key={image._id}
-                    className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer !py-0"
-                    onClick={() => setSelectedImage(image)}
-                  >
-                    <div className="relative w-full h-48 bg-muted">
-                      {image.imageUrl ? (
-                        <Image
-                          src={image.imageUrl || "/placeholder.svg"}
-                          alt={image.title}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <p className="text-muted-foreground">No image available</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-semibold text-foreground">{image.title}</h3>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(image.uploadedAt).toLocaleDateString()}
-                      </p>
-                      <span className="inline-block mt-2 px-2 py-1 bg-primary/10 text-primary text-xs rounded">
-                        {image.type.toUpperCase()}
-                      </span>
-                    </div>
-                  </Card>
-                ))}
+                {images.map((image) => {
+                  const isPdf = image.imageUrl?.toLowerCase().includes(".pdf")
+                  return (
+                    <Card
+                      key={image._id}
+                      className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer !py-0"
+                      onClick={() => setSelectedImage(image)}
+                    >
+                      <div className="relative w-full h-48 bg-muted flex items-center justify-center">
+                        {isPdf ? (
+                          <div className="flex flex-col items-center justify-center w-full h-full bg-gradient-to-br from-muted to-muted/50">
+                            <FileText className="w-12 h-12 text-destructive/50 mb-2" />
+                            <p className="text-xs text-muted-foreground font-medium">PDF Document</p>
+                          </div>
+                        ) : (
+                          <Image
+                            src={image.imageUrl || "/placeholder.svg"}
+                            alt={image.title}
+                            fill
+                            className="object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-foreground">{image.title}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(image.uploadedAt).toLocaleDateString()}
+                        </p>
+                        <span className="inline-block mt-2 px-2 py-1 bg-primary/10 text-primary text-xs rounded">
+                          {image.type.toUpperCase()}
+                        </span>
+                      </div>
+                    </Card>
+                  )
+                })}
               </div>
             )}
           </div>
         </main>
       </div>
 
-      {/* Image Modal */}
+      {/* Image Viewer Modal */}
       {selectedImage && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-          onClick={() => setSelectedImage(null)}
-        >
-          <Card className="max-w-2xl w-full max-h-[90vh] overflow-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-foreground">{selectedImage.title}</h2>
-                <Button variant="ghost" onClick={() => setSelectedImage(null)}>
-                  ✕
-                </Button>
-              </div>
-
-              {selectedImage.imageUrl && (
-                <div className="relative w-full h-96 bg-muted mb-4">
-                  <Image
-                    src={selectedImage.imageUrl || "/placeholder.svg"}
-                    alt={selectedImage.title}
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
-                  <p className="font-medium text-foreground">{selectedImage.type.toUpperCase()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Date</p>
-                  <p className="font-medium text-foreground">
-                    {new Date(selectedImage.uploadedAt).toLocaleDateString()}
-                  </p>
-                </div>
-                {selectedImage.description && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Description</p>
-                    <p className="font-medium text-foreground">{selectedImage.description}</p>
-                  </div>
-                )}
-                {selectedImage.notes && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Notes</p>
-                    <p className="font-medium text-foreground">{selectedImage.notes}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        </div>
+        <XrayDisplayViewer
+          imageUrl={selectedImage.imageUrl}
+          title={selectedImage.title || "Document"}
+          type={selectedImage.type}
+          description={selectedImage.description}
+          notes={selectedImage.notes}
+          uploadedAt={selectedImage.uploadedAt}
+          onClose={() => setSelectedImage(null)}
+        />
       )}
     </ProtectedRoute>
   )
