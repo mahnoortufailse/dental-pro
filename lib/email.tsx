@@ -94,11 +94,7 @@ export async function sendPatientCredentials(email: string, patientName: string,
               </p>
             </div>
             
-            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0;">
-              <p style="margin: 0; color: #856404; font-size: 14px;">
-                ⚠️ Please change your password after logging in.
-              </p>
-            </div>
+            
           </div>
         </div>
       `,
