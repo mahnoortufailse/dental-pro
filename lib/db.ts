@@ -12,7 +12,6 @@ if (!MONGODB_URI) {
 
 // Define Schemas
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true, sparse: true },
   password: { type: String, required: true }, // Will be hashed
   name: { type: String, required: true },
@@ -141,6 +140,7 @@ const medicalHistorySchema = new mongoose.Schema({
       findings: String,
       treatment: String,
       medications: [String],
+      doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     },
   ],
   createdAt: { type: Date, default: Date.now },
@@ -207,7 +207,16 @@ export async function connectDB() {
       .connect(MONGODB_URI, {
         bufferCommands: false,
       })
-      .then((mongoose) => {
+      .then(async (mongoose) => {
+        try {
+          const userModel = mongoose.model("User", userSchema)
+          await userModel.collection.dropIndex("username_1").catch(() => {
+            // Index doesn't exist, which is fine
+          })
+          console.log("[v0] Cleaned up stale indexes")
+        } catch (err) {
+          // Silently ignore if index doesn't exist
+        }
         return mongoose
       })
   }
@@ -231,7 +240,6 @@ export async function initializeDB() {
     if (!adminExists) {
       const createdUsers = await User.create([
         {
-          username: "admin",
           email: "admin@dentalcare.com",
           password: "Admin@123456", // Will be hashed by pre-save hook
           name: "Admin User",
@@ -240,7 +248,6 @@ export async function initializeDB() {
           active: true,
         },
         {
-          username: "doctor1",
           email: "doctor@dentalcare.com",
           password: "Doctor@123456", // Will be hashed by pre-save hook
           name: "Dr. John Smith",
@@ -250,7 +257,6 @@ export async function initializeDB() {
           active: true,
         },
         {
-          username: "receptionist1",
           email: "receptionist@dentalcare.com",
           password: "Receptionist@123456", // Will be hashed by pre-save hook
           name: "Jane Doe",

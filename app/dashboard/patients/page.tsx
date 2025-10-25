@@ -150,73 +150,63 @@ export default function PatientsPage() {
 		};
 	};
 
-	// Enhanced handleAddPatient function with credential warnings modal
-	const handleAddPatient = async (e: React.FormEvent) => {
-		e.preventDefault();
+  // Enhanced handleAddPatient function with credential warnings modal
+ // Enhanced handleAddPatient function with credential warnings modal
+const handleAddPatient = async (e: React.FormEvent) => {
+  e.preventDefault()
 
-		const loadingKey = editingPatient ? "updatePatient" : "addPatient";
-		setLoading((prev) => ({ ...prev, [loadingKey]: true }));
+  const loadingKey = editingPatient ? 'updatePatient' : 'addPatient'
+  setLoading(prev => ({ ...prev, [loadingKey]: true }))
 
-		// Ensure phone number starts with +
-		let phoneNumber = formData.phone;
-		if (phoneNumber && !phoneNumber.startsWith("+")) {
-			phoneNumber = "+" + phoneNumber.replace(/\D/g, "");
-			console.log("  Fixed phone number format:", phoneNumber);
-		}
+  // Ensure phone number starts with +
+  let phoneNumber = formData.phone
+  if (phoneNumber && !phoneNumber.startsWith('+')) {
+    phoneNumber = '+' + phoneNumber.replace(/\D/g, '')
+    console.log("[v0] Fixed phone number format:", phoneNumber)
+  }
 
-		const phoneValidation = validatePhoneInputStrict(phoneNumber);
-		if (!phoneValidation.valid) {
-			toast.error(phoneValidation.error);
-			setLoading((prev) => ({ ...prev, [loadingKey]: false }));
-			return;
-		}
+  const phoneValidation = validatePhoneInputStrict(phoneNumber)
+  if (!phoneValidation.valid) {
+    toast.error(phoneValidation.error)
+    setLoading(prev => ({ ...prev, [loadingKey]: false }))
+    return
+  }
 
-		// Validate credentials
-		const validation = validatePatientCredentials({
-			...formData,
-			phone: phoneNumber,
-		});
+  // Validate credentials
+  const validation = validatePatientCredentials({...formData, phone: phoneNumber})
 
-		// Block if critical credentials are missing
-		if (validation.criticalCredentials.length > 0) {
-			toast.error(
-				`Missing critical credentials: ${validation.criticalCredentials.join(
-					", "
-				)}`
-			);
-			setLoading((prev) => ({ ...prev, [loadingKey]: false }));
-			return;
-		}
+  // Block if critical credentials are missing
+  if (validation.criticalCredentials.length > 0) {
+    toast.error(`Missing critical credentials: ${validation.criticalCredentials.join(", ")}`)
+    setLoading(prev => ({ ...prev, [loadingKey]: false }))
+    return
+  }
 
-		if (!formData.assignedDoctorId) {
-			toast.error("Please select a doctor");
-			setLoading((prev) => ({ ...prev, [loadingKey]: false }));
-			return;
-		}
+  if (!formData.assignedDoctorId) {
+    toast.error("Please select a doctor")
+    setLoading(prev => ({ ...prev, [loadingKey]: false }))
+    return
+  }
 
-		const selectedDoctor = doctors.find(
-			(doc) => doc.id === formData.assignedDoctorId
-		);
-		if (!selectedDoctor) {
-			toast.error(
-				"Invalid doctor selection. Please select a doctor from the list."
-			);
-			setLoading((prev) => ({ ...prev, [loadingKey]: false }));
-			return;
-		}
+  const selectedDoctor = doctors.find((doc) => doc.id === formData.assignedDoctorId)
+  if (!selectedDoctor) {
+    toast.error("Invalid doctor selection. Please select a doctor from the list.")
+    setLoading(prev => ({ ...prev, [loadingKey]: false }))
+    return
+  }
 
-		// Show modal for missing non-critical credentials instead of confirm
-		if (validation.warningCredentials.length > 0) {
-			setCredentialWarnings(validation.warningCredentials);
-			setPendingSubmit(() => () => submitPatientData(loadingKey, phoneNumber));
-			setShowCredentialWarning(true);
-			setLoading((prev) => ({ ...prev, [loadingKey]: false }));
-			return;
-		}
+  // Show modal for missing non-critical credentials - DON'T reset loading here
+  if (validation.warningCredentials.length > 0) {
+    setCredentialWarnings(validation.warningCredentials)
+    setPendingSubmit(() => () => submitPatientData(loadingKey, phoneNumber))
+    setShowCredentialWarning(true)
+    // DON'T reset loading state here - keep it true so the button shows loading
+    return
+  }
 
-		// If no warnings, proceed directly
-		await submitPatientData(loadingKey, phoneNumber);
-	};
+  // If no warnings, proceed directly
+  await submitPatientData(loadingKey, phoneNumber)
+}
 
 	// Separate function to handle the actual submission
 	const submitPatientData = async (loadingKey: string, phoneNumber: string) => {
@@ -304,15 +294,18 @@ export default function PatientsPage() {
 		}
 	};
 
-	// Handle proceed with warnings
-	const handleProceedWithWarnings = () => {
-		setShowCredentialWarning(false);
-		if (pendingSubmit) {
-			pendingSubmit();
-		}
-		setPendingSubmit(null);
-		setCredentialWarnings([]);
-	};
+  // Handle proceed with warnings
+  const handleProceedWithWarnings = () => {
+    setShowCredentialWarning(false)
+    if (pendingSubmit) {
+      // Re-enable loading state when proceeding with warnings
+      const loadingKey = editingPatient ? 'updatePatient' : 'addPatient'
+      setLoading(prev => ({ ...prev, [loadingKey]: true }))
+      pendingSubmit()
+    }
+    setPendingSubmit(null)
+    setCredentialWarnings([])
+  }
 
 	// Handle cancel with warnings
 	const handleCancelWithWarnings = () => {
@@ -492,53 +485,50 @@ export default function PatientsPage() {
 		(p) => p.credentialStatus === "incomplete"
 	);
 
-	return (
-		<ProtectedRoute>
-			<div className="flex h-screen bg-background">
-				<Sidebar />
-				<main className="flex-1 overflow-auto md:pt-0 pt-16">
-					<div className="p-4 sm:p-6 lg:p-8">
-						<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-							<div>
-								<h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-									Patients
-								</h1>
-								<p className="text-muted-foreground text-sm mt-1">
-									Manage patient records and medical information
-								</p>
-							</div>
-							{user?.role !== "doctor" && (
-								<button
-									onClick={() => {
-										setEditingPatient(null);
-										setShowForm(!showForm);
-										if (!showForm) {
-											setFormData({
-												name: "",
-												phone: "",
-												email: "",
-												dob: "",
-												idNumber: "",
-												address: "",
-												insuranceProvider: "",
-												insuranceNumber: "",
-												allergies: "",
-												medicalConditions: "",
-												assignedDoctorId: "",
-											});
-										}
-									}}
-									disabled={loading.patients || loading.doctors}
-									className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed">
-									{loading.patients || loading.doctors ? (
-										<Loader2 className="w-4 h-4 animate-spin" />
-									) : (
-										<Plus className="w-4 h-4" />
-									)}
-									{showForm ? "Cancel" : "Add Patient"}
-								</button>
-							)}
-						</div>
+  return (
+    <ProtectedRoute>
+      <div className="flex h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 overflow-auto md:pt-0 pt-16">
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Patients</h1>
+                <p className="text-muted-foreground text-sm mt-1">Manage patient records and medical information</p>
+              </div>
+              {user?.role !== "doctor" && (
+                <button
+                  onClick={() => {
+                    setEditingPatient(null)
+                    setShowForm(!showForm)
+                    if (!showForm) {
+                      setFormData({
+                        name: "",
+                        phone: "",
+                        email: "",
+                        dob: "",
+                        idNumber: "",
+                        address: "",
+                        insuranceProvider: "",
+                        insuranceNumber: "",
+                        allergies: "",
+                        medicalConditions: "",
+                        assignedDoctorId: "",
+                      })
+                    }
+                  }}
+                  disabled={loading.patients || loading.doctors || loading.addPatient || loading.updatePatient}
+                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {(loading.addPatient || loading.updatePatient) ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  {showForm ? "Cancel" : "Add Patient"}
+                </button>
+              )}
+            </div>
 
 						{incompleteCredentials.length > 0 && (
 							<div className="mb-6 bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex gap-3">
@@ -752,128 +742,107 @@ export default function PatientsPage() {
 							</div>
 						)}
 
-						<div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
-							<div className="overflow-x-auto">
-								<table className="w-full text-sm">
-									<thead className="bg-muted border-b border-border">
-										<tr>
-											<th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">
-												Name
-											</th>
-											<th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden sm:table-cell">
-												Phone
-											</th>
-											<th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden md:table-cell">
-												Doctor
-											</th>
-											<th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">
-												Credentials
-											</th>
-											<th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">
-												Actions
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{loading.patients ? (
-											<tr>
-												<td
-													colSpan={5}
-													className="px-4 sm:px-6 py-8 text-center text-muted-foreground">
-													<div className="flex items-center justify-center gap-2">
-														<Loader2 className="w-5 h-5 animate-spin" />
-														Loading patients...
-													</div>
-												</td>
-											</tr>
-										) : patients.length > 0 ? (
-											patients.map((patient) => (
-												<tr
-													key={patient._id}
-													className="border-b border-border hover:bg-muted/50 transition-colors">
-													<td className="px-4 sm:px-6 py-3 font-medium text-foreground">
-														{patient.name}
-													</td>
-													<td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell">
-														{formatPhoneForDisplay(patient.phone)}
-													</td>
-													<td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell">
-														{patient.assignedDoctorId?.name || "Unassigned"}
-													</td>
-													<td className="px-4 sm:px-6 py-3">
-														{patient.credentialStatus === "incomplete" ? (
-															<span className="flex items-center gap-1 text-destructive text-xs font-medium">
-																<AlertCircle className="w-4 h-4" />
-																Incomplete
-															</span>
-														) : (
-															<span className="text-accent text-xs font-medium">
-																Complete
-															</span>
-														)}
-													</td>
-													<td className="px-4 sm:px-6 py-3">
-														<div className="flex gap-2">
-															<button
-																onClick={() => {
-																	setSelectedPatient(patient);
-																	setMedicalFormData({
-																		medicalHistory:
-																			patient.medicalHistory || "",
-																		allergies:
-																			patient.allergies?.join(", ") || "",
-																		medicalConditions:
-																			patient.medicalConditions?.join(", ") ||
-																			"",
-																	});
-																}}
-																disabled={loading.deletePatient}
-																className="text-primary hover:text-primary/80 disabled:text-primary/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
-																title="View Details">
-																<Eye className="w-4 h-4" />
-															</button>
-															{user?.role !== "doctor" && (
-																<>
-																	<button
-																		onClick={() => handleEditPatient(patient)}
-																		disabled={
-																			loading.deletePatient ||
-																			loading.addPatient ||
-																			loading.updatePatient
-																		}
-																		className="text-accent hover:text-accent/80 disabled:text-accent/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
-																		title="Edit">
-																		<Edit2 className="w-4 h-4" />
-																	</button>
-																	<button
-																		onClick={() => {
-																			setPatientToDelete(patient);
-																			setShowDeleteModal(true);
-																		}}
-																		disabled={loading.deletePatient}
-																		className="text-destructive hover:text-destructive/80 disabled:text-destructive/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
-																		title="Delete">
-																		<Trash2 className="w-4 h-4" />
-																	</button>
-																</>
-															)}
-														</div>
-													</td>
-												</tr>
-											))
-										) : (
-											<tr>
-												<td
-													colSpan={5}
-													className="px-4 sm:px-6 py-8 text-center text-muted-foreground">
-													No patients found
-												</td>
-											</tr>
-										)}
-									</tbody>
-								</table>
-							</div>
-						</div>
+            <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted border-b border-border">
+                    <tr>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Name</th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden sm:table-cell">
+                        Phone
+                      </th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden md:table-cell">
+                        Doctor
+                      </th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Credentials</th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading.patients ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 sm:px-6 py-8 text-center text-muted-foreground">
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Loading patients...
+                          </div>
+                        </td>
+                      </tr>
+                    ) : patients.length > 0 ? (
+                      patients.map((patient) => (
+                        <tr key={patient._id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                          <td className="px-4 sm:px-6 py-3 font-medium text-foreground">{patient.name}</td>
+                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell">
+                            {formatPhoneForDisplay(patient.phone)}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell">
+                            {patient.assignedDoctorId?.name || "Unassigned"}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3">
+                            {patient.credentialStatus === "incomplete" ? (
+                              <span className="flex items-center gap-1 text-destructive text-xs font-medium">
+                                <AlertCircle className="w-4 h-4" />
+                                Incomplete
+                              </span>
+                            ) : (
+                              <span className="text-accent text-xs font-medium">Complete</span>
+                            )}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedPatient(patient)
+                                  setMedicalFormData({
+                                    medicalHistory: patient.medicalHistory || "",
+                                    allergies: patient.allergies?.join(", ") || "",
+                                    medicalConditions: patient.medicalConditions?.join(", ") || "",
+                                  })
+                                }}
+                                disabled={loading.deletePatient || loading.addPatient || loading.updatePatient}
+                                className="text-primary hover:text-primary/80 disabled:text-primary/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              {user?.role !== "doctor" && (
+                                <>
+                                  <button
+                                    onClick={() => handleEditPatient(patient)}
+                                    disabled={loading.deletePatient || loading.addPatient || loading.updatePatient}
+                                    className="text-accent hover:text-accent/80 disabled:text-accent/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                                    title="Edit"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setPatientToDelete(patient)
+                                      setShowDeleteModal(true)
+                                    }}
+                                    disabled={loading.deletePatient || loading.addPatient || loading.updatePatient}
+                                    className="text-destructive hover:text-destructive/80 disabled:text-destructive/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-4 sm:px-6 py-8 text-center text-muted-foreground">
+                          No patients found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
 						{/* Credential Warning Modal */}
 						{showCredentialWarning && (

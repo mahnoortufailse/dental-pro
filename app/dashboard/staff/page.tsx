@@ -13,6 +13,8 @@ export default function StaffPage() {
   const [staff, setStaff] = useState([])
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [staffToDelete, setStaffToDelete] = useState<any>(null)
+  const [isLoadingFetch, setIsLoadingFetch] = useState(false)
+  const [isLoadingDelete, setIsLoadingDelete] = useState(false)
 
   useEffect(() => {
     if (token) {
@@ -21,6 +23,7 @@ export default function StaffPage() {
   }, [token])
 
   const fetchStaff = async () => {
+    setIsLoadingFetch(true)
     try {
       const res = await fetch("/api/users", {
         headers: { Authorization: `Bearer ${token}` },
@@ -31,10 +34,13 @@ export default function StaffPage() {
       }
     } catch (error) {
       console.error("Failed to fetch staff:", error)
+    } finally {
+      setIsLoadingFetch(false)
     }
   }
 
   const handleDeleteStaff = async (staffId: string) => {
+    setIsLoadingDelete(true)
     try {
       const res = await fetch(`/api/users/${staffId}`, {
         method: "DELETE",
@@ -50,6 +56,8 @@ export default function StaffPage() {
     } catch (error) {
       console.error("Failed to delete staff:", error)
       toast.error("Error deleting staff member")
+    } finally {
+      setIsLoadingDelete(false)
     }
   }
 
@@ -81,6 +89,15 @@ export default function StaffPage() {
             </div>
 
             <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="flex justify-between items-center p-6 border-b">
+                <h2 className="text-lg font-semibold">Staff Members</h2>
+                <a
+                  href="/signup"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Register New Staff
+                </a>
+              </div>
               <table className="w-full">
                 <thead className="bg-gray-100 border-b">
                   <tr>
@@ -92,29 +109,55 @@ export default function StaffPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {staff.map((member) => (
-                    <tr key={member.id} className="border-b hover:bg-gray-50">
-                      <td className="px-6 py-3">{member.name}</td>
-                      <td className="px-6 py-3">{member.email}</td>
-                      <td className="px-6 py-3">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
-                          {member.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3">{member.specialty || "-"}</td>
-                      <td className="px-6 py-3">
-                        <button
-                          onClick={() => {
-                            setStaffToDelete(member)
-                            setShowDeleteModal(true)
-                          }}
-                          className="text-red-600 hover:underline text-sm"
-                        >
-                          Delete
-                        </button>
+                  {isLoadingFetch ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center">
+                        <div className="flex justify-center items-center gap-2">
+                          <div className="w-4 h-4 bg-blue-600 rounded-full animate-bounce"></div>
+                          <div
+                            className="w-4 h-4 bg-blue-600 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.1s" }}
+                          ></div>
+                          <div
+                            className="w-4 h-4 bg-blue-600 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.2s" }}
+                          ></div>
+                          <span className="text-gray-600 ml-2">Loading staff...</span>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : staff.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                        No staff members found
+                      </td>
+                    </tr>
+                  ) : (
+                    staff.map((member) => (
+                      <tr key={member.id} className="border-b hover:bg-gray-50">
+                        <td className="px-6 py-3">{member.name}</td>
+                        <td className="px-6 py-3">{member.email}</td>
+                        <td className="px-6 py-3">
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
+                            {member.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3">{member.specialty || "-"}</td>
+                        <td className="px-6 py-3">
+                          <button
+                            onClick={() => {
+                              setStaffToDelete(member)
+                              setShowDeleteModal(true)
+                            }}
+                            disabled={isLoadingDelete}
+                            className="text-red-600 hover:underline text-sm disabled:text-red-400 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {isLoadingDelete ? "Deleting..." : "Delete"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

@@ -67,7 +67,7 @@ export default function AppointmentsPage() {
             {/* Header */}
             <div className="dashboard-header mb-8">
               <div>
-                <h1 className="dashboard-title">Appointments</h1>
+                <h1 className="dashboard-title sm:text-3xl text-2xl">Appointments</h1>
                 <p className="text-muted-foreground mt-1 text-sm sm:text-base">
                   Your appointment history and upcoming visits
                 </p>
@@ -76,7 +76,7 @@ export default function AppointmentsPage() {
 
             {/* Upcoming Appointments */}
             <div className="mb-8">
-              <h2 className="text-xl font-bold text-foreground mb-4">Upcoming Appointments</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4">Upcoming Appointments</h2>
               {upcomingAppointments.length === 0 ? (
                 <Card className="p-6 text-center">
                   <p className="text-muted-foreground">No upcoming appointments</p>
@@ -105,7 +105,7 @@ export default function AppointmentsPage() {
 
             {/* Past Appointments */}
             <div>
-              <h2 className="text-xl font-bold text-foreground mb-4">Past Appointments</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4">Past Appointments</h2>
               {pastAppointments.length === 0 ? (
                 <Card className="p-6 text-center">
                   <p className="text-muted-foreground">No past appointments</p>

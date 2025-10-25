@@ -3,55 +3,63 @@
 
 import type React from "react";
 
-import { ProtectedRoute } from "@/components/protected-route";
-import { Sidebar } from "@/components/sidebar";
-import { useAuth } from "@/components/auth-context";
-import { useState, useEffect } from "react";
-import { toast } from "react-hot-toast";
-import { AlertCircle, History, Trash2, Loader2 } from "lucide-react";
-import { ToothChartVisual } from "@/components/tooth-chart-visual";
-import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { ProtectedRoute } from "@/components/protected-route"
+import { Sidebar } from "@/components/sidebar"
+import { useAuth } from "@/components/auth-context"
+import { useState, useEffect } from "react"
+import { toast } from "react-hot-toast"
+import { AlertCircle, History, Trash2, Loader2 } from "lucide-react"
+import { ToothChartVisual } from "@/components/tooth-chart-visual"
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
+import { Button } from "@/components/ui/button"
 
 export default function ClinicalToolsPage() {
-	const { user, token } = useAuth();
-	const [patients, setPatients] = useState([]);
-	const [selectedPatient, setSelectedPatient] = useState(null);
-	const [toothChart, setToothChart] = useState(null);
-	const [medicalHistory, setMedicalHistory] = useState(null);
-	const [patientImages, setPatientImages] = useState([]);
-	const [loading, setLoading] = useState({
-		patients: false,
-		toothChart: false,
-		medicalHistory: false,
-		patientImages: false,
-		createChart: false,
-		saveChart: false,
-		addMedical: false,
-		uploadImage: false,
-		deleteImage: false,
-	});
-	const [showHistory, setShowHistory] = useState(false);
-	const [doctorHistory, setDoctorHistory] = useState([]);
-	const [activeTab, setActiveTab] = useState("tooth-chart");
-	const [medicalEntry, setMedicalEntry] = useState({
-		notes: "",
-		findings: "",
-		treatment: "",
-		medications: "",
-	});
-	const [medicalErrors, setMedicalErrors] = useState<Record<string, string>>(
-		{}
-	);
-	const [imageUpload, setImageUpload] = useState({
-		type: "xray",
-		title: "",
-		description: "",
-		imageUrl: "",
-		notes: "",
-	});
-	const [imageErrors, setImageErrors] = useState<Record<string, string>>({});
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [imageToDelete, setImageToDelete] = useState<any>(null);
+  const { user, token } = useAuth()
+  const [patients, setPatients] = useState([])
+  const [selectedPatient, setSelectedPatient] = useState(null)
+  const [toothChart, setToothChart] = useState(null)
+  const [medicalHistory, setMedicalHistory] = useState(null)
+  const [patientImages, setPatientImages] = useState([])
+  const [loading, setLoading] = useState({
+    patients: false,
+    toothChart: false,
+    medicalHistory: false,
+    patientImages: false,
+    createChart: false,
+    saveChart: false,
+    addMedical: false,
+    uploadImage: false,
+    deleteImage: false,
+  })
+  const [showHistory, setShowHistory] = useState(false)
+  const [doctorHistory, setDoctorHistory] = useState([])
+  const [activeTab, setActiveTab] = useState("tooth-chart")
+  const [medicalEntry, setMedicalEntry] = useState({
+    notes: "",
+    findings: "",
+    treatment: "",
+    medications: "",
+  })
+  const [medicalErrors, setMedicalErrors] = useState<Record<string, string>>({})
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
+  const [editingEntry, setEditingEntry] = useState({
+    notes: "",
+    findings: "",
+    treatment: "",
+    medications: "",
+  })
+  const [imageUpload, setImageUpload] = useState({
+    type: "xray",
+    title: "",
+    description: "",
+    imageUrl: "",
+    notes: "",
+  })
+  const [imageErrors, setImageErrors] = useState<Record<string, string>>({})
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [imageToDelete, setImageToDelete] = useState<any>(null)
+  const [showMedicalDeleteModal, setShowMedicalDeleteModal] = useState(false)
+  const [medicalEntryToDelete, setMedicalEntryToDelete] = useState<number | null>(null)
 
 	useEffect(() => {
 		if (token) fetchPatients();
@@ -374,19 +382,115 @@ export default function ClinicalToolsPage() {
 				headers: { Authorization: `Bearer ${token}` },
 			});
 
-			if (res.ok) {
-				setPatientImages(patientImages.filter((img) => img._id !== imageId));
-				toast.success("Image deleted successfully");
-			} else {
-				toast.error("Failed to delete image");
-			}
-		} catch (error) {
-			console.error(error);
-			toast.error("Error deleting image");
-		} finally {
-			setLoading((prev) => ({ ...prev, deleteImage: false }));
-		}
-	};
+      if (res.ok) {
+        setPatientImages(patientImages.filter((img) => img._id !== imageId))
+        toast.success("Image deleted successfully")
+      } else {
+        toast.error("Failed to delete image")
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Error deleting image")
+    } finally {
+      setLoading((prev) => ({ ...prev, deleteImage: false }))
+    }
+  }
+
+  const handleEditMedicalEntry = (index: number, entry: any) => {
+    setEditingEntryId(index.toString())
+    setEditingEntry({
+      notes: entry.notes || "",
+      findings: entry.findings || "",
+      treatment: entry.treatment || "",
+      medications: (entry.medications || []).join(", "),
+    })
+  }
+
+  const handleSaveEditedEntry = async () => {
+    if (editingEntryId === null || !medicalHistory) return
+
+    if (!editingEntry.notes.trim() || !editingEntry.findings.trim() || !editingEntry.treatment.trim()) {
+      toast.error("Please fill in all required fields: Notes, Findings, and Treatment")
+      return
+    }
+
+    setLoading((prev) => ({ ...prev, addMedical: true }))
+    try {
+      const entryIndex = Number.parseInt(editingEntryId)
+      const res = await fetch(`/api/medical-history/${medicalHistory._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          entryIndex,
+          entry: {
+            notes: editingEntry.notes.trim(),
+            findings: editingEntry.findings.trim(),
+            treatment: editingEntry.treatment.trim(),
+            medications: editingEntry.medications
+              .split(",")
+              .map((m) => m.trim())
+              .filter(Boolean),
+          },
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setMedicalHistory(data.history)
+        setEditingEntryId(null)
+        setEditingEntry({
+          notes: "",
+          findings: "",
+          treatment: "",
+          medications: "",
+        })
+        toast.success("Medical entry updated successfully")
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to update medical entry")
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Error updating medical entry")
+    } finally {
+      setLoading((prev) => ({ ...prev, addMedical: false }))
+    }
+  }
+
+  const handleDeleteMedicalEntry = async (index: number) => {
+    if (!medicalHistory) return
+
+    setLoading((prev) => ({ ...prev, addMedical: true }))
+    try {
+      const res = await fetch(`/api/medical-history/${medicalHistory._id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ entryIndex: index }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setMedicalHistory(data.history)
+        toast.success("Medical entry deleted successfully")
+        setShowMedicalDeleteModal(false)
+        setMedicalEntryToDelete(null)
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to delete medical entry")
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Error deleting medical entry")
+    } finally {
+      setLoading((prev) => ({ ...prev, addMedical: false }))
+    }
+  }
 
 	return (
 		<ProtectedRoute allowedRoles={["admin", "doctor"]}>
@@ -403,77 +507,59 @@ export default function ClinicalToolsPage() {
 							</p>
 						</div>
 
-						<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-							{/* Patients List */}
-							<div className="lg:col-span-1">
-								<div className="bg-card rounded-lg shadow-md border border-border p-6">
-									<h2 className="text-lg sm:text-xl font-bold mb-4 text-foreground">
-										Your Patients
-									</h2>
-									<div className="space-y-2 max-h-[600px] overflow-y-auto">
-										{loading.patients ? (
-											<div className="flex items-center justify-center py-8">
-												<Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-											</div>
-										) : patients.length === 0 ? (
-											<p className="text-muted-foreground text-sm">
-												No patients assigned
-											</p>
-										) : (
-											patients.map((patient) => (
-												<button
-													key={patient._id || patient.id}
-													onClick={() =>
-														handleSelectPatient(patient._id || patient.id)
-													}
-													disabled={
-														loading.toothChart ||
-														loading.medicalHistory ||
-														loading.patientImages
-													}
-													className={`w-full text-left px-4 py-3 rounded-lg transition-colors text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-														selectedPatient?._id === (patient._id || patient.id)
-															? "bg-primary text-primary-foreground"
-															: "bg-muted hover:bg-muted/80 text-foreground"
-													}`}>
-													<div className="truncate">{patient.name}</div>
-													<div className="text-xs opacity-75 truncate">
-														{patient.phone}
-													</div>
-												</button>
-											))
-										)}
-									</div>
-								</div>
-							</div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Patients List */}
+              <div className="lg:col-span-1">
+                <div className="bg-card rounded-lg shadow-md border border-border p-6">
+                  <h2 className="text-lg sm:text-xl font-bold mb-4 text-foreground">Your Patients</h2>
+                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                    {loading.patients ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : patients.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">No patients assigned</p>
+                    ) : (
+                      patients.map((patient) => (
+                        <button
+                          key={patient._id || patient.id}
+                          onClick={() => handleSelectPatient(patient._id || patient.id)}
+                          disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
+                          className={`w-full text-left px-4 py-3 rounded-lg transition-colors text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                            selectedPatient?._id === (patient._id || patient.id)
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted hover:bg-muted/80 text-foreground"
+                          }`}
+                        >
+                          <div className="truncate">{patient.name}</div>
+                          <div className="text-xs opacity-75 truncate">{patient.phone}</div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
 
-							{/* Main Content */}
-							<div className="lg:col-span-2">
-								{selectedPatient ? (
-									<div className="bg-card rounded-lg shadow-md border border-border p-6">
-										{/* Patient Info Header */}
-										<div className="mb-6 pb-4 border-b border-border">
-											<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-												<div>
-													<h2 className="text-xl sm:text-2xl font-bold text-foreground">
-														{selectedPatient.name}
-													</h2>
-													<p className="text-muted-foreground text-sm">
-														DOB: {selectedPatient.dob}
-													</p>
-												</div>
-												<button
-													onClick={() => setShowHistory(!showHistory)}
-													disabled={
-														loading.toothChart ||
-														loading.medicalHistory ||
-														loading.patientImages
-													}
-													className="flex items-center gap-2 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground px-3 py-2 rounded-lg transition-colors text-sm font-medium disabled:cursor-not-allowed">
-													<History className="w-4 h-4" />
-													History
-												</button>
-											</div>
+              {/* Main Content */}
+              <div className="lg:col-span-2">
+                {selectedPatient ? (
+                  <div className="bg-card rounded-lg shadow-md border border-border p-6">
+                    {/* Patient Info Header */}
+                    <div className="mb-6 pb-4 border-b border-border">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                          <h2 className="text-xl sm:text-2xl font-bold text-foreground">{selectedPatient.name}</h2>
+                          <p className="text-muted-foreground text-sm">DOB: {selectedPatient.dob}</p>
+                        </div>
+                        <button
+                          onClick={() => setShowHistory(!showHistory)}
+                          disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
+                          className="flex items-center gap-2 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground px-3 py-2 rounded-lg transition-colors text-sm font-medium disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          <History className="w-4 h-4" />
+                          History
+                        </button>
+                      </div>
 
 											{showHistory && doctorHistory.length > 0 && (
 												<div className="mt-4 p-3 bg-muted rounded-lg text-sm">
@@ -501,62 +587,49 @@ export default function ClinicalToolsPage() {
 											)}
 										</div>
 
-										{/* Tabs */}
-										<div className="flex gap-2 mb-6 border-b border-border">
-											{["tooth-chart", "medical-history", "images"].map(
-												(tab) => (
-													<button
-														key={tab}
-														onClick={() => setActiveTab(tab)}
-														disabled={
-															loading.toothChart ||
-															loading.medicalHistory ||
-															loading.patientImages
-														}
-														className={`px-4 py-2 font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-															activeTab === tab
-																? "text-primary border-b-2 border-primary"
-																: "text-muted-foreground hover:text-foreground"
-														}`}>
-														{tab === "tooth-chart" && "Tooth Chart"}
-														{tab === "medical-history" && "Medical History"}
-														{tab === "images" && "X-Rays & Images"}
-													</button>
-												)
-											)}
-										</div>
+                    {/* Tabs */}
+                    <div className="flex gap-2 mb-6 border-b border-border">
+                      {["tooth-chart", "medical-history", "images"].map((tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveTab(tab)}
+                          disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
+                          className={`px-4 py-2 font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                            activeTab === tab
+                              ? "text-primary border-b-2 border-primary"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {tab === "tooth-chart" && "Tooth Chart"}
+                          {tab === "medical-history" && "Medical History"}
+                          {tab === "images" && "X-Rays & Images"}
+                        </button>
+                      ))}
+                    </div>
 
-										{/* Tooth Chart Tab */}
-										{activeTab === "tooth-chart" && (
-											<>
-												{loading.toothChart ? (
-													<div className="flex items-center justify-center py-12">
-														<Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-													</div>
-												) : !toothChart ? (
-													<div className="text-center py-12">
-														<AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-														<p className="text-muted-foreground mb-4">
-															No tooth chart created yet
-														</p>
-														<button
-															onClick={handleCreateToothChart}
-															disabled={loading.createChart}
-															className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-															{loading.createChart && (
-																<Loader2 className="w-4 h-4 animate-spin" />
-															)}
-															{loading.createChart
-																? "Creating..."
-																: "Create Tooth Chart"}
-														</button>
-													</div>
-												) : (
-													<>
-														<ToothChartVisual
-															teeth={toothChart.teeth || {}}
-															onToothClick={handleToothClick}
-														/>
+                    {/* Tooth Chart Tab */}
+                    {activeTab === "tooth-chart" && (
+                      <>
+                        {loading.toothChart ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : !toothChart ? (
+                          <div className="text-center py-12">
+                            <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                            <p className="text-muted-foreground mb-4">No tooth chart created yet</p>
+                            <button
+                              onClick={handleCreateToothChart}
+                              disabled={loading.createChart}
+                              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              {loading.createChart && <Loader2 className="w-4 h-4 animate-spin" />}
+                              {loading.createChart ? "Creating..." : "Create Tooth Chart"}
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <ToothChartVisual teeth={toothChart.teeth || {}} onToothClick={handleToothClick} />
 
 														<div className="mt-6">
 															<label className="block text-sm font-semibold text-foreground mb-2">
@@ -577,398 +650,485 @@ export default function ClinicalToolsPage() {
 															/>
 														</div>
 
-														<button
-															onClick={handleSaveToothChart}
-															disabled={loading.saveChart}
-															className="mt-6 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-															{loading.saveChart && (
-																<Loader2 className="w-4 h-4 animate-spin" />
-															)}
-															{loading.saveChart ? "Saving..." : "Save Chart"}
-														</button>
-													</>
-												)}
-											</>
-										)}
+                            <button
+                              onClick={handleSaveToothChart}
+                              disabled={loading.saveChart}
+                              className="mt-6 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              {loading.saveChart && <Loader2 className="w-4 h-4 animate-spin" />}
+                              {loading.saveChart ? "Saving..." : "Save Chart"}
+                            </button>
+                          </>
+                        )}
+                      </>
+                    )}
 
-										{/* Medical History Tab */}
-										{activeTab === "medical-history" && (
-											<div className="space-y-6">
-												{loading.medicalHistory ? (
-													<div className="flex items-center justify-center py-12">
-														<Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-													</div>
-												) : medicalHistory &&
-												  medicalHistory.entries &&
-												  medicalHistory.entries.length > 0 ? (
-													<div className="space-y-3">
-														<h3 className="font-semibold text-foreground">
-															Medical History Entries
-														</h3>
-														{medicalHistory.entries.map((entry, idx) => (
-															<div
-																key={idx}
-																className="p-4 bg-muted rounded-lg">
-																<p className="text-xs text-muted-foreground mb-2">
-																	{new Date(entry.date).toLocaleDateString()}
-																</p>
-																{entry.notes && (
-																	<div>
-																		<p className="text-xs font-semibold text-foreground">
-																			Notes:
-																		</p>
-																		<p className="text-sm text-foreground">
-																			{entry.notes}
-																		</p>
-																	</div>
-																)}
-																{entry.findings && (
-																	<div className="mt-2">
-																		<p className="text-xs font-semibold text-foreground">
-																			Findings:
-																		</p>
-																		<p className="text-sm text-foreground">
-																			{entry.findings}
-																		</p>
-																	</div>
-																)}
-																{entry.treatment && (
-																	<div className="mt-2">
-																		<p className="text-xs font-semibold text-foreground">
-																			Treatment:
-																		</p>
-																		<p className="text-sm text-foreground">
-																			{entry.treatment}
-																		</p>
-																	</div>
-																)}
-															</div>
-														))}
-													</div>
-												) : (
-													<p className="text-muted-foreground text-sm">
-														No medical history entries yet
-													</p>
-												)}
-												{user?.role === "doctor" && (
-													<form
-														onSubmit={handleAddMedicalEntry}
-														className="space-y-4 p-4 bg-muted rounded-lg">
-														<h3 className="font-semibold text-foreground">
-															Add Medical Entry
-														</h3>
-														<div>
-															<label className="block text-sm font-medium text-foreground mb-1">
-																Notes *
-															</label>
-															<textarea
-																placeholder="Clinical notes..."
-																value={medicalEntry.notes}
-																onChange={(e) => {
-																	setMedicalEntry({
-																		...medicalEntry,
-																		notes: e.target.value,
-																	});
-																	setMedicalErrors({
-																		...medicalErrors,
-																		notes: "",
-																	});
-																}}
-																disabled={loading.addMedical}
-																className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-																	medicalErrors.notes
-																		? "border-destructive"
-																		: "border-border"
-																}`}
-																rows={2}
-															/>
-															{medicalErrors.notes && (
-																<p className="text-xs text-destructive mt-1">
-																	{medicalErrors.notes}
-																</p>
-															)}
-														</div>
-														<div>
-															<label className="block text-sm font-medium text-foreground mb-1">
-																Findings *
-															</label>
-															<textarea
-																placeholder="Findings..."
-																value={medicalEntry.findings}
-																onChange={(e) => {
-																	setMedicalEntry({
-																		...medicalEntry,
-																		findings: e.target.value,
-																	});
-																	setMedicalErrors({
-																		...medicalErrors,
-																		findings: "",
-																	});
-																}}
-																disabled={loading.addMedical}
-																className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-																	medicalErrors.findings
-																		? "border-destructive"
-																		: "border-border"
-																}`}
-																rows={2}
-															/>
-															{medicalErrors.findings && (
-																<p className="text-xs text-destructive mt-1">
-																	{medicalErrors.findings}
-																</p>
-															)}
-														</div>
-														<div>
-															<label className="block text-sm font-medium text-foreground mb-1">
-																Treatment *
-															</label>
-															<textarea
-																placeholder="Treatment..."
-																value={medicalEntry.treatment}
-																onChange={(e) => {
-																	setMedicalEntry({
-																		...medicalEntry,
-																		treatment: e.target.value,
-																	});
-																	setMedicalErrors({
-																		...medicalErrors,
-																		treatment: "",
-																	});
-																}}
-																disabled={loading.addMedical}
-																className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-																	medicalErrors.treatment
-																		? "border-destructive"
-																		: "border-border"
-																}`}
-																rows={2}
-															/>
-															{medicalErrors.treatment && (
-																<p className="text-xs text-destructive mt-1">
-																	{medicalErrors.treatment}
-																</p>
-															)}
-														</div>
-														<input
-															type="text"
-															placeholder="Medications (comma-separated)"
-															value={medicalEntry.medications}
-															onChange={(e) =>
-																setMedicalEntry({
-																	...medicalEntry,
-																	medications: e.target.value,
-																})
-															}
-															disabled={loading.addMedical}
-															className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-														/>
-														<button
-															type="submit"
-															disabled={loading.addMedical}
-															className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-															{loading.addMedical && (
-																<Loader2 className="w-4 h-4 animate-spin" />
-															)}
-															{loading.addMedical ? "Adding..." : "Add Entry"}
-														</button>
-													</form>
-												)}
-											</div>
-										)}
+                    {/* Medical History Tab */}
+                    {activeTab === "medical-history" && (
+                      <div className="space-y-6">
+                        {loading.medicalHistory ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : medicalHistory && medicalHistory.entries && medicalHistory.entries.length > 0 ? (
+                          <div className="space-y-3">
+                            <h3 className="font-semibold text-foreground">Medical History Entries</h3>
+                            {medicalHistory.entries.map((entry, idx) => (
+                              <div key={idx} className="p-4 bg-muted rounded-lg border border-border">
+                                {editingEntryId === idx.toString() ? (
+                                  <div className="space-y-4">
+                                    <div>
+                                      <label className="block text-xs font-semibold text-foreground mb-2">
+                                        Notes *
+                                      </label>
+                                      <textarea
+                                        value={editingEntry.notes}
+                                        onChange={(e) =>
+                                          setEditingEntry({
+                                            ...editingEntry,
+                                            notes: e.target.value,
+                                          })
+                                        }
+                                        disabled={loading.addMedical}
+                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                        rows={2}
+                                        placeholder="Enter clinical notes..."
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-semibold text-foreground mb-2">
+                                        Findings *
+                                      </label>
+                                      <textarea
+                                        value={editingEntry.findings}
+                                        onChange={(e) =>
+                                          setEditingEntry({
+                                            ...editingEntry,
+                                            findings: e.target.value,
+                                          })
+                                        }
+                                        disabled={loading.addMedical}
+                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                        rows={2}
+                                        placeholder="Enter findings..."
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-semibold text-foreground mb-2">
+                                        Treatment *
+                                      </label>
+                                      <textarea
+                                        value={editingEntry.treatment}
+                                        onChange={(e) =>
+                                          setEditingEntry({
+                                            ...editingEntry,
+                                            treatment: e.target.value,
+                                          })
+                                        }
+                                        disabled={loading.addMedical}
+                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                        rows={2}
+                                        placeholder="Enter treatment..."
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-semibold text-foreground mb-2">
+                                        Medications
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={editingEntry.medications}
+                                        onChange={(e) =>
+                                          setEditingEntry({
+                                            ...editingEntry,
+                                            medications: e.target.value,
+                                          })
+                                        }
+                                        disabled={loading.addMedical}
+                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                        placeholder="Comma-separated medications"
+                                      />
+                                    </div>
+                                    <div className="flex gap-3 pt-2">
+                                      <Button
+                                        onClick={handleSaveEditedEntry}
+                                        disabled={loading.addMedical}
+                                        variant="default"
+                                        size="sm"
+                                        className="flex-1 cursor-pointer"
+                                      >
+                                        {loading.addMedical ? (
+                                          <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Saving...
+                                          </>
+                                        ) : (
+                                          "Save Changes"
+                                        )}
+                                      </Button>
+                                      <Button
+                                        onClick={() => setEditingEntryId(null)}
+                                        disabled={loading.addMedical}
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex-1 cursor-pointer"
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex justify-between items-start mb-3">
+                                      <p className="text-xs text-muted-foreground font-medium">
+                                        {new Date(entry.date).toLocaleDateString("en-US", {
+                                          year: "numeric",
+                                          month: "short",
+                                          day: "numeric",
+                                        })}
+                                      </p>
+                                      {user?.role === "doctor" &&
+                                        entry.doctorId &&
+                                        entry.doctorId.toString() === user.id && (
+                                          <div className="flex gap-2">
+                                            <Button
+                                              onClick={() => handleEditMedicalEntry(idx, entry)}
+                                              disabled={loading.addMedical}
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-7 px-3 text-xs cursor-pointer"
+                                            >
+                                              Edit
+                                            </Button>
+                                            <Button
+                                              onClick={() => {
+                                                setMedicalEntryToDelete(idx)
+                                                setShowMedicalDeleteModal(true)
+                                              }}
+                                              disabled={loading.addMedical}
+                                              variant="destructive"
+                                              size="sm"
+                                              className="h-7 px-3 text-xs cursor-pointer"
+                                            >
+                                              Delete
+                                            </Button>
+                                          </div>
+                                        )}
+                                    </div>
+                                    {entry.notes && (
+                                      <div className="mb-2">
+                                        <p className="text-xs font-semibold text-foreground mb-1">Notes:</p>
+                                        <p className="text-sm text-foreground">{entry.notes}</p>
+                                      </div>
+                                    )}
+                                    {entry.findings && (
+                                      <div className="mb-2">
+                                        <p className="text-xs font-semibold text-foreground mb-1">Findings:</p>
+                                        <p className="text-sm text-foreground">{entry.findings}</p>
+                                      </div>
+                                    )}
+                                    {entry.treatment && (
+                                      <div className="mb-2">
+                                        <p className="text-xs font-semibold text-foreground mb-1">Treatment:</p>
+                                        <p className="text-sm text-foreground">{entry.treatment}</p>
+                                      </div>
+                                    )}
+                                    {entry.medications && entry.medications.length > 0 && (
+                                      <div>
+                                        <p className="text-xs font-semibold text-foreground mb-1">Medications:</p>
+                                        <p className="text-sm text-foreground">{entry.medications.join(", ")}</p>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">No medical history entries yet</p>
+                        )}
+                        {user?.role === "doctor" && (
+                          <form
+                            onSubmit={handleAddMedicalEntry}
+                            className="space-y-4 p-4 bg-muted rounded-lg border border-border"
+                          >
+                            <h3 className="font-semibold text-foreground">Add Medical Entry</h3>
+                            <div>
+                              <label className="block text-sm font-medium text-foreground mb-2">Notes *</label>
+                              <textarea
+                                placeholder="Clinical notes..."
+                                value={medicalEntry.notes}
+                                onChange={(e) => {
+                                  setMedicalEntry({
+                                    ...medicalEntry,
+                                    notes: e.target.value,
+                                  })
+                                  setMedicalErrors({
+                                    ...medicalErrors,
+                                    notes: "",
+                                  })
+                                }}
+                                disabled={loading.addMedical}
+                                className={`w-full px-4 py-2 bg-input border rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                                  medicalErrors.notes ? "border-destructive" : "border-border"
+                                }`}
+                                rows={2}
+                              />
+                              {medicalErrors.notes && (
+                                <p className="text-xs text-destructive mt-1">{medicalErrors.notes}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-foreground mb-2">Findings *</label>
+                              <textarea
+                                placeholder="Findings..."
+                                value={medicalEntry.findings}
+                                onChange={(e) => {
+                                  setMedicalEntry({
+                                    ...medicalEntry,
+                                    findings: e.target.value,
+                                  })
+                                  setMedicalErrors({
+                                    ...medicalErrors,
+                                    findings: "",
+                                  })
+                                }}
+                                disabled={loading.addMedical}
+                                className={`w-full px-4 py-2 bg-input border rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                                  medicalErrors.findings ? "border-destructive" : "border-border"
+                                }`}
+                                rows={2}
+                              />
+                              {medicalErrors.findings && (
+                                <p className="text-xs text-destructive mt-1">{medicalErrors.findings}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-foreground mb-2">Treatment *</label>
+                              <textarea
+                                placeholder="Treatment..."
+                                value={medicalEntry.treatment}
+                                onChange={(e) => {
+                                  setMedicalEntry({
+                                    ...medicalEntry,
+                                    treatment: e.target.value,
+                                  })
+                                  setMedicalErrors({
+                                    ...medicalErrors,
+                                    treatment: "",
+                                  })
+                                }}
+                                disabled={loading.addMedical}
+                                className={`w-full px-4 py-2 bg-input border rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                                  medicalErrors.treatment ? "border-destructive" : "border-border"
+                                }`}
+                                rows={2}
+                              />
+                              {medicalErrors.treatment && (
+                                <p className="text-xs text-destructive mt-1">{medicalErrors.treatment}</p>
+                              )}
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Medications (comma-separated)"
+                              value={medicalEntry.medications}
+                              onChange={(e) =>
+                                setMedicalEntry({
+                                  ...medicalEntry,
+                                  medications: e.target.value,
+                                })
+                              }
+                              disabled={loading.addMedical}
+                              className="w-full px-4 py-2 bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                            <Button
+                              type="submit"
+                              disabled={loading.addMedical}
+                              variant="default"
+                              size="sm"
+                              className="w-full cursor-pointer"
+                            >
+                              {loading.addMedical && <Loader2 className="w-4 h-4 animate-spin" />}
+                              {loading.addMedical ? "Adding..." : "Add Entry"}
+                            </Button>
+                          </form>
+                        )}
+                      </div>
+                    )}
 
-										{/* Images Tab */}
-										{activeTab === "images" && (
-											<div className="space-y-6">
-												{loading.patientImages ? (
-													<div className="flex items-center justify-center py-12">
-														<Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-													</div>
-												) : patientImages.length > 0 ? (
-													<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-														{patientImages.map((image) => (
-															<div
-																key={image._id}
-																className="p-4 bg-muted rounded-lg">
-																{image.imageUrl && (
-																	<img
-																		src={image.imageUrl || "/placeholder.svg"}
-																		alt={image.title}
-																		className="w-full h-40 object-cover rounded-lg mb-3"
-																	/>
-																)}
-																<p className="font-semibold text-foreground text-sm">
-																	{image.title}
-																</p>
-																<p className="text-xs text-muted-foreground">
-																	{image.type.toUpperCase()}
-																</p>
-																<p className="text-xs text-muted-foreground mt-1">
-																	{new Date(
-																		image.uploadedAt
-																	).toLocaleDateString()}
-																</p>
-																{image.notes && (
-																	<p className="text-xs text-foreground mt-2">
-																		{image.notes}
-																	</p>
-																)}
-																<button
-																	onClick={() => {
-																		setImageToDelete(image);
-																		setShowDeleteModal(true);
-																	}}
-																	disabled={loading.deleteImage}
-																	className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
-																	<Trash2 className="w-3 h-3" />
-																	Delete
-																</button>
-															</div>
-														))}
-													</div>
-												) : (
-													<p className="text-muted-foreground text-sm">
-														No images uploaded yet
-													</p>
-												)}
-												<form
-													onSubmit={handleUploadImage}
-													className="space-y-4 p-4 bg-muted rounded-lg">
-													<h3 className="font-semibold text-foreground">
-														Upload X-Ray or Image
-													</h3>
-													<select
-														value={imageUpload.type}
-														onChange={(e) =>
-															setImageUpload({
-																...imageUpload,
-																type: e.target.value,
-															})
-														}
-														disabled={loading.uploadImage}
-														className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-														<option value="xray">X-Ray</option>
-														<option value="photo">Photo</option>
-														<option value="scan">Scan</option>
-													</select>
-													<div>
-														<label className="block text-sm font-medium text-foreground mb-1">
-															Image Title *
-														</label>
-														<input
-															type="text"
-															placeholder="Image title"
-															value={imageUpload.title}
-															onChange={(e) => {
-																setImageUpload({
-																	...imageUpload,
-																	title: e.target.value,
-																});
-																setImageErrors({ ...imageErrors, title: "" });
-															}}
-															disabled={loading.uploadImage}
-															className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-																imageErrors.title
-																	? "border-destructive"
-																	: "border-border"
-															}`}
-														/>
-														{imageErrors.title && (
-															<p className="text-xs text-destructive mt-1">
-																{imageErrors.title}
-															</p>
-														)}
-													</div>
-													<div>
-														<label className="block text-sm font-medium text-foreground mb-1">
-															Image URL *
-														</label>
-														<textarea
-															placeholder="Image URL (paste image URL here)"
-															value={imageUpload.imageUrl}
-															onChange={(e) => {
-																setImageUpload({
-																	...imageUpload,
-																	imageUrl: e.target.value,
-																});
-																setImageErrors({
-																	...imageErrors,
-																	imageUrl: "",
-																});
-															}}
-															disabled={loading.uploadImage}
-															className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-																imageErrors.imageUrl
-																	? "border-destructive"
-																	: "border-border"
-															}`}
-															rows={2}
-														/>
-														{imageErrors.imageUrl && (
-															<p className="text-xs text-destructive mt-1">
-																{imageErrors.imageUrl}
-															</p>
-														)}
-													</div>
-													<textarea
-														placeholder="Notes..."
-														value={imageUpload.notes}
-														onChange={(e) =>
-															setImageUpload({
-																...imageUpload,
-																notes: e.target.value,
-															})
-														}
-														disabled={loading.uploadImage}
-														className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-														rows={2}
-													/>
-													<button
-														type="submit"
-														disabled={
-															loading.uploadImage || !imageUpload.imageUrl
-														}
-														className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-														{loading.uploadImage && (
-															<Loader2 className="w-4 h-4 animate-spin" />
-														)}
-														{loading.uploadImage
-															? "Uploading..."
-															: "Upload Image"}
-													</button>
-												</form>
-											</div>
-										)}
-									</div>
-								) : (
-									<div className="bg-card rounded-lg shadow-md border border-border p-8 text-center">
-										<AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-										<p className="text-muted-foreground">
-											Select a patient to view their clinical records
-										</p>
-									</div>
-								)}
-							</div>
-						</div>
-					</div>
-				</main>
-				<ConfirmDeleteModal
-					isOpen={showDeleteModal}
-					title="Delete Image"
-					description="Are you sure you want to delete this image? This action cannot be undone."
-					itemName={imageToDelete?.title || "Untitled Image"}
-					onConfirm={() => {
-						handleDeleteImage(imageToDelete._id);
-						setShowDeleteModal(false);
-						setImageToDelete(null);
-					}}
-					onCancel={() => {
-						setShowDeleteModal(false);
-						setImageToDelete(null);
-					}}
-					isLoading={loading.deleteImage}
-				/>
-			</div>
-		</ProtectedRoute>
-	);
+                    {/* Images Tab */}
+                    {activeTab === "images" && (
+                      <div className="space-y-6">
+                        {loading.patientImages ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : patientImages.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {patientImages.map((image) => (
+                              <div key={image._id} className="p-4 bg-muted rounded-lg">
+                                {image.imageUrl && (
+                                  <img
+                                    src={image.imageUrl || "/placeholder.svg"}
+                                    alt={image.title}
+                                    className="w-full h-40 object-cover rounded-lg mb-3"
+                                  />
+                                )}
+                                <p className="font-semibold text-foreground text-sm">{image.title}</p>
+                                <p className="text-xs text-muted-foreground">{image.type.toUpperCase()}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {new Date(image.uploadedAt).toLocaleDateString()}
+                                </p>
+                                {image.notes && <p className="text-xs text-foreground mt-2">{image.notes}</p>}
+                                <button
+                                  onClick={() => {
+                                    setImageToDelete(image)
+                                    setShowDeleteModal(true)
+                                  }}
+                                  disabled={loading.deleteImage}
+                                  className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Delete
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">No images uploaded yet</p>
+                        )}
+                        <form onSubmit={handleUploadImage} className="space-y-4 p-4 bg-muted rounded-lg">
+                          <h3 className="font-semibold text-foreground">Upload X-Ray or Image</h3>
+                          <select
+                            value={imageUpload.type}
+                            onChange={(e) =>
+                              setImageUpload({
+                                ...imageUpload,
+                                type: e.target.value,
+                              })
+                            }
+                            disabled={loading.uploadImage}
+                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <option value="xray">X-Ray</option>
+                            <option value="photo">Photo</option>
+                            <option value="scan">Scan</option>
+                          </select>
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">Image Title *</label>
+                            <input
+                              type="text"
+                              placeholder="Image title"
+                              value={imageUpload.title}
+                              onChange={(e) => {
+                                setImageUpload({
+                                  ...imageUpload,
+                                  title: e.target.value,
+                                })
+                                setImageErrors({ ...imageErrors, title: "" })
+                              }}
+                              disabled={loading.uploadImage}
+                              className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                                imageErrors.title ? "border-destructive" : "border-border"
+                              }`}
+                            />
+                            {imageErrors.title && <p className="text-xs text-destructive mt-1">{imageErrors.title}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">Image URL *</label>
+                            <textarea
+                              placeholder="Image URL (paste image URL here)"
+                              value={imageUpload.imageUrl}
+                              onChange={(e) => {
+                                setImageUpload({
+                                  ...imageUpload,
+                                  imageUrl: e.target.value,
+                                })
+                                setImageErrors({
+                                  ...imageErrors,
+                                  imageUrl: "",
+                                })
+                              }}
+                              disabled={loading.uploadImage}
+                              className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                                imageErrors.imageUrl ? "border-destructive" : "border-border"
+                              }`}
+                              rows={2}
+                            />
+                            {imageErrors.imageUrl && (
+                              <p className="text-xs text-destructive mt-1">{imageErrors.imageUrl}</p>
+                            )}
+                          </div>
+                          <textarea
+                            placeholder="Notes..."
+                            value={imageUpload.notes}
+                            onChange={(e) =>
+                              setImageUpload({
+                                ...imageUpload,
+                                notes: e.target.value,
+                              })
+                            }
+                            disabled={loading.uploadImage}
+                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            rows={2}
+                          />
+                          <button
+                            type="submit"
+                            disabled={loading.uploadImage || !imageUpload.imageUrl}
+                            className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            {loading.uploadImage && <Loader2 className="w-4 h-4 animate-spin" />}
+                            {loading.uploadImage ? "Uploading..." : "Upload Image"}
+                          </button>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-card rounded-lg shadow-md border border-border p-8 text-center">
+                    <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <p className="text-muted-foreground">Select a patient to view their clinical records</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+        <ConfirmDeleteModal
+          isOpen={showMedicalDeleteModal}
+          title="Delete Medical Entry"
+          description="Are you sure you want to delete this medical history entry? This action cannot be undone."
+          itemName={
+            medicalHistory?.entries?.[medicalEntryToDelete || 0]?.notes?.substring(0, 50) + "..." || "Medical Entry"
+          }
+          onConfirm={() => {
+            if (medicalEntryToDelete !== null) {
+              handleDeleteMedicalEntry(medicalEntryToDelete)
+            }
+          }}
+          onCancel={() => {
+            setShowMedicalDeleteModal(false)
+            setMedicalEntryToDelete(null)
+          }}
+          isLoading={loading.addMedical}
+        />
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          title="Delete Image"
+          description="Are you sure you want to delete this image? This action cannot be undone."
+          itemName={imageToDelete?.title || "Untitled Image"}
+          onConfirm={() => {
+            handleDeleteImage(imageToDelete._id)
+            setShowDeleteModal(false)
+            setImageToDelete(null)
+          }}
+          onCancel={() => {
+            setShowDeleteModal(false)
+            setImageToDelete(null)
+          }}
+          isLoading={loading.deleteImage}
+        />
+      </div>
+    </ProtectedRoute>
+  )
 }

@@ -8,12 +8,9 @@ export async function POST(request: NextRequest) {
 		await connectDB();
 		const { username, password } = await request.json();
 
-		if (!username || !password) {
-			return NextResponse.json(
-				{ error: "Username and password required" },
-				{ status: 400 }
-			);
-		}
+    if (!username || !password) {
+      return NextResponse.json({ error: "Email and password required" }, { status: 400 })
+    }
 
 		const user = await User.findOne({
 			$or: [{ username }, { email: username }],

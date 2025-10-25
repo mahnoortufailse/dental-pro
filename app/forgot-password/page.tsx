@@ -12,6 +12,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [userType, setUserType] = useState<"patient" | "staff">("patient")
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,7 +25,7 @@ export default function ForgotPasswordPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          userType: "staff",
+          userType,
         }),
       })
 
@@ -72,6 +73,34 @@ export default function ForgotPasswordPage() {
 
           {!submitted ? (
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+              <div>
+               
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setUserType("patient")}
+                    className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-colors ${
+                      userType === "patient"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-input border border-border text-foreground hover:bg-input/80"
+                    }`}
+                  >
+                    Patient
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUserType("staff")}
+                    className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-colors ${
+                      userType === "staff"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-input border border-border text-foreground hover:bg-input/80"
+                    }`}
+                  >
+                    Staff
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">Email Address</label>
                 <div className="relative">

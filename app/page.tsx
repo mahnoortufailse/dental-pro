@@ -9,7 +9,7 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    if (isLoading) return // ✅ Wait until loading completes
+    if (isLoading) return // ��� Wait until loading completes
 
     const path = window.location.pathname
 

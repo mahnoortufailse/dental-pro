@@ -85,20 +85,18 @@ export default function ToothChartPage() {
 		);
 	}
 
-	return (
-		<ProtectedRoute patientOnly={true}>
-			<div className="flex h-screen bg-background">
-				<main className="flex-1  lg:ml-0">
-					<div className="">
-						{/* Header */}
-						<div className="dashboard-header mb-8">
-							<div>
-								<h1 className="dashboard-title">Tooth Chart</h1>
-								<p className="text-muted-foreground mt-1 text-sm sm:text-base">
-									Your dental treatment status
-								</p>
-							</div>
-						</div>
+  return (
+    <ProtectedRoute patientOnly={true}>
+      <div className="flex h-screen bg-background">
+        <main className="flex-1  lg:ml-0">
+          <div className="">
+            {/* Header */}
+            <div className="dashboard-header mb-8">
+              <div>
+                <h1 className="dashboard-title sm:text-3xl text-2xl">Tooth Chart</h1>
+                <p className="text-muted-foreground mt-1 text-sm sm:text-base">Your dental treatment status</p>
+              </div>
+            </div>
 
 						{/* Content */}
 						{error && (

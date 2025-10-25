@@ -29,7 +29,7 @@ export function AppointmentActionModal({
   const confirmText = isClose ? "Close" : "Cancel"
   const confirmColor = isClose
     ? "bg-green-600 hover:bg-green-700 text-white"
-    : "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+    : "bg-destructive hover:bg-destructive/90 text-white"
   const icon = isClose ? CheckCircle : AlertCircle
   const Icon = icon
   const iconBgColor = isClose ? "bg-green-100" : "bg-red-100"

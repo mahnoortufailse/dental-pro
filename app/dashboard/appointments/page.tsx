@@ -20,58 +20,58 @@ import { AppointmentActionModal } from "@/components/appointment-action-modal";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 export default function AppointmentsPage() {
-	const { user, token } = useAuth();
-	const [appointments, setAppointments] = useState([]);
-	const [currentDate, setCurrentDate] = useState(new Date());
-	const [showForm, setShowForm] = useState(false);
-	const [editingId, setEditingId] = useState(null);
-	const [selectedAppointment, setSelectedAppointment] = useState(null);
-	const [showReportForm, setShowReportForm] = useState(false);
-	const [selectedDate, setSelectedDate] = useState<string | null>(null);
-	const [appointmentActionModal, setAppointmentActionModal] = useState<{
-		isOpen: boolean;
-		action: "close" | "cancel" | null;
-		appointmentId: string | null;
-	}>({
-		isOpen: false,
-		action: null,
-		appointmentId: null,
-	});
-	const [formData, setFormData] = useState({
-		patientId: "",
-		patientName: "",
-		doctorId: "",
-		doctorName: "",
-		date: "",
-		time: "",
-		type: "Consultation",
-		chair: "",
-		duration: 30,
-	});
-	const [reportData, setReportData] = useState({
-		procedures: [],
-		findings: "",
-		notes: "",
-		nextVisit: "",
-		followUpDetails: "",
-	});
-	const [patients, setPatients] = useState([]);
-	const [doctors, setDoctors] = useState([]);
-	const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-	const [reportErrors, setReportErrors] = useState<Record<string, string>>({});
-	const [loading, setLoading] = useState({
-		appointments: false,
-		patients: false,
-		doctors: false,
-		addAppointment: false,
-		updateAppointment: false,
-		deleteAppointment: false,
-		cancelAppointment: false,
-		completeAppointment: false,
-		createReport: false,
-	});
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null);
+  const { user, token } = useAuth()
+  const [appointments, setAppointments] = useState([])
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [selectedAppointment, setSelectedAppointment] = useState(null)
+  const [showReportForm, setShowReportForm] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [appointmentActionModal, setAppointmentActionModal] = useState<{
+    isOpen: boolean
+    action: "close" | "cancel" | null
+    appointmentId: string | null
+  }>({
+    isOpen: false,
+    action: null,
+    appointmentId: null,
+  })
+  const [formData, setFormData] = useState({
+    patientId: "",
+    patientName: "",
+    doctorId: "",
+    doctorName: "",
+    date: "",
+    time: "",
+    type: "Consultation",
+    chair: "",
+    duration: 30,
+  })
+  const [reportData, setReportData] = useState({
+    procedures: [],
+    findings: "",
+    notes: "",
+    nextVisit: "",
+    followUpDetails: "",
+  })
+  const [patients, setPatients] = useState([])
+  const [doctors, setDoctors] = useState([])
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [reportErrors, setReportErrors] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState({
+    appointments: false,
+    patients: false,
+    doctors: false,
+    addAppointment: false,
+    updateAppointment: false,
+    deleteAppointment: false,
+    cancelAppointment: false,
+    completeAppointment: false,
+    createReport: false,
+  })
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null)
 
 	useEffect(() => {
 		if (token) {
@@ -83,59 +83,59 @@ export default function AppointmentsPage() {
 		}
 	}, [token, user]);
 
-	const fetchAppointments = async () => {
-		setLoading((prev) => ({ ...prev, appointments: true }));
-		try {
-			const res = await fetch("/api/appointments", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			if (res.ok) {
-				const data = await res.json();
-				setAppointments(data.appointments || []);
-			}
-		} catch (error) {
-			console.error("Failed to fetch appointments:", error);
-			toast.error("Failed to fetch appointments");
-		} finally {
-			setLoading((prev) => ({ ...prev, appointments: false }));
-		}
-	};
+  const fetchAppointments = async () => {
+    setLoading((prev) => ({ ...prev, appointments: true }))
+    try {
+      const res = await fetch("/api/appointments", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAppointments(data.appointments || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch appointments:", error)
+      toast.error("Failed to fetch appointments")
+    } finally {
+      setLoading((prev) => ({ ...prev, appointments: false }))
+    }
+  }
 
-	const fetchPatients = async () => {
-		setLoading((prev) => ({ ...prev, patients: true }));
-		try {
-			const res = await fetch("/api/patients", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			if (res.ok) {
-				const data = await res.json();
-				setPatients(data.patients || []);
-			}
-		} catch (error) {
-			console.error("Failed to fetch patients:", error);
-			toast.error("Failed to fetch patients");
-		} finally {
-			setLoading((prev) => ({ ...prev, patients: false }));
-		}
-	};
+  const fetchPatients = async () => {
+    setLoading((prev) => ({ ...prev, patients: true }))
+    try {
+      const res = await fetch("/api/patients", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPatients(data.patients || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch patients:", error)
+      toast.error("Failed to fetch patients")
+    } finally {
+      setLoading((prev) => ({ ...prev, patients: false }))
+    }
+  }
 
-	const fetchDoctors = async () => {
-		setLoading((prev) => ({ ...prev, doctors: true }));
-		try {
-			const res = await fetch("/api/users?role=doctor", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			if (res.ok) {
-				const data = await res.json();
-				setDoctors(data.users || []);
-			}
-		} catch (error) {
-			console.error("Failed to fetch doctors:", error);
-			toast.error("Failed to fetch doctors");
-		} finally {
-			setLoading((prev) => ({ ...prev, doctors: false }));
-		}
-	};
+  const fetchDoctors = async () => {
+    setLoading((prev) => ({ ...prev, doctors: true }))
+    try {
+      const res = await fetch("/api/users?role=doctor", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setDoctors(data.users || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch doctors:", error)
+      toast.error("Failed to fetch doctors")
+    } finally {
+      setLoading((prev) => ({ ...prev, doctors: false }))
+    }
+  }
 
 	const getDaysInMonth = (date: Date) => {
 		return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -176,109 +176,89 @@ export default function AppointmentsPage() {
 		});
 	};
 
-	const handleDeleteAppointment = async (appointmentId: string) => {
-		setLoading((prev) => ({ ...prev, deleteAppointment: true }));
-		try {
-			const res = await fetch(`/api/appointments/${appointmentId}`, {
-				method: "DELETE",
-				headers: { Authorization: `Bearer ${token}` },
-			});
+  const handleDeleteAppointment = async (appointmentId: string) => {
+    setLoading((prev) => ({ ...prev, deleteAppointment: true }))
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
 
-			if (res.ok) {
-				setAppointments(
-					appointments.filter(
-						(a) => a._id !== appointmentId && a.id !== appointmentId
-					)
-				);
-				toast.success("Appointment deleted successfully");
-			} else {
-				toast.error("Failed to delete appointment");
-			}
-		} catch (error) {
-			console.error("Failed to delete appointment:", error);
-			toast.error("Error deleting appointment");
-		} finally {
-			setLoading((prev) => ({ ...prev, deleteAppointment: false }));
-		}
-	};
+      if (res.ok) {
+        setAppointments(appointments.filter((a) => a._id !== appointmentId && a.id !== appointmentId))
+        toast.success("Appointment deleted successfully")
+      } else {
+        toast.error("Failed to delete appointment")
+      }
+    } catch (error) {
+      console.error("Failed to delete appointment:", error)
+      toast.error("Error deleting appointment")
+    } finally {
+      setLoading((prev) => ({ ...prev, deleteAppointment: false }))
+    }
+  }
 
-	const handleCancelAppointment = async (appointmentId: string) => {
-		setLoading((prev) => ({ ...prev, cancelAppointment: true }));
-		try {
-			const res = await fetch(`/api/appointments/${appointmentId}`, {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({ status: "cancelled" }),
-			});
+  const handleCancelAppointment = async (appointmentId: string) => {
+    setLoading((prev) => ({ ...prev, cancelAppointment: true }))
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "cancelled" }),
+      })
 
-			if (res.ok) {
-				const data = await res.json();
-				setAppointments(
-					appointments.map((a) =>
-						a._id === appointmentId || a.id === appointmentId
-							? data.appointment
-							: a
-					)
-				);
-				toast.success("Appointment cancelled successfully");
-				setAppointmentActionModal({
-					isOpen: false,
-					action: null,
-					appointmentId: null,
-				});
-			} else {
-				const errorData = await res.json();
-				toast.error(errorData.error || "Failed to cancel appointment");
-			}
-		} catch (error) {
-			console.error("Failed to cancel appointment:", error);
-			toast.error("Error cancelling appointment");
-		} finally {
-			setLoading((prev) => ({ ...prev, cancelAppointment: false }));
-		}
-	};
+      if (res.ok) {
+        const data = await res.json()
+        setAppointments(
+          appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
+        )
+        toast.success("Appointment cancelled successfully")
+        setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to cancel appointment")
+      }
+    } catch (error) {
+      console.error("Failed to cancel appointment:", error)
+      toast.error("Error cancelling appointment")
+    } finally {
+      setLoading((prev) => ({ ...prev, cancelAppointment: false }))
+    }
+  }
 
-	const handleCompleteAppointment = async (appointmentId: string) => {
-		setLoading((prev) => ({ ...prev, completeAppointment: true }));
-		try {
-			const res = await fetch(`/api/appointments/${appointmentId}`, {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({ status: "completed" }),
-			});
+  const handleCompleteAppointment = async (appointmentId: string) => {
+    setLoading((prev) => ({ ...prev, completeAppointment: true }))
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "completed" }),
+      })
 
-			if (res.ok) {
-				const data = await res.json();
-				setAppointments(
-					appointments.map((a) =>
-						a._id === appointmentId || a.id === appointmentId
-							? data.appointment
-							: a
-					)
-				);
-				toast.success("Appointment marked as completed");
-				setAppointmentActionModal({
-					isOpen: false,
-					action: null,
-					appointmentId: null,
-				});
-			} else {
-				const errorData = await res.json();
-				toast.error(errorData.error || "Failed to complete appointment");
-			}
-		} catch (error) {
-			console.error("Failed to complete appointment:", error);
-			toast.error("Error completing appointment");
-		} finally {
-			setLoading((prev) => ({ ...prev, completeAppointment: false }));
-		}
-	};
+      if (res.ok) {
+        const data = await res.json()
+        setAppointments(
+          appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
+        )
+        toast.success("Appointment marked as completed")
+        setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to complete appointment")
+      }
+    } catch (error) {
+      console.error("Failed to complete appointment:", error)
+      toast.error("Error completing appointment")
+    } finally {
+      setLoading((prev) => ({ ...prev, completeAppointment: false }))
+    }
+  }
 
 	const handleEditAppointment = (appointment: any) => {
 		setEditingId(appointment._id || appointment.id);
@@ -337,14 +317,12 @@ export default function AppointmentsPage() {
 			return;
 		}
 
-		const loadingKey = editingId ? "updateAppointment" : "addAppointment";
-		setLoading((prev) => ({ ...prev, [loadingKey]: true }));
+    const loadingKey = editingId ? "updateAppointment" : "addAppointment"
+    setLoading((prev) => ({ ...prev, [loadingKey]: true }))
 
-		try {
-			const method = editingId ? "PUT" : "POST";
-			const url = editingId
-				? `/api/appointments/${editingId}`
-				: "/api/appointments";
+    try {
+      const method = editingId ? "PUT" : "POST"
+      const url = editingId ? `/api/appointments/${editingId}` : "/api/appointments"
 
 			const res = await fetch(url, {
 				method,
@@ -355,44 +333,40 @@ export default function AppointmentsPage() {
 				body: JSON.stringify(formData),
 			});
 
-			if (res.ok) {
-				const data = await res.json();
-				if (editingId) {
-					setAppointments(
-						appointments.map((a) =>
-							a._id === editingId || a.id === editingId ? data.appointment : a
-						)
-					);
-					toast.success("Appointment updated successfully");
-					setEditingId(null);
-				} else {
-					setAppointments([...appointments, data.appointment]);
-					toast.success("Appointment scheduled successfully");
-				}
-				setShowForm(false);
-				setFormErrors({});
-				setFormData({
-					patientId: "",
-					patientName: "",
-					doctorId: "",
-					doctorName: "",
-					date: "",
-					time: "",
-					type: "Consultation",
-					chair: "",
-					duration: 30,
-				});
-			} else {
-				const errorData = await res.json();
-				toast.error(errorData.error || "Failed to save appointment");
-			}
-		} catch (error) {
-			console.error("Failed to add appointment:", error);
-			toast.error("Error saving appointment");
-		} finally {
-			setLoading((prev) => ({ ...prev, [loadingKey]: false }));
-		}
-	};
+      if (res.ok) {
+        const data = await res.json()
+        if (editingId) {
+          setAppointments(appointments.map((a) => (a._id === editingId || a.id === editingId ? data.appointment : a)))
+          toast.success("Appointment updated successfully")
+          setEditingId(null)
+        } else {
+          setAppointments([...appointments, data.appointment])
+          toast.success("Appointment scheduled successfully")
+        }
+        setShowForm(false)
+        setFormErrors({})
+        setFormData({
+          patientId: "",
+          patientName: "",
+          doctorId: "",
+          doctorName: "",
+          date: "",
+          time: "",
+          type: "Consultation",
+          chair: "",
+          duration: 30,
+        })
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to save appointment")
+      }
+    } catch (error) {
+      console.error("Failed to add appointment:", error)
+      toast.error("Error saving appointment")
+    } finally {
+      setLoading((prev) => ({ ...prev, [loadingKey]: false }))
+    }
+  }
 
 	const validateReportForm = (): boolean => {
 		const errors: Record<string, string> = {};
@@ -420,14 +394,14 @@ export default function AppointmentsPage() {
 			return;
 		}
 
-		setLoading((prev) => ({ ...prev, createReport: true }));
-		try {
-			const proceduresArray = Array.isArray(reportData.procedures)
-				? reportData.procedures.filter((p) => p && p.trim())
-				: reportData.procedures
-						.split("\n")
-						.map((p) => p.trim())
-						.filter(Boolean);
+    setLoading((prev) => ({ ...prev, createReport: true }))
+    try {
+      const proceduresArray = Array.isArray(reportData.procedures)
+        ? reportData.procedures.filter((p) => p && p.trim())
+        : reportData.procedures
+            .split("\n")
+            .map((p) => p.trim())
+            .filter(Boolean)
 
 			const res = await fetch("/api/appointment-reports", {
 				method: "POST",
@@ -448,44 +422,41 @@ export default function AppointmentsPage() {
 
 			const responseData = await res.json();
 
-			if (res.ok) {
-				toast.success("Report created successfully");
-				setShowReportForm(false);
-				setReportErrors({});
-				setReportData({
-					procedures: [],
-					findings: "",
-					notes: "",
-					nextVisit: "",
-					followUpDetails: "",
-				});
-				setSelectedAppointment(null);
-			} else {
-				console.error("  Report creation error:", responseData);
-				toast.error(responseData.error || "Failed to create report");
-			}
-		} catch (error) {
-			console.error("  Failed to create report:", error);
-			toast.error("Error creating report");
-		} finally {
-			setLoading((prev) => ({ ...prev, createReport: false }));
-		}
-	};
+      if (res.ok) {
+        toast.success("Report created successfully")
+        setShowReportForm(false)
+        setReportErrors({})
+        setReportData({
+          procedures: [],
+          findings: "",
+          notes: "",
+          nextVisit: "",
+          followUpDetails: "",
+        })
+        setSelectedAppointment(null)
+      } else {
+        console.error("[v0] Report creation error:", responseData)
+        toast.error(responseData.error || "Failed to create report")
+      }
+    } catch (error) {
+      console.error("[v0] Failed to create report:", error)
+      toast.error("Error creating report")
+    } finally {
+      setLoading((prev) => ({ ...prev, createReport: false }))
+    }
+  }
 
-	const daysInMonth = getDaysInMonth(currentDate);
-	const firstDay = getFirstDayOfMonth(currentDate);
-	const monthName = currentDate.toLocaleString("default", {
-		month: "long",
-		year: "numeric",
-	});
+  const daysInMonth = getDaysInMonth(currentDate)
+  const firstDay = getFirstDayOfMonth(currentDate)
+  const monthName = currentDate.toLocaleString("default", { month: "long", year: "numeric" })
 
-	const calendarDays = [];
-	for (let i = 0; i < firstDay; i++) {
-		calendarDays.push(null);
-	}
-	for (let i = 1; i <= daysInMonth; i++) {
-		calendarDays.push(i);
-	}
+  const calendarDays = []
+  for (let i = 0; i < firstDay; i++) {
+    calendarDays.push(null)
+  }
+  for (let i = 1; i <= daysInMonth; i++) {
+    calendarDays.push(i)
+  }
 
 	const selectedDateAppointments = selectedDate
 		? appointments.filter((apt) => apt.date === selectedDate)
@@ -575,241 +546,260 @@ export default function AppointmentsPage() {
 												: null;
 											const isSelected = dateStr === selectedDate;
 
-											return (
-												<div
-													key={idx}
-													onClick={() =>
-														day && !loading.appointments && handleDateClick(day)
-													}
-													className={`aspect-square p-2 rounded-lg border-2 transition-colors ${
-														day && !loading.appointments
-															? "cursor-pointer"
-															: "cursor-not-allowed"
-													} ${
-														isSelected
-															? "border-accent bg-accent/20"
-															: day
-															? dayAppointments.length > 0
-																? "border-primary bg-primary/10"
-																: "border-border hover:border-primary"
-															: "border-transparent"
-													} ${loading.appointments ? "opacity-50" : ""}`}>
-													{day && (
-														<div className="h-full flex flex-col">
-															<span className="font-semibold text-sm text-foreground">
-																{day}
-															</span>
-															{dayAppointments.length > 0 && (
-																<div className="text-xs text-primary font-medium mt-1">
-																	{dayAppointments.length} apt
-																	{dayAppointments.length > 1 ? "s" : ""}
-																</div>
-															)}
-														</div>
-													)}
-												</div>
-											);
-										})}
-									</div>
-								</div>
-							</div>
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => day && !loading.appointments && handleDateClick(day)}
+                          className={`aspect-square p-2 rounded-lg border-2 transition-colors ${
+                            day && !loading.appointments ? "cursor-pointer" : "cursor-not-allowed"
+                          } ${
+                            isSelected
+                              ? "border-accent bg-accent/20"
+                              : day
+                                ? dayAppointments.length > 0
+                                  ? "border-primary bg-primary/10"
+                                  : "border-border hover:border-primary"
+                                : "border-transparent"
+                          } ${loading.appointments ? "opacity-50" : ""}`}
+                        >
+                          {day && (
+                            <div className="h-full flex flex-col">
+                              <span className="font-semibold text-sm text-foreground">{day}</span>
+                              {dayAppointments.length > 0 && (
+                                <div className="text-xs text-primary font-medium mt-1">
+                                  {dayAppointments.length} apt{dayAppointments.length > 1 ? "s" : ""}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
 
-							{/* Sidebar */}
-							<div className="space-y-6">
-								{user?.role !== "doctor" && (
-									<button
-										onClick={() => {
-											setEditingId(null);
-											setShowForm(!showForm);
-											setFormErrors({});
-										}}
-										disabled={
-											loading.appointments ||
-											loading.patients ||
-											loading.doctors
-										}
-										className="w-full flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed">
-										{loading.appointments ||
-										loading.patients ||
-										loading.doctors ? (
-											<Loader2 className="w-4 h-4 animate-spin" />
-										) : (
-											<Plus className="w-4 h-4" />
-										)}
-										New Appointment
-									</button>
-								)}
+              {/* Sidebar */}
+              <div className="space-y-6">
+                {user?.role !== "doctor" && (
+                  <button
+                    onClick={() => {
+                      setEditingId(null)
+                      setShowForm(!showForm)
+                      setFormErrors({})
+                    }}
+                    disabled={loading.appointments || loading.patients || loading.doctors}
+                    className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {loading.appointments || loading.patients || loading.doctors ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                    New Appointment
+                  </button>
+                )}
 
-								{selectedDate && (
-									<div className="bg-card rounded-lg shadow-md border border-border p-6">
-										<h3 className="font-bold text-foreground mb-4">
-											Appointments for{" "}
-											{new Date(selectedDate).toLocaleDateString()}
-										</h3>
-										<div className="space-y-3 max-h-96 overflow-y-auto">
-											{loading.appointments ? (
-												<div className="flex items-center justify-center py-4">
-													<Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-												</div>
-											) : selectedDateAppointments.length === 0 ? (
-												<p className="text-muted-foreground text-sm">
-													No appointments on this date
-												</p>
-											) : (
-												selectedDateAppointments.map((apt) => (
-													<div
-														key={apt._id || apt.id}
-														className="p-3 bg-muted rounded-lg">
-														<div className="flex justify-between items-start gap-2 mb-2">
-															<p className="font-medium text-foreground text-sm">
-																{apt.patientName}
-															</p>
-															<span
-																className={`text-xs px-2 py-1 rounded ${getStatusColor(
-																	apt.status
-																)}`}>
-																{apt.status}
-															</span>
-														</div>
-														<p className="text-xs text-muted-foreground">
-															{apt.time} - {apt.type}
-														</p>
-														<p className="text-xs text-muted-foreground">
-															Chair: {apt.chair}
-														</p>
-														<div className="flex gap-2 mt-2 flex-wrap">
-															{user?.role !== "doctor" && (
-																<>
-																	<button
-																		onClick={() => handleEditAppointment(apt)}
-																		disabled={
-																			loading.addAppointment ||
-																			loading.updateAppointment ||
-																			loading.deleteAppointment
-																		}
-																		className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer">
-																		Edit
-																	</button>
-																	<button
-																		onClick={() => {
-																			setAppointmentToDelete(apt);
-																			setShowDeleteModal(true);
-																		}}
-																		disabled={loading.deleteAppointment}
-																		className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer">
-																		Delete
-																	</button>
-																</>
-															)}
-															{user?.role === "doctor" &&
-																apt.status !== "cancelled" &&
-																apt.status !== "completed" && (
-																	<>
-																		<button
-																			onClick={() => {
-																				setSelectedAppointment(apt);
-																				setShowReportForm(true);
-																				setReportErrors({});
-																			}}
-																			disabled={loading.createReport}
-																			className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1">
-																			<FileText className="w-3 h-3" />
-																			Report
-																		</button>
-																		<button
-																			onClick={() =>
-																				setAppointmentActionModal({
-																					isOpen: true,
-																					action: "close",
-																					appointmentId: apt._id || apt.id,
-																				})
-																			}
-																			disabled={loading.completeAppointment}
-																			className="text-xs text-green-600 hover:underline disabled:text-green-600/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1">
-																			<CheckCircle className="w-3 h-3" />
-																			Close
-																		</button>
-																		<button
-																			onClick={() =>
-																				setAppointmentActionModal({
-																					isOpen: true,
-																					action: "cancel",
-																					appointmentId: apt._id || apt.id,
-																				})
-																			}
-																			disabled={loading.cancelAppointment}
-																			className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1">
-																			<X className="w-3 h-3" />
-																			Cancel
-																		</button>
-																	</>
-																)}
-														</div>
-													</div>
-												))
-											)}
-										</div>
-									</div>
-								)}
+                {selectedDate && (
+                  <div className="bg-card rounded-lg shadow-md border border-border p-6">
+                    <h3 className="font-bold text-foreground mb-4">
+                      Appointments for {new Date(selectedDate).toLocaleDateString()}
+                    </h3>
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {loading.appointments ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : selectedDateAppointments.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No appointments on this date</p>
+                      ) : (
+                        selectedDateAppointments.map((apt) => (
+                          <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
+                            <div className="flex justify-between items-start gap-2 mb-2">
+                              <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
+                              <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
+                                {apt.status}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {apt.time} - {apt.type}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Chair: {apt.chair}</p>
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                              {user?.role !== "doctor" && (
+                                <>
+                                  <button
+                                    onClick={() => handleEditAppointment(apt)}
+                                    disabled={
+                                      loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                    }
+                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setAppointmentToDelete(apt)
+                                      setShowDeleteModal(true)
+                                    }}
+                                    disabled={loading.deleteAppointment}
+                                    className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                </>
+                              )}
+                              {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "completed" && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedAppointment(apt)
+                                      setShowReportForm(true)
+                                      setReportErrors({})
+                                    }}
+                                    disabled={loading.createReport}
+                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                  >
+                                    <FileText className="w-3 h-3" />
+                                    Report
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      setAppointmentActionModal({
+                                        isOpen: true,
+                                        action: "close",
+                                        appointmentId: apt._id || apt.id,
+                                      })
+                                    }
+                                    disabled={loading.completeAppointment}
+                                    className="text-xs text-green-600 hover:underline disabled:text-green-600/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                  >
+                                    <CheckCircle className="w-3 h-3" />
+                                    Close
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      setAppointmentActionModal({
+                                        isOpen: true,
+                                        action: "cancel",
+                                        appointmentId: apt._id || apt.id,
+                                      })
+                                    }
+                                    disabled={loading.cancelAppointment}
+                                    className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                  >
+                                    <X className="w-3 h-3" />
+                                    Cancel
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
 
-								{/* Upcoming Appointments */}
-								<div className="bg-card rounded-lg shadow-md border border-border p-6">
-									<h3 className="font-bold text-foreground mb-4">
-										Upcoming Appointments
-									</h3>
-									<div className="space-y-3 max-h-96 overflow-y-auto">
-										{loading.appointments ? (
-											<div className="flex items-center justify-center py-4">
-												<Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-											</div>
-										) : appointments.length === 0 ? (
-											<p className="text-muted-foreground text-sm">
-												No appointments scheduled
-											</p>
-										) : (
-											appointments.slice(0, 5).map((apt) => (
-												<div
-													key={apt._id || apt.id}
-													className="p-3 bg-muted rounded-lg">
-													<div className="flex justify-between items-start gap-2 mb-1">
-														<p className="font-medium text-foreground text-sm">
-															{apt.patientName}
-														</p>
-														<span
-															className={`text-xs px-2 py-1 rounded ${getStatusColor(
-																apt.status
-															)}`}>
-															{apt.status}
-														</span>
-													</div>
-													<p className="text-xs text-muted-foreground">
-														{apt.date} at {apt.time}
-													</p>
-													<p className="text-xs text-muted-foreground">
-														{apt.type}
-													</p>
-													{user?.role === "doctor" &&
-														apt.status !== "cancelled" &&
-														apt.status !== "completed" && (
-															<button
-																onClick={() => {
-																	setSelectedAppointment(apt);
-																	setShowReportForm(true);
-																	setReportErrors({});
-																}}
-																disabled={loading.createReport}
-																className="mt-2 text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1">
-																<FileText className="w-3 h-3" />
-																Create Report
-															</button>
-														)}
-												</div>
-											))
-										)}
-									</div>
-								</div>
-							</div>
-						</div>
+                {/* Upcoming Appointments */}
+                <div className="bg-card rounded-lg shadow-md border border-border p-6">
+                  <h3 className="font-bold text-foreground mb-4">Upcoming Appointments</h3>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {loading.appointments ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : appointments.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">No appointments scheduled</p>
+                    ) : (
+                      appointments.slice(0, 5).map((apt) => (
+                        <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
+                          <div className="flex justify-between items-start gap-2 mb-1">
+                            <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
+                            <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
+                              {apt.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {apt.date} at {apt.time}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{apt.type}</p>
+                          <div className="flex gap-2 mt-2 flex-wrap">
+                            {user?.role !== "doctor" && (
+                              <>
+                                <button
+                                  onClick={() => handleEditAppointment(apt)}
+                                  disabled={
+                                    loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                  }
+                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setAppointmentToDelete(apt)
+                                    setShowDeleteModal(true)
+                                  }}
+                                  disabled={loading.deleteAppointment}
+                                  className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                            {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "completed" && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setSelectedAppointment(apt)
+                                    setShowReportForm(true)
+                                    setReportErrors({})
+                                  }}
+                                  disabled={loading.createReport}
+                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  Report
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setAppointmentActionModal({
+                                      isOpen: true,
+                                      action: "close",
+                                      appointmentId: apt._id || apt.id,
+                                    })
+                                  }
+                                  disabled={loading.completeAppointment}
+                                  className="text-xs text-green-600 hover:underline disabled:text-green-600/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                >
+                                  <CheckCircle className="w-3 h-3" />
+                                  Close
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setAppointmentActionModal({
+                                      isOpen: true,
+                                      action: "cancel",
+                                      appointmentId: apt._id || apt.id,
+                                    })
+                                  }
+                                  disabled={loading.cancelAppointment}
+                                  className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                >
+                                  <X className="w-3 h-3" />
+                                  Cancel
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
 
 						{/* Appointment Form Modal */}
 						{showForm && user?.role !== "doctor" && (

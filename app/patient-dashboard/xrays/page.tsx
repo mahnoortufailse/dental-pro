@@ -65,7 +65,7 @@ export default function XRaysPage() {
             {/* Header */}
             <div className="dashboard-header mb-8">
               <div>
-                <h1 className="dashboard-title">X-Rays & Images</h1>
+                <h1 className="dashboard-title sm:text-3xl text-2xl">X-Rays & Images</h1>
                 <p className="text-muted-foreground mt-1 text-sm sm:text-base">Your dental imaging records</p>
               </div>
             </div>
