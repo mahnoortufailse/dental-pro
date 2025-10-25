@@ -23,7 +23,6 @@ export async function POST(request: NextRequest) {
     } else {
       user = await User.findOne({
         email: email.toLowerCase(),
-        role: { $in: ["admin", "doctor", "receptionist"] },
       })
     }
 
@@ -55,9 +54,16 @@ export async function POST(request: NextRequest) {
 
     console.log(`[v0] Attempting to send password reset to ${userType}:`, email)
 
-    await sendPasswordResetEmail(email, user.name, resetUrl)
-
-    console.log(`[v0] Password reset email sent successfully to ${userType}:`, email)
+    try {
+      await sendPasswordResetEmail(email, user.name, resetUrl)
+      console.log(`[v0] Password reset email sent successfully to ${userType}:`, email)
+    } catch (emailError) {
+      console.error(`[v0] Failed to send password reset email to ${userType}:`, emailError)
+      // Still return success to user for security, but log the error
+      console.warn(
+        "[v0] Password reset token saved but email delivery failed. Check EMAIL_USER and EMAIL_PASS environment variables.",
+      )
+    }
 
     return NextResponse.json({
       success: true,

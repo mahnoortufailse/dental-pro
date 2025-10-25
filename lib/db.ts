@@ -24,6 +24,8 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 })
 
+userSchema.index({ email: 1 }, { unique: true, sparse: true })
+
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next()
   try {

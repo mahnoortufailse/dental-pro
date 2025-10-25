@@ -12,7 +12,7 @@ function getTransporter() {
 
   if (!emailUser || !emailPassword) {
     console.warn("[v0] Email credentials not configured. Email sending will fail.")
-    console.warn("[v0] Please set EMAIL_USER and EMAIL_PASSWORD environment variables")
+    console.warn("[v0] Please set EMAIL_USER and EMAIL_PASS environment variables")
   }
 
   transporter = nodemailer.createTransport({
@@ -152,15 +152,7 @@ export async function sendStaffCredentials(email: string, staffName: string, str
               </p>
             </div>
             
-            <p style="color: #555; font-size: 14px; line-height: 1.6; margin: 20px 0;">
-              Please use these credentials to log in to your Dental Clinic Staff Portal at <a href="${appUrl}" style="color: #667eea; text-decoration: none;">${appUrl}</a>.
-            </p>
             
-            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0;">
-              <p style="margin: 0; color: #856404; font-size: 14px;">
-                ⚠️ Please change your password after logging in.
-              </p>
-            </div>
           </div>
         </div>
       `,
