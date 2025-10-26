@@ -16,12 +16,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		if (userType !== "staff") {
-			return NextResponse.json(
-				{ error: "Password reset is only available for staff members" },
-				{ status: 403 }
-			);
-		}
+		
 
 		const resetTokenHash = crypto
 			.createHash("sha256")
