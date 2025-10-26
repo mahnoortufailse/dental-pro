@@ -11,15 +11,8 @@ export async function POST(request: NextRequest) {
 
 		if (!token || !password || !userType) {
 			return NextResponse.json(
-				{ error: "Missing required fields" },
+				{ error: "Missing required field" },
 				{ status: 400 }
-			);
-		}
-
-		if (userType !== "staff") {
-			return NextResponse.json(
-				{ error: "Password reset is only available for staff members" },
-				{ status: 403 }
 			);
 		}
 
