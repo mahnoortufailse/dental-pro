@@ -9,6 +9,7 @@ import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
 import { Plus, Edit2, Trash2, DollarSign, Clock, FileText } from "lucide-react"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
+import { SearchableDropdown } from "@/components/searchable-dropdown"
 
 export default function BillingPage() {
   const { user, token } = useAuth()
@@ -194,7 +195,7 @@ export default function BillingPage() {
               </button>
             </div>
 
-            {/* Stats Cards */}
+            {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
               <div className="stat-card">
                 <div className="stat-icon bg-gradient-to-br from-accent/20 to-accent/10">
@@ -229,25 +230,28 @@ export default function BillingPage() {
                 </h2>
                 <form onSubmit={handleAddBilling} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <select
-                      value={formData.patientId}
-                      onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                    {/* Searchable Dropdown for Patient */}
+                    <SearchableDropdown
+                      label="Patient"
+                      items={patients.map((p) => ({ id: p._id, name: p.name }))}
+                      selectedItem={patients.find((p) => p._id === formData.patientId) || null}
+                      onSelect={(item) =>
+                        setFormData({
+                          ...formData,
+                          patientId: item ? item.id : "",
+                        })
+                      }
+                      placeholder="Select Patient"
+                      searchPlaceholder="Search patients..."
                       required
-                    >
-                      <option value="">Select Patient</option>
-                      {patients.map((p) => (
-                        <option key={p._id} value={p._id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                    <input
+                    />
+
+                     <input
                       type="number"
                       placeholder="Total Amount"
                       value={formData.totalAmount}
                       onChange={(e) => setFormData({ ...formData, totalAmount: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      className="px-4 !py-0 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
                       required
                     />
                     <input
@@ -281,6 +285,7 @@ export default function BillingPage() {
                     className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
                     rows={2}
                   />
+
                   <div className="flex gap-2 flex-wrap">
                     <button
                       type="submit"
@@ -344,8 +349,8 @@ export default function BillingPage() {
                                 bill.paymentStatus === "Paid"
                                   ? "bg-accent/20 text-accent"
                                   : bill.paymentStatus === "Partially Paid"
-                                    ? "bg-secondary/20 text-secondary"
-                                    : "bg-destructive/20 text-destructive"
+                                  ? "bg-secondary/20 text-secondary"
+                                  : "bg-destructive/20 text-destructive"
                               }`}
                             >
                               {bill.paymentStatus}

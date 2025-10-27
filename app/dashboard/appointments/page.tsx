@@ -1,23 +1,16 @@
 //@ts-nocheck
-"use client";
+"use client"
 
-import type React from "react";
-import { ProtectedRoute } from "@/components/protected-route";
-import { Sidebar } from "@/components/sidebar";
-import { useAuth } from "@/components/auth-context";
-import { useState, useEffect } from "react";
-import { toast } from "react-hot-toast";
-import {
-	ChevronLeft,
-	ChevronRight,
-	Plus,
-	FileText,
-	X,
-	CheckCircle,
-	Loader2,
-} from "lucide-react";
-import { AppointmentActionModal } from "@/components/appointment-action-modal";
-import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import type React from "react"
+import { ProtectedRoute } from "@/components/protected-route"
+import { Sidebar } from "@/components/sidebar"
+import { useAuth } from "@/components/auth-context"
+import { useState, useEffect } from "react"
+import { toast } from "react-hot-toast"
+import { ChevronLeft, ChevronRight, Plus, FileText, X, CheckCircle, Loader2 } from "lucide-react"
+import { AppointmentActionModal } from "@/components/appointment-action-modal"
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
+import { SearchableDropdown } from "@/components/searchable-dropdown" // Import the component
 
 export default function AppointmentsPage() {
   const { user, token } = useAuth()
@@ -45,7 +38,7 @@ export default function AppointmentsPage() {
     date: "",
     time: "",
     type: "Consultation",
-    chair: "",
+    roomNumber: "",
     duration: 30,
   })
   const [reportData, setReportData] = useState({
@@ -73,15 +66,21 @@ export default function AppointmentsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null)
 
-	useEffect(() => {
-		if (token) {
-			fetchAppointments();
-			if (user?.role !== "doctor") {
-				fetchPatients();
-				fetchDoctors();
-			}
-		}
-	}, [token, user]);
+  // Remove the old search states and dropdown handlers
+  // const [patientSearch, setPatientSearch] = useState("")
+  // const [showPatientDropdown, setShowPatientDropdown] = useState(false)
+  // const [doctorSearch, setDoctorSearch] = useState("")
+  // const [showDoctorDropdown, setShowDoctorDropdown] = useState(false)
+
+  useEffect(() => {
+    if (token) {
+      fetchAppointments()
+      if (user?.role !== "doctor") {
+        fetchPatients()
+        fetchDoctors()
+      }
+    }
+  }, [token, user])
 
   const fetchAppointments = async () => {
     setLoading((prev) => ({ ...prev, appointments: true }))
@@ -137,44 +136,80 @@ export default function AppointmentsPage() {
     }
   }
 
-	const getDaysInMonth = (date: Date) => {
-		return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-	};
+  // Helper function to get selected patient/doctor objects
+  const getSelectedPatient = () => {
+    return formData.patientId ? patients.find(p => p._id === formData.patientId) : null
+  }
 
-	const getFirstDayOfMonth = (date: Date) => {
-		return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-	};
+  const getSelectedDoctor = () => {
+    return formData.doctorId ? doctors.find(d => d.id === formData.doctorId) : null
+  }
 
-	const getAppointmentsForDate = (date: Date) => {
-		const dateStr = date.toISOString().split("T")[0];
-		return appointments.filter((apt) => apt.date === dateStr);
-	};
+  const handlePatientSelect = (patient: any) => {
+    if (patient) {
+      setFormData({
+        ...formData,
+        patientId: patient._id,
+        patientName: patient.name,
+      })
+      setFormErrors({ ...formErrors, patientId: "" })
+    } else {
+      setFormData({
+        ...formData,
+        patientId: "",
+        patientName: "",
+      })
+    }
+  }
 
-	const handlePreviousMonth = () => {
-		setCurrentDate(
-			new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)
-		);
-	};
+  const handleDoctorSelect = (doctor: any) => {
+    if (doctor) {
+      setFormData({
+        ...formData,
+        doctorId: doctor.id,
+        doctorName: doctor.name,
+      })
+      setFormErrors({ ...formErrors, doctorId: "" })
+    } else {
+      setFormData({
+        ...formData,
+        doctorId: "",
+        doctorName: "",
+      })
+    }
+  }
 
-	const handleNextMonth = () => {
-		setCurrentDate(
-			new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)
-		);
-	};
+  // Rest of your existing functions remain the same...
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  }
 
-	const handleDateClick = (day: number) => {
-		const date = new Date(
-			currentDate.getFullYear(),
-			currentDate.getMonth(),
-			day
-		);
-		const dateStr = date.toISOString().split("T")[0];
-		setSelectedDate(dateStr);
-		setFormData({
-			...formData,
-			date: dateStr,
-		});
-	};
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
+  }
+
+  const getAppointmentsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split("T")[0]
+    return appointments.filter((apt) => apt.date === dateStr)
+  }
+
+  const handlePreviousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))
+  }
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))
+  }
+
+  const handleDateClick = (day: number) => {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+    const dateStr = date.toISOString().split("T")[0]
+    setSelectedDate(dateStr)
+    setFormData({
+      ...formData,
+      date: dateStr,
+    })
+  }
 
   const handleDeleteAppointment = async (appointmentId: string) => {
     setLoading((prev) => ({ ...prev, deleteAppointment: true }))
@@ -260,62 +295,62 @@ export default function AppointmentsPage() {
     }
   }
 
-	const handleEditAppointment = (appointment: any) => {
-		setEditingId(appointment._id || appointment.id);
-		setFormData({
-			patientId: appointment.patientId,
-			patientName: appointment.patientName,
-			doctorId: appointment.doctorId,
-			doctorName: appointment.doctorName,
-			date: appointment.date,
-			time: appointment.time,
-			type: appointment.type,
-			chair: appointment.chair,
-			duration: appointment.duration,
-		});
-		setShowForm(true);
-	};
+  const handleEditAppointment = (appointment: any) => {
+    setEditingId(appointment._id || appointment.id)
+    setFormData({
+      patientId: appointment.patientId,
+      patientName: appointment.patientName,
+      doctorId: appointment.doctorId,
+      doctorName: appointment.doctorName,
+      date: appointment.date,
+      time: appointment.time,
+      type: appointment.type,
+      roomNumber: appointment.roomNumber,
+      duration: appointment.duration,
+    })
+    setShowForm(true)
+  }
 
-	const validateAppointmentForm = (): boolean => {
-		const errors: Record<string, string> = {};
+  const validateAppointmentForm = (): boolean => {
+    const errors: Record<string, string> = {}
 
-		if (!formData.patientId.trim()) {
-			errors.patientId = "Patient is required";
-		}
-		if (!formData.doctorId.trim()) {
-			errors.doctorId = "Doctor is required";
-		}
-		if (!formData.date.trim()) {
-			errors.date = "Date is required";
-		} else {
-			const selectedDate = new Date(formData.date);
-			const today = new Date();
-			today.setHours(0, 0, 0, 0);
-			if (selectedDate < today) {
-				errors.date = "Cannot schedule appointments in the past";
-			}
-		}
-		if (!formData.time.trim()) {
-			errors.time = "Time is required";
-		}
-		if (!formData.chair.trim()) {
-			errors.chair = "Chair number is required";
-		}
-		if (formData.duration <= 0) {
-			errors.duration = "Duration must be greater than 0";
-		}
+    if (!formData.patientId.trim()) {
+      errors.patientId = "Patient is required"
+    }
+    if (!formData.doctorId.trim()) {
+      errors.doctorId = "Doctor is required"
+    }
+    if (!formData.date.trim()) {
+      errors.date = "Date is required"
+    } else {
+      const selectedDate = new Date(formData.date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (selectedDate < today) {
+        errors.date = "Cannot schedule appointments in the past"
+      }
+    }
+    if (!formData.time.trim()) {
+      errors.time = "Time is required"
+    }
+    if (!formData.roomNumber.trim()) {
+      errors.roomNumber = "Room Number is required"
+    }
+    if (formData.duration <= 0) {
+      errors.duration = "Duration must be greater than 0"
+    }
 
-		setFormErrors(errors);
-		return Object.keys(errors).length === 0;
-	};
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
-	const handleAddAppointment = async (e: React.FormEvent) => {
-		e.preventDefault();
+  const handleAddAppointment = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-		if (!validateAppointmentForm()) {
-			toast.error("Please fix the errors in the form");
-			return;
-		}
+    if (!validateAppointmentForm()) {
+      toast.error("Please fix the errors in the form")
+      return
+    }
 
     const loadingKey = editingId ? "updateAppointment" : "addAppointment"
     setLoading((prev) => ({ ...prev, [loadingKey]: true }))
@@ -324,14 +359,14 @@ export default function AppointmentsPage() {
       const method = editingId ? "PUT" : "POST"
       const url = editingId ? `/api/appointments/${editingId}` : "/api/appointments"
 
-			const res = await fetch(url, {
-				method,
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify(formData),
-			});
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      })
 
       if (res.ok) {
         const data = await res.json()
@@ -353,7 +388,7 @@ export default function AppointmentsPage() {
           date: "",
           time: "",
           type: "Consultation",
-          chair: "",
+          roomNumber: "",
           duration: 30,
         })
       } else {
@@ -368,31 +403,31 @@ export default function AppointmentsPage() {
     }
   }
 
-	const validateReportForm = (): boolean => {
-		const errors: Record<string, string> = {};
+  const validateReportForm = (): boolean => {
+    const errors: Record<string, string> = {}
 
-		if (!reportData.procedures || reportData.procedures.length === 0) {
-			errors.procedures = "At least one procedure is required";
-		}
-		if (!reportData.findings.trim()) {
-			errors.findings = "Findings are required";
-		}
-		if (!reportData.notes.trim()) {
-			errors.notes = "Notes are required";
-		}
+    if (!reportData.procedures || reportData.procedures.length === 0) {
+      errors.procedures = "At least one procedure is required"
+    }
+    if (!reportData.findings.trim()) {
+      errors.findings = "Findings are required"
+    }
+    if (!reportData.notes.trim()) {
+      errors.notes = "Notes are required"
+    }
 
-		setReportErrors(errors);
-		return Object.keys(errors).length === 0;
-	};
+    setReportErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
-	const handleCreateReport = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!selectedAppointment) return;
+  const handleCreateReport = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedAppointment) return
 
-		if (!validateReportForm()) {
-			toast.error("Please fix the errors in the form");
-			return;
-		}
+    if (!validateReportForm()) {
+      toast.error("Please fix the errors in the form")
+      return
+    }
 
     setLoading((prev) => ({ ...prev, createReport: true }))
     try {
@@ -403,24 +438,24 @@ export default function AppointmentsPage() {
             .map((p) => p.trim())
             .filter(Boolean)
 
-			const res = await fetch("/api/appointment-reports", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({
-					appointmentId: selectedAppointment._id || selectedAppointment.id,
-					patientId: selectedAppointment.patientId,
-					procedures: proceduresArray,
-					findings: reportData.findings.trim(),
-					notes: reportData.notes.trim(),
-					nextVisit: reportData.nextVisit || null,
-					followUpDetails: reportData.followUpDetails || "",
-				}),
-			});
+      const res = await fetch("/api/appointment-reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          appointmentId: selectedAppointment._id || selectedAppointment.id,
+          patientId: selectedAppointment.patientId,
+          procedures: proceduresArray,
+          findings: reportData.findings.trim(),
+          notes: reportData.notes.trim(),
+          nextVisit: reportData.nextVisit || null,
+          followUpDetails: reportData.followUpDetails || "",
+        }),
+      })
 
-			const responseData = await res.json();
+      const responseData = await res.json()
 
       if (res.ok) {
         toast.success("Report created successfully")
@@ -458,93 +493,71 @@ export default function AppointmentsPage() {
     calendarDays.push(i)
   }
 
-	const selectedDateAppointments = selectedDate
-		? appointments.filter((apt) => apt.date === selectedDate)
-		: [];
+  const selectedDateAppointments = selectedDate ? appointments.filter((apt) => apt.date === selectedDate) : []
 
-	const getStatusColor = (status: string) => {
-		switch (status) {
-			case "completed":
-				return "bg-green-100 text-green-800";
-			case "cancelled":
-				return "bg-red-100 text-red-800";
-			case "confirmed":
-				return "bg-blue-100 text-blue-800";
-			default:
-				return "bg-yellow-100 text-yellow-800";
-		}
-	};
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800"
+      case "cancelled":
+        return "bg-red-100 text-red-800"
+      case "confirmed":
+        return "bg-blue-100 text-blue-800"
+      default:
+        return "bg-yellow-100 text-yellow-800"
+    }
+  }
 
-	return (
-		<ProtectedRoute>
-			<div className="flex h-screen bg-background">
-				<Sidebar />
-				<main className="flex-1 overflow-auto md:pt-0 pt-16">
-					<div className="p-4 sm:p-6 lg:p-8">
-						<div className="mb-8">
-							<h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-								Appointments Calendar
-							</h1>
-							<p className="text-muted-foreground text-sm mt-1">
-								View and manage appointments by date
-							</p>
-						</div>
+  return (
+    <ProtectedRoute>
+      <div className="flex h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 overflow-auto md:pt-0 pt-16">
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="mb-8">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Appointments Calendar</h1>
+              <p className="text-muted-foreground text-sm mt-1">View and manage appointments by date</p>
+            </div>
 
-						<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-							{/* Calendar */}
-							<div className="lg:col-span-2">
-								<div className="bg-card rounded-lg shadow-md border border-border p-6">
-									<div className="flex items-center justify-between mb-6">
-										<button
-											onClick={handlePreviousMonth}
-											disabled={loading.appointments}
-											className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-											<ChevronLeft className="w-5 h-5" />
-										</button>
-										<h2 className="text-xl font-bold text-foreground">
-											{monthName}
-										</h2>
-										<button
-											onClick={handleNextMonth}
-											disabled={loading.appointments}
-											className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-											<ChevronRight className="w-5 h-5" />
-										</button>
-									</div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Calendar */}
+              <div className="lg:col-span-2">
+                <div className="bg-card rounded-lg shadow-md border border-border p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <button
+                      onClick={handlePreviousMonth}
+                      disabled={loading.appointments}
+                      className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <h2 className="text-xl font-bold text-foreground">{monthName}</h2>
+                    <button
+                      onClick={handleNextMonth}
+                      disabled={loading.appointments}
+                      className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
 
-									<div className="grid grid-cols-7 gap-2 mb-4">
-										{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-											(day) => (
-												<div
-													key={day}
-													className="text-center font-semibold text-muted-foreground text-sm py-2">
-													{day}
-												</div>
-											)
-										)}
-									</div>
+                  <div className="grid grid-cols-7 gap-2 mb-4">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                      <div key={day} className="text-center font-semibold text-muted-foreground text-sm py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
 
-									<div className="grid grid-cols-7 gap-2">
-										{calendarDays.map((day, idx) => {
-											const dayAppointments = day
-												? getAppointmentsForDate(
-														new Date(
-															currentDate.getFullYear(),
-															currentDate.getMonth(),
-															day
-														)
-												  )
-												: [];
-											const dateStr = day
-												? new Date(
-														currentDate.getFullYear(),
-														currentDate.getMonth(),
-														day
-												  )
-														.toISOString()
-														.split("T")[0]
-												: null;
-											const isSelected = dateStr === selectedDate;
+                  <div className="grid grid-cols-7 gap-2">
+                    {calendarDays.map((day, idx) => {
+                      const dayAppointments = day
+                        ? getAppointmentsForDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))
+                        : []
+                      const dateStr = day
+                        ? new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split("T")[0]
+                        : null
+                      const isSelected = dateStr === selectedDate
 
                       return (
                         <div
@@ -624,7 +637,7 @@ export default function AppointmentsPage() {
                             <p className="text-xs text-muted-foreground">
                               {apt.time} - {apt.type}
                             </p>
-                            <p className="text-xs text-muted-foreground">Chair: {apt.chair}</p>
+                            <p className="text-xs text-muted-foreground">Room: {apt.roomNumber}</p>
                             <div className="flex gap-2 mt-2 flex-wrap">
                               {user?.role !== "doctor" && (
                                 <>
@@ -801,474 +814,337 @@ export default function AppointmentsPage() {
               </div>
             </div>
 
-						{/* Appointment Form Modal */}
-						{showForm && user?.role !== "doctor" && (
-							<div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-								<div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-									<h2 className="text-xl font-bold mb-4 text-foreground">
-										{editingId ? "Edit Appointment" : "Schedule Appointment"}
-									</h2>
-									<form onSubmit={handleAddAppointment} className="space-y-4">
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-1">
-												Patient *
-											</label>
-											<select
-												value={formData.patientId}
-												onChange={(e) => {
-													const patient = patients.find(
-														(p) => p._id === e.target.value
-													);
-													setFormData({
-														...formData,
-														patientId: e.target.value,
-														patientName: patient?.name || "",
-													});
-													setFormErrors({ ...formErrors, patientId: "" });
-												}}
-												disabled={
-													loading.addAppointment ||
-													loading.updateAppointment ||
-													loading.patients
-												}
-												className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
-													formErrors.patientId
-														? "border-destructive"
-														: "border-border"
-												}`}>
-												<option value="">Select Patient</option>
-												{patients.map((p) => (
-													<option key={p._id} value={p._id}>
-														{p.name}
-													</option>
-												))}
-											</select>
-											{formErrors.patientId && (
-												<p className="text-xs text-destructive mt-1">
-													{formErrors.patientId}
-												</p>
-											)}
-										</div>
+            {/* Appointment Form Modal */}
+            {showForm && user?.role !== "doctor" && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+                  <h2 className="text-xl font-bold mb-4 text-foreground">
+                    {editingId ? "Edit Appointment" : "Schedule Appointment"}
+                  </h2>
+                  <form onSubmit={handleAddAppointment} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Patient *</label>
+                      <SearchableDropdown
+                        items={patients.map(p => ({ ...p, id: p._id }))}
+                        selectedItem={getSelectedPatient()}
+                        onSelect={handlePatientSelect}
+                        placeholder="Select Patient..."
+                        searchPlaceholder="Search patients..."
+                        disabled={loading.addAppointment || loading.updateAppointment}
+                        error={formErrors.patientId}
+                        required={true}
+                        clearable={true}
+                      />
+                    </div>
 
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-1">
-												Doctor *
-											</label>
-											<select
-												value={formData.doctorId}
-												onChange={(e) => {
-													const doctor = doctors.find(
-														(d) => d.id === e.target.value
-													);
-													setFormData({
-														...formData,
-														doctorId: e.target.value,
-														doctorName: doctor?.name || "",
-													});
-													setFormErrors({ ...formErrors, doctorId: "" });
-												}}
-												disabled={
-													loading.addAppointment ||
-													loading.updateAppointment ||
-													loading.doctors
-												}
-												className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
-													formErrors.doctorId
-														? "border-destructive"
-														: "border-border"
-												}`}>
-												<option value="">Select Doctor</option>
-												{doctors.map((d) => (
-													<option key={d.id} value={d.id}>
-														{d.name}
-													</option>
-												))}
-											</select>
-											{formErrors.doctorId && (
-												<p className="text-xs text-destructive mt-1">
-													{formErrors.doctorId}
-												</p>
-											)}
-										</div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Doctor *</label>
+                      <SearchableDropdown
+                        items={doctors}
+                        selectedItem={getSelectedDoctor()}
+                        onSelect={handleDoctorSelect}
+                        placeholder="Select Doctor..."
+                        searchPlaceholder="Search doctors..."
+                        disabled={loading.addAppointment || loading.updateAppointment}
+                        error={formErrors.doctorId}
+                        required={true}
+                        clearable={true}
+                      />
+                    </div>
 
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-1">
-												Date *
-											</label>
-											<input
-												type="date"
-												value={formData.date}
-												onChange={(e) => {
-													setFormData({ ...formData, date: e.target.value });
-													setFormErrors({ ...formErrors, date: "" });
-												}}
-												disabled={
-													loading.addAppointment || loading.updateAppointment
-												}
-												className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
-													formErrors.date
-														? "border-destructive"
-														: "border-border"
-												}`}
-											/>
-											{formErrors.date && (
-												<p className="text-xs text-destructive mt-1">
-													{formErrors.date}
-												</p>
-											)}
-										</div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Date *</label>
+                      <input
+                        type="date"
+                        value={formData.date}
+                        onChange={(e) => {
+                          setFormData({ ...formData, date: e.target.value })
+                          setFormErrors({ ...formErrors, date: "" })
+                        }}
+                        disabled={loading.addAppointment || loading.updateAppointment}
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
+                          formErrors.date ? "border-destructive" : "border-border"
+                        }`}
+                      />
+                      {formErrors.date && <p className="text-xs text-destructive mt-1">{formErrors.date}</p>}
+                    </div>
 
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-1">
-												Time *
-											</label>
-											<input
-												type="time"
-												value={formData.time}
-												onChange={(e) => {
-													setFormData({ ...formData, time: e.target.value });
-													setFormErrors({ ...formErrors, time: "" });
-												}}
-												disabled={
-													loading.addAppointment || loading.updateAppointment
-												}
-												className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
-													formErrors.time
-														? "border-destructive"
-														: "border-border"
-												}`}
-											/>
-											{formErrors.time && (
-												<p className="text-xs text-destructive mt-1">
-													{formErrors.time}
-												</p>
-											)}
-										</div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Time *</label>
+                      <input
+                        type="time"
+                        value={formData.time}
+                        onChange={(e) => {
+                          setFormData({ ...formData, time: e.target.value })
+                          setFormErrors({ ...formErrors, time: "" })
+                        }}
+                        disabled={loading.addAppointment || loading.updateAppointment}
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
+                          formErrors.time ? "border-destructive" : "border-border"
+                        }`}
+                      />
+                      {formErrors.time && <p className="text-xs text-destructive mt-1">{formErrors.time}</p>}
+                    </div>
 
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-1">
-												Type
-											</label>
-											<select
-												value={formData.type}
-												onChange={(e) =>
-													setFormData({ ...formData, type: e.target.value })
-												}
-												disabled={
-													loading.addAppointment || loading.updateAppointment
-												}
-												className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed">
-												<option value="Consultation">Consultation</option>
-												<option value="Cleaning">Cleaning</option>
-												<option value="Filling">Filling</option>
-												<option value="Root Canal">Root Canal</option>
-											</select>
-										</div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Type</label>
+                      <select
+                        value={formData.type}
+                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                        disabled={loading.addAppointment || loading.updateAppointment}
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        <option value="Consultation">Consultation</option>
+                        <option value="Cleaning">Cleaning</option>
+                        <option value="Filling">Filling</option>
+                        <option value="Root Canal">Root Canal</option>
+                      </select>
+                    </div>
 
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-1">
-												Chair *
-											</label>
-											<input
-												type="text"
-												placeholder="Chair (e.g., Chair 1)"
-												value={formData.chair}
-												onChange={(e) => {
-													setFormData({ ...formData, chair: e.target.value });
-													setFormErrors({ ...formErrors, chair: "" });
-												}}
-												disabled={
-													loading.addAppointment || loading.updateAppointment
-												}
-												className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
-													formErrors.chair
-														? "border-destructive"
-														: "border-border"
-												}`}
-											/>
-											{formErrors.chair && (
-												<p className="text-xs text-destructive mt-1">
-													{formErrors.chair}
-												</p>
-											)}
-										</div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Room Number *</label>
+                      <input
+                        type="text"
+                        placeholder="Room Number (e.g., Room 1)"
+                        value={formData.roomNumber}
+                        onChange={(e) => {
+                          setFormData({ ...formData, roomNumber: e.target.value })
+                          setFormErrors({ ...formErrors, roomNumber: "" })
+                        }}
+                        disabled={loading.addAppointment || loading.updateAppointment}
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
+                          formErrors.roomNumber ? "border-destructive" : "border-border"
+                        }`}
+                      />
+                      {formErrors.roomNumber && (
+                        <p className="text-xs text-destructive mt-1">{formErrors.roomNumber}</p>
+                      )}
+                    </div>
 
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-1">
-												Duration (minutes)
-											</label>
-											<input
-												type="number"
-												min="1"
-												value={formData.duration}
-												onChange={(e) =>
-													setFormData({
-														...formData,
-														duration: Number.parseInt(e.target.value),
-													})
-												}
-												disabled={
-													loading.addAppointment || loading.updateAppointment
-												}
-												className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed"
-											/>
-											{formErrors.duration && (
-												<p className="text-xs text-destructive mt-1">
-													{formErrors.duration}
-												</p>
-											)}
-										</div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Duration (minutes)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formData.duration}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            duration: Number.parseInt(e.target.value),
+                          })
+                        }
+                        disabled={loading.addAppointment || loading.updateAppointment}
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed"
+                      />
+                      {formErrors.duration && <p className="text-xs text-destructive mt-1">{formErrors.duration}</p>}
+                    </div>
 
-										<div className="flex gap-2">
-											<button
-												type="submit"
-												disabled={
-													loading.addAppointment || loading.updateAppointment
-												}
-												className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer">
-												{(loading.addAppointment ||
-													loading.updateAppointment) && (
-													<Loader2 className="w-4 h-4 animate-spin" />
-												)}
-												{editingId ? "Update" : "Schedule"}
-											</button>
-											<button
-												type="button"
-												onClick={() => {
-													setShowForm(false);
-													setEditingId(null);
-													setFormErrors({});
-												}}
-												disabled={
-													loading.addAppointment || loading.updateAppointment
-												}
-												className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:cursor-not-allowed">
-												Cancel
-											</button>
-										</div>
-									</form>
-								</div>
-							</div>
-						)}
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={loading.addAppointment || loading.updateAppointment}
+                        className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        {(loading.addAppointment || loading.updateAppointment) && (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        )}
+                        {editingId ? "Update" : "Schedule"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowForm(false)
+                          setEditingId(null)
+                          setFormErrors({})
+                        }}
+                        disabled={loading.addAppointment || loading.updateAppointment}
+                        className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
 
-						{/* Report Form Modal */}
-						{showReportForm && user?.role === "doctor" && (
-							<div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-								<div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-									<h2 className="text-xl font-bold mb-4 text-foreground">
-										Create Appointment Report
-									</h2>
-									<form onSubmit={handleCreateReport} className="space-y-4">
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-2">
-												Procedures *
-											</label>
-											<textarea
-												placeholder="List procedures performed (one per line)..."
-												value={reportData.procedures.join("\n")}
-												onChange={(e) => {
-													setReportData({
-														...reportData,
-														procedures: e.target.value
-															.split("\n")
-															.filter(Boolean),
-													});
-													setReportErrors({ ...reportErrors, procedures: "" });
-												}}
-												disabled={loading.createReport}
-												className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
-													reportErrors.procedures
-														? "border-destructive"
-														: "border-border"
-												}`}
-												rows={3}
-											/>
-											{reportErrors.procedures && (
-												<p className="text-xs text-destructive mt-1">
-													{reportErrors.procedures}
-												</p>
-											)}
-										</div>
+            {/* Report Form Modal */}
+            {showReportForm && user?.role === "doctor" && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+                  <h2 className="text-xl font-bold mb-4 text-foreground">Create Appointment Report</h2>
+                  <form onSubmit={handleCreateReport} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Procedures *</label>
+                      <textarea
+                        placeholder="List procedures performed (one per line)..."
+                        value={reportData.procedures.join("\n")}
+                        onChange={(e) => {
+                          setReportData({
+                            ...reportData,
+                            procedures: e.target.value.split("\n").filter(Boolean),
+                          })
+                          setReportErrors({ ...reportErrors, procedures: "" })
+                        }}
+                        disabled={loading.createReport}
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
+                          reportErrors.procedures ? "border-destructive" : "border-border"
+                        }`}
+                        rows={3}
+                      />
+                      {reportErrors.procedures && (
+                        <p className="text-xs text-destructive mt-1">{reportErrors.procedures}</p>
+                      )}
+                    </div>
 
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-2">
-												Findings *
-											</label>
-											<textarea
-												placeholder="Clinical findings..."
-												value={reportData.findings}
-												onChange={(e) => {
-													setReportData({
-														...reportData,
-														findings: e.target.value,
-													});
-													setReportErrors({ ...reportErrors, findings: "" });
-												}}
-												disabled={loading.createReport}
-												className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
-													reportErrors.findings
-														? "border-destructive"
-														: "border-border"
-												}`}
-												rows={3}
-											/>
-											{reportErrors.findings && (
-												<p className="text-xs text-destructive mt-1">
-													{reportErrors.findings}
-												</p>
-											)}
-										</div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Findings *</label>
+                      <textarea
+                        placeholder="Clinical findings..."
+                        value={reportData.findings}
+                        onChange={(e) => {
+                          setReportData({
+                            ...reportData,
+                            findings: e.target.value,
+                          })
+                          setReportErrors({ ...reportErrors, findings: "" })
+                        }}
+                        disabled={loading.createReport}
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
+                          reportErrors.findings ? "border-destructive" : "border-border"
+                        }`}
+                        rows={3}
+                      />
+                      {reportErrors.findings && (
+                        <p className="text-xs text-destructive mt-1">{reportErrors.findings}</p>
+                      )}
+                    </div>
 
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-2">
-												Notes *
-											</label>
-											<textarea
-												placeholder="Additional notes..."
-												value={reportData.notes}
-												onChange={(e) => {
-													setReportData({
-														...reportData,
-														notes: e.target.value,
-													});
-													setReportErrors({ ...reportErrors, notes: "" });
-												}}
-												disabled={loading.createReport}
-												className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
-													reportErrors.notes
-														? "border-destructive"
-														: "border-border"
-												}`}
-												rows={2}
-											/>
-											{reportErrors.notes && (
-												<p className="text-xs text-destructive mt-1">
-													{reportErrors.notes}
-												</p>
-											)}
-										</div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Notes *</label>
+                      <textarea
+                        placeholder="Additional notes..."
+                        value={reportData.notes}
+                        onChange={(e) => {
+                          setReportData({
+                            ...reportData,
+                            notes: e.target.value,
+                          })
+                          setReportErrors({ ...reportErrors, notes: "" })
+                        }}
+                        disabled={loading.createReport}
+                        className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer disabled:cursor-not-allowed ${
+                          reportErrors.notes ? "border-destructive" : "border-border"
+                        }`}
+                        rows={2}
+                      />
+                      {reportErrors.notes && <p className="text-xs text-destructive mt-1">{reportErrors.notes}</p>}
+                    </div>
 
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-1">
-												Next Visit
-											</label>
-											<input
-												type="date"
-												value={reportData.nextVisit}
-												onChange={(e) =>
-													setReportData({
-														...reportData,
-														nextVisit: e.target.value,
-													})
-												}
-												disabled={loading.createReport}
-												className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed"
-											/>
-										</div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Next Visit</label>
+                      <input
+                        type="date"
+                        value={reportData.nextVisit}
+                        onChange={(e) =>
+                          setReportData({
+                            ...reportData,
+                            nextVisit: e.target.value,
+                          })
+                        }
+                        disabled={loading.createReport}
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed"
+                      />
+                    </div>
 
-										<div>
-											<label className="block text-sm font-medium text-foreground mb-1">
-												Follow-up Details
-											</label>
-											<textarea
-												placeholder="Follow-up details..."
-												value={reportData.followUpDetails}
-												onChange={(e) =>
-													setReportData({
-														...reportData,
-														followUpDetails: e.target.value,
-													})
-												}
-												disabled={loading.createReport}
-												className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer disabled:cursor-not-allowed"
-												rows={2}
-											/>
-										</div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Follow-up Details</label>
+                      <textarea
+                        placeholder="Follow-up details..."
+                        value={reportData.followUpDetails}
+                        onChange={(e) =>
+                          setReportData({
+                            ...reportData,
+                            followUpDetails: e.target.value,
+                          })
+                        }
+                        disabled={loading.createReport}
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer disabled:cursor-not-allowed"
+                        rows={2}
+                      />
+                    </div>
 
-										<div className="flex gap-2">
-											<button
-												type="submit"
-												disabled={loading.createReport}
-												className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer">
-												{loading.createReport && (
-													<Loader2 className="w-4 h-4 animate-spin" />
-												)}
-												{loading.createReport ? "Creating..." : "Create Report"}
-											</button>
-											<button
-												type="button"
-												onClick={() => {
-													setShowReportForm(false);
-													setReportErrors({});
-													setSelectedAppointment(null);
-												}}
-												disabled={loading.createReport}
-												className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:cursor-not-allowed">
-												Cancel
-											</button>
-										</div>
-									</form>
-								</div>
-							</div>
-						)}
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={loading.createReport}
+                        className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        {loading.createReport && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {loading.createReport ? "Creating..." : "Create Report"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowReportForm(false)
+                          setReportErrors({})
+                          setSelectedAppointment(null)
+                        }}
+                        disabled={loading.createReport}
+                        className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
 
-						<AppointmentActionModal
-							isOpen={appointmentActionModal.isOpen}
-							action={appointmentActionModal.action}
-							appointmentPatientName={
-								appointments.find(
-									(a) =>
-										(a._id || a.id) === appointmentActionModal.appointmentId
-								)?.patientName
-							}
-							onConfirm={() => {
-								if (appointmentActionModal.action === "close") {
-									handleCompleteAppointment(
-										appointmentActionModal.appointmentId!
-									);
-								} else if (appointmentActionModal.action === "cancel") {
-									handleCancelAppointment(
-										appointmentActionModal.appointmentId!
-									);
-								}
-							}}
-							onCancel={() =>
-								setAppointmentActionModal({
-									isOpen: false,
-									action: null,
-									appointmentId: null,
-								})
-							}
-							isLoading={
-								loading.completeAppointment || loading.cancelAppointment
-							}
-						/>
+            <AppointmentActionModal
+              isOpen={appointmentActionModal.isOpen}
+              action={appointmentActionModal.action}
+              appointmentPatientName={
+                appointments.find((a) => (a._id || a.id) === appointmentActionModal.appointmentId)?.patientName
+              }
+              onConfirm={() => {
+                if (appointmentActionModal.action === "close") {
+                  handleCompleteAppointment(appointmentActionModal.appointmentId!)
+                } else if (appointmentActionModal.action === "cancel") {
+                  handleCancelAppointment(appointmentActionModal.appointmentId!)
+                }
+              }}
+              onCancel={() =>
+                setAppointmentActionModal({
+                  isOpen: false,
+                  action: null,
+                  appointmentId: null,
+                })
+              }
+              isLoading={loading.completeAppointment || loading.cancelAppointment}
+            />
 
-						<ConfirmDeleteModal
-							isOpen={showDeleteModal}
-							title="Delete Appointment"
-							description="Are you sure you want to delete this appointment? This action cannot be undone."
-							itemName={
-								appointmentToDelete
-									? `${appointmentToDelete.patientName} - ${appointmentToDelete.date}`
-									: undefined
-							}
-							onConfirm={() => {
-								handleDeleteAppointment(
-									appointmentToDelete._id || appointmentToDelete.id
-								);
-								setShowDeleteModal(false);
-								setAppointmentToDelete(null);
-							}}
-							onCancel={() => {
-								setShowDeleteModal(false);
-								setAppointmentToDelete(null);
-							}}
-							isLoading={loading.deleteAppointment}
-						/>
-					</div>
-				</main>
-			</div>
-		</ProtectedRoute>
-	);
+            <ConfirmDeleteModal
+              isOpen={showDeleteModal}
+              title="Delete Appointment"
+              description="Are you sure you want to delete this appointment? This action cannot be undone."
+              itemName={
+                appointmentToDelete ? `${appointmentToDelete.patientName} - ${appointmentToDelete.date}` : undefined
+              }
+              onConfirm={() => {
+                handleDeleteAppointment(appointmentToDelete._id || appointmentToDelete.id)
+                setShowDeleteModal(false)
+                setAppointmentToDelete(null)
+              }}
+              onCancel={() => {
+                setShowDeleteModal(false)
+                setAppointmentToDelete(null)
+              }}
+              isLoading={loading.deleteAppointment}
+            />
+          </div>
+        </main>
+      </div>
+    </ProtectedRoute>
+  )
 }

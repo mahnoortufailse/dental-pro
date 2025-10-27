@@ -64,6 +64,9 @@ export default function ClinicalToolsPage() {
   const [medicalEntryToDelete, setMedicalEntryToDelete] = useState<number | null>(null)
   const [showFileUpload, setShowFileUpload] = useState(false)
   const [selectedImage, setSelectedImage] = useState<any>(null)
+  const [patientSearch, setPatientSearch] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const PATIENTS_PER_PAGE = 10
 
   useEffect(() => {
     if (token) fetchPatients()
@@ -493,8 +496,13 @@ export default function ClinicalToolsPage() {
       title: imageUpload.title || fileName.split(".")[0],
     })
     setShowFileUpload(false)
-    
   }
+
+  const filteredPatients = patients.filter((p) => p.name.toLowerCase().includes(patientSearch.toLowerCase()))
+
+  const totalPages = Math.ceil(filteredPatients.length / PATIENTS_PER_PAGE)
+  const startIndex = (currentPage - 1) * PATIENTS_PER_PAGE
+  const paginatedPatients = filteredPatients.slice(startIndex, startIndex + PATIENTS_PER_PAGE)
 
   return (
     <ProtectedRoute allowedRoles={["admin", "doctor"]}>
@@ -514,15 +522,25 @@ export default function ClinicalToolsPage() {
               <div className="lg:col-span-1">
                 <div className="bg-card rounded-lg shadow-md border border-border p-6">
                   <h2 className="text-lg sm:text-xl font-bold mb-4 text-foreground">Your Patients</h2>
-                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                  <input
+                    type="text"
+                    placeholder="Search patients..."
+                    value={patientSearch}
+                    onChange={(e) => {
+                      setPatientSearch(e.target.value)
+                      setCurrentPage(1)
+                    }}
+                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm mb-4 cursor-text"
+                  />
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto">
                     {loading.patients ? (
                       <div className="flex items-center justify-center py-8">
                         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                       </div>
-                    ) : patients.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No patients assigned</p>
+                    ) : paginatedPatients.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">No patients found</p>
                     ) : (
-                      patients.map((patient) => (
+                      paginatedPatients.map((patient) => (
                         <button
                           key={patient._id || patient.id}
                           onClick={() => handleSelectPatient(patient._id || patient.id)}
@@ -539,6 +557,27 @@ export default function ClinicalToolsPage() {
                       ))
                     )}
                   </div>
+                  {totalPages > 1 && (
+                    <div className="mt-4 flex items-center justify-between text-sm">
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground rounded transition-colors disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-muted-foreground">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground rounded transition-colors disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

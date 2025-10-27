@@ -14,7 +14,7 @@ export interface CredentialValidationResult {
   warnings: string[]
 }
 
-export const CRITICAL_CREDENTIALS = ["phone", "email", "dob", "idNumber"]
+export const CRITICAL_CREDENTIALS = ["phone", "dob", "idNumber"]
 export const IMPORTANT_CREDENTIALS = ["insuranceProvider", "insuranceNumber", "address"]
 
 export function validatePatientCredentials(credentials: PatientCredentials): CredentialValidationResult {
@@ -27,9 +27,6 @@ export function validatePatientCredentials(credentials: PatientCredentials): Cre
   }
   if (!credentials.phone?.trim()) {
     missingCredentials.push("Phone Number")
-  }
-  if (!credentials.email?.trim()) {
-    missingCredentials.push("Email Address")
   }
   if (!credentials.dob?.trim()) {
     missingCredentials.push("Date of Birth")

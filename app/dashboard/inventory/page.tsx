@@ -23,6 +23,7 @@ export default function InventoryPage() {
   })
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
 
   // Fetch inventory on load or token change
   useEffect(() => {
@@ -37,6 +38,9 @@ export default function InventoryPage() {
       if (res.ok) {
         const data = await res.json()
         setInventory(data.inventory || [])
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to load inventory")
       }
     } catch (error) {
       console.error("Failed to fetch inventory:", error)
@@ -55,7 +59,8 @@ export default function InventoryPage() {
         setInventory(inventory.filter((i) => i._id !== _id))
         toast.success("Item deleted successfully")
       } else {
-        toast.error("Failed to delete item")
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to delete item")
       }
     } catch (error) {
       console.error("Delete error:", error)
@@ -77,9 +82,19 @@ export default function InventoryPage() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading(true)
+    
     try {
       const method = editingId ? "PUT" : "POST"
       const url = editingId ? `/api/inventory/${editingId}` : "/api/inventory"
+
+      const payload = {
+        ...formData,
+        quantity: Number.parseInt(formData.quantity),
+        minStock: Number.parseInt(formData.minStock),
+      }
+
+      console.log("Sending payload:", payload) // Debug log
 
       const res = await fetch(url, {
         method,
@@ -87,16 +102,14 @@ export default function InventoryPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          ...formData,
-          quantity: Number.parseInt(formData.quantity),
-          minStock: Number.parseInt(formData.minStock),
-        }),
+        body: JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error("Failed to save item")
-
       const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to save item")
+      }
 
       if (editingId) {
         setInventory(inventory.map((i) => (i._id === editingId ? data.item : i)))
@@ -111,7 +124,9 @@ export default function InventoryPage() {
       setFormData({ name: "", quantity: "", minStock: "", unit: "", supplier: "" })
     } catch (error) {
       console.error("Save error:", error)
-      toast.error("Error saving item")
+      toast.error(error.message || "Error saving item")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -167,6 +182,7 @@ export default function InventoryPage() {
                   onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                   className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
+                  min="0"
                 />
                 <input
                   type="number"
@@ -175,6 +191,7 @@ export default function InventoryPage() {
                   onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
                   className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
+                  min="0"
                 />
                 <input
                   type="text"
@@ -193,9 +210,10 @@ export default function InventoryPage() {
                 <div className="flex gap-2 col-span-2">
                   <button
                     type="submit"
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                    disabled={loading}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400"
                   >
-                    {editingId ? "Update Item" : "Add Item"}
+                    {loading ? "Saving..." : editingId ? "Update Item" : "Add Item"}
                   </button>
                   {editingId && (
                     <button

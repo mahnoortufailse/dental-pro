@@ -37,19 +37,26 @@ userSchema.pre("save", async function (next) {
 const patientSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true },
-  email: { type: String, required: true, unique: true, sparse: true },
+  email: { 
+    type: String, 
+    required: false,
+    default: "" // Add default value
+  },
   dob: { type: String, required: true },
-  idNumber: { type: String },
-  address: { type: String },
-  insuranceProvider: String,
-  insuranceNumber: String,
-  allergies: [String],
-  medicalConditions: [String],
+  idNumber: { type: String, default: "" },
+  address: { type: String, default: "" },
+  insuranceProvider: { 
+    type: String, 
+    required: false,
+    default: "" // Add default value
+  },
+  insuranceNumber: { type: String, default: "" },
+  allergies: { type: [String], default: [] },
+  medicalConditions: { type: [String], default: [] },
   status: { type: String, enum: ["active", "inactive"], default: "active" },
   balance: { type: Number, default: 0 },
   lastVisit: Date,
   nextAppt: Date,
-  password: { type: String, required: true },
   assignedDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   doctorHistory: [
     {
@@ -59,22 +66,14 @@ const patientSchema = new mongoose.Schema({
       endDate: Date,
     },
   ],
-  medicalHistory: String,
-  credentialStatus: { type: String, enum: ["complete", "incomplete"], default: "incomplete" },
-  missingCredentials: [String],
+  medicalHistory: { type: String, default: "" },
   resetToken: { type: String, default: null },
   resetTokenExpiry: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
 })
 
-patientSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next()
-  try {
-    this.password = await hashPassword(this.password)
-    next()
-  } catch (error) {
-    next(error)
-  }
+patientSchema.pre("save", async (next) => {
+  next()
 })
 
 const appointmentSchema = new mongoose.Schema({
@@ -86,7 +85,7 @@ const appointmentSchema = new mongoose.Schema({
   time: { type: String, required: true },
   type: { type: String, enum: ["Consultation", "Cleaning", "Filling", "Root Canal"], required: true },
   status: { type: String, enum: ["pending", "confirmed", "completed"], default: "pending" },
-  chair: String,
+  roomNumber: String,
   duration: Number,
   createdAt: { type: Date, default: Date.now },
 })
@@ -287,8 +286,8 @@ export async function initializeDB() {
             assignedDoctorId: doctor._id,
             doctorHistory: [{ doctorId: doctor._id, doctorName: doctor.name, startDate: new Date() }],
             medicalHistory: "Patient has diabetes, monitor blood sugar levels",
-            credentialStatus: "complete",
-            missingCredentials: [],
+            resetToken: null,
+            resetTokenExpiry: null,
           })
         }
       }
