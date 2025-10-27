@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Mail, ArrowLeft, AlertCircle } from "lucide-react"
+import { Mail, ArrowLeft } from "lucide-react"
 import { toast } from "react-hot-toast"
 import Link from "next/link"
 
@@ -11,7 +11,6 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [userType, setUserType] = useState<"patient" | "staff">("patient")
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,7 +23,7 @@ export default function ForgotPasswordPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          userType,
+          userType: "staff",
         }),
       })
 
@@ -58,17 +57,13 @@ export default function ForgotPasswordPage() {
             </svg>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">DentalCare Pro</h1>
-          <p className="text-muted-foreground text-xs sm:text-sm mt-1">
-            Professional Clinic Management
-          </p>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">Professional Clinic Management</p>
         </div>
 
         {/* Forgot Password Form */}
         <div className="bg-card rounded-2xl shadow-lg border border-border p-6 sm:p-8">
           <div className="text-center mb-8">
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1">
-              Reset Password
-            </h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1">Reset Password</h2>
             <p className="text-muted-foreground text-xs sm:text-sm">
               Enter your email address and we'll send you a link to reset your password
             </p>
@@ -77,46 +72,7 @@ export default function ForgotPasswordPage() {
           {!submitted ? (
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               <div>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setUserType("patient")}
-                    className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-colors ${
-                      userType === "patient"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-input border border-border text-foreground hover:bg-input/80"
-                    }`}
-                  >
-                    Patient
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUserType("staff")}
-                    className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-colors ${
-                      userType === "staff"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-input border border-border text-foreground hover:bg-input/80"
-                    }`}
-                  >
-                    Staff
-                  </button>
-                </div>
-
-                {/* Highlighted Note */}
-                <div className="mt-3 bg-yellow-50 border border-yellow-300 rounded-lg p-3 flex items-start gap-2 shadow-sm">
-  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-  <p className="text-xs text-yellow-800 leading-snug">
-    <span className="font-semibold">Note:</span> 
-    Patients must use the <span className="font-semibold text-accent">Patient</span> tab, 
-    and doctors or receptionists must use the <span className="font-semibold text-primary">Staff</span> tab to receive the reset email. Otherwise, you will <strong>not receive</strong> the reset email.
-  </p>
-</div>
-              </div>
-
-              <div>
-                <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
-                  Email Address
-                </label>
+                <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                   <input
@@ -166,9 +122,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2025 DentalCare Pro. All rights reserved.
-        </p>
+        <p className="text-center text-xs text-muted-foreground mt-6">© 2025 DentalCare Pro. All rights reserved.</p>
       </div>
     </div>
   )
