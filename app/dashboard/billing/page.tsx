@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { Plus, Edit2, Trash2, DollarSign, Clock, FileText, Search, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Edit2, Trash2, DollarSign, Clock, FileText, Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { SearchableDropdown } from "@/components/searchable-dropdown"
 
@@ -33,6 +33,14 @@ export default function BillingPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [billingToDelete, setBillingToDelete] = useState<any>(null)
 
+  // Loading states
+  const [loading, setLoading] = useState({
+    billing: false,
+    patients: false,
+    submit: false,
+    delete: false,
+  })
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
@@ -46,6 +54,7 @@ export default function BillingPage() {
   }, [token])
 
   const fetchBilling = async () => {
+    setLoading((prev) => ({ ...prev, billing: true }))
     try {
       const res = await fetch("/api/billing", {
         headers: { Authorization: `Bearer ${token}` },
@@ -68,10 +77,14 @@ export default function BillingPage() {
       }
     } catch (error) {
       console.error("Failed to fetch billing:", error)
+      toast.error("Failed to load billing records")
+    } finally {
+      setLoading((prev) => ({ ...prev, billing: false }))
     }
   }
 
   const fetchPatients = async () => {
+    setLoading((prev) => ({ ...prev, patients: true }))
     try {
       const res = await fetch("/api/patients", {
         headers: { Authorization: `Bearer ${token}` },
@@ -82,10 +95,14 @@ export default function BillingPage() {
       }
     } catch (error) {
       console.error("Failed to fetch patients:", error)
+      toast.error("Failed to load patients")
+    } finally {
+      setLoading((prev) => ({ ...prev, patients: false }))
     }
   }
 
   const handleDeleteBilling = async (billingId: string) => {
+    setLoading((prev) => ({ ...prev, delete: true }))
     try {
       const res = await fetch(`/api/billing/${billingId}`, {
         method: "DELETE",
@@ -102,6 +119,8 @@ export default function BillingPage() {
     } catch (error) {
       console.error("Failed to delete billing:", error)
       toast.error("Error deleting billing record")
+    } finally {
+      setLoading((prev) => ({ ...prev, delete: false }))
     }
   }
 
@@ -120,6 +139,7 @@ export default function BillingPage() {
 
   const handleAddBilling = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading((prev) => ({ ...prev, submit: true }))
 
     try {
       const method = editingId ? "PUT" : "POST"
@@ -146,7 +166,6 @@ export default function BillingPage() {
         } else {
           toast.success("Billing record added successfully")
         }
-        setBilling([])
         setShowForm(false)
         setFormData({
           patientId: "",
@@ -163,6 +182,8 @@ export default function BillingPage() {
     } catch (error) {
       console.error("Failed to add billing:", error)
       toast.error("Error saving billing record")
+    } finally {
+      setLoading((prev) => ({ ...prev, submit: false }))
     }
   }
 
@@ -212,9 +233,14 @@ export default function BillingPage() {
                     })
                   }
                 }}
-                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium"
+                disabled={loading.billing || loading.patients || loading.submit}
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed"
               >
-                <Plus className="w-4 h-4" />
+                {loading.submit ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
                 {showForm ? "Cancel" : "Add Billing"}
               </button>
             </div>
@@ -268,6 +294,7 @@ export default function BillingPage() {
                       placeholder="Select Patient"
                       searchPlaceholder="Search patients..."
                       required
+                      disabled={loading.submit}
                     />
 
                      <input
@@ -275,20 +302,23 @@ export default function BillingPage() {
                       placeholder="Total Amount"
                       value={formData.totalAmount}
                       onChange={(e) => setFormData({ ...formData, totalAmount: e.target.value })}
-                      className="px-4 !py-0 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      className="px-4 !py-0 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
                       required
+                      disabled={loading.submit}
                     />
                     <input
                       type="number"
                       placeholder="Paid Amount"
                       value={formData.paidAmount}
                       onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
+                      disabled={loading.submit}
                     />
                     <select
                       value={formData.paymentStatus}
                       onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
-                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-text disabled:cursor-not-allowed"
+                      disabled={loading.submit}
                     >
                       <option value="Pending">Pending</option>
                       <option value="Paid">Paid</option>
@@ -299,22 +329,26 @@ export default function BillingPage() {
                     placeholder="Treatments (comma-separated)"
                     value={formData.treatments}
                     onChange={(e) => setFormData({ ...formData, treatments: e.target.value })}
-                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
                     rows={2}
+                    disabled={loading.submit}
                   />
                   <textarea
                     placeholder="Notes"
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
                     rows={2}
+                    disabled={loading.submit}
                   />
 
                   <div className="flex gap-2 flex-wrap">
                     <button
                       type="submit"
-                      className="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                      disabled={loading.submit}
+                      className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
                     >
+                      {loading.submit && <Loader2 className="w-4 h-4 animate-spin" />}
                       {editingId ? "Update Record" : "Add Billing Record"}
                     </button>
                     {editingId && (
@@ -324,7 +358,8 @@ export default function BillingPage() {
                           setEditingId(null)
                           setShowForm(false)
                         }}
-                        className="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                        disabled={loading.submit}
+                        className="bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
                       >
                         Cancel Edit
                       </button>
@@ -366,6 +401,15 @@ export default function BillingPage() {
                       <option value="50">50</option>
                     </select>
                   </div>
+                  
+                  <button
+                    onClick={fetchBilling}
+                    disabled={loading.billing}
+                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 cursor-pointer"
+                  >
+                    <Loader2 className={`w-4 h-4 ${loading.billing ? 'animate-spin' : ''}`} />
+                    {loading.billing ? "Loading..." : "Refresh"}
+                  </button>
                 </div>
               </div>
 
@@ -388,39 +432,74 @@ export default function BillingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentBilling.length > 0 ? (
+                    {loading.billing ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 sm:px-6 py-8 text-center">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <div className="flex justify-center items-center gap-2">
+                              <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
+                              <div
+                                className="w-3 h-3 bg-primary rounded-full animate-bounce"
+                                style={{ animationDelay: "0.1s" }}
+                              ></div>
+                              <div
+                                className="w-3 h-3 bg-primary rounded-full animate-bounce"
+                                style={{ animationDelay: "0.2s" }}
+                              ></div>
+                            </div>
+                            <span className="text-muted-foreground text-sm">Loading billing records...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : currentBilling.length > 0 ? (
                       currentBilling.map((bill) => (
                         <tr key={bill._id} className="border-b border-border hover:bg-muted/50 transition-colors">
                           <td className="px-4 sm:px-6 py-3 font-medium text-foreground">
-                            {patients.find((p) => p._id === bill.patientId)?.name || "Unknown"}
+                            <div>
+                              <div className="sm:hidden text-xs text-muted-foreground mb-1">Patient</div>
+                              {patients.find((p) => p._id === bill.patientId)?.name || "Unknown"}
+                            </div>
                           </td>
                           <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell">
-                            ${bill.totalAmount.toFixed(2)}
+                            <div>
+                              <div className="md:hidden text-xs text-muted-foreground mb-1">Total</div>
+                              ${bill.totalAmount.toFixed(2)}
+                            </div>
                           </td>
                           <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell">
-                            ${bill.paidAmount.toFixed(2)}
+                            <div>
+                              <div className="lg:hidden text-xs text-muted-foreground mb-1">Paid</div>
+                              ${bill.paidAmount.toFixed(2)}
+                            </div>
                           </td>
                           <td className="px-4 sm:px-6 py-3">
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-semibold ${
-                                bill.paymentStatus === "Paid"
-                                  ? "bg-accent/20 text-accent"
-                                  : bill.paymentStatus === "Partially Paid"
-                                  ? "bg-secondary/20 text-secondary"
-                                  : "bg-destructive/20 text-destructive"
-                              }`}
-                            >
-                              {bill.paymentStatus}
-                            </span>
+                            <div>
+                              <div className="sm:hidden text-xs text-muted-foreground mb-1">Status</div>
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-semibold ${
+                                  bill.paymentStatus === "Paid"
+                                    ? "bg-accent/20 text-accent"
+                                    : bill.paymentStatus === "Partially Paid"
+                                    ? "bg-secondary/20 text-secondary"
+                                    : "bg-destructive/20 text-destructive"
+                                }`}
+                              >
+                                {bill.paymentStatus}
+                              </span>
+                            </div>
                           </td>
                           <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden lg:table-cell text-xs">
-                            {new Date(bill.createdAt).toLocaleDateString()}
+                            <div>
+                              <div className="xl:hidden text-xs text-muted-foreground mb-1">Date</div>
+                              {new Date(bill.createdAt).toLocaleDateString()}
+                            </div>
                           </td>
                           <td className="px-4 sm:px-6 py-3">
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleEditBilling(bill)}
-                                className="text-primary hover:text-primary/80 transition-colors"
+                                disabled={loading.submit || loading.delete}
+                                className="text-primary hover:text-primary/80 disabled:text-primary/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                                 title="Edit"
                               >
                                 <Edit2 className="w-4 h-4" />
@@ -430,7 +509,8 @@ export default function BillingPage() {
                                   setBillingToDelete(bill)
                                   setShowDeleteModal(true)
                                 }}
-                                className="text-destructive hover:text-destructive/80 transition-colors"
+                                disabled={loading.submit || loading.delete}
+                                className="text-destructive hover:text-destructive/80 disabled:text-destructive/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                                 title="Delete"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -451,60 +531,62 @@ export default function BillingPage() {
               </div>
 
               {/* Pagination */}
-              <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-sm text-muted-foreground">
-                  Showing <span className="font-medium">{filteredBilling.length === 0 ? 0 : startIndex + 1}</span> to{" "}
-                  <span className="font-medium">{Math.min(endIndex, filteredBilling.length)}</span> of{" "}
-                  <span className="font-medium">{filteredBilling.length}</span> results
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(page => 
-                        page === 1 || 
-                        page === totalPages ||
-                        Math.abs(page - currentPage) <= 1
-                      )
-                      .map((page, index, array) => {
-                        const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
-                        return (
-                          <div key={page} className="flex items-center">
-                            <button
-                              onClick={() => setCurrentPage(page)}
-                              className={`min-w-[2rem] h-8 px-2 rounded text-sm font-medium transition-colors ${
-                                currentPage === page
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-background text-foreground hover:bg-muted border border-border"
-                              }`}
-                            >
-                              {page}
-                            </button>
-                            {showEllipsis && (
-                              <span className="px-1 text-muted-foreground">...</span>
-                            )}
-                          </div>
-                        );
-                      })}
+              {filteredBilling.length > 0 && (
+                <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-sm text-muted-foreground">
+                    Showing <span className="font-medium">{filteredBilling.length === 0 ? 0 : startIndex + 1}</span> to{" "}
+                    <span className="font-medium">{Math.min(endIndex, filteredBilling.length)}</span> of{" "}
+                    <span className="font-medium">{filteredBilling.length}</span> results
                   </div>
                   
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages || totalPages === 0}
-                    className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => 
+                          page === 1 || 
+                          page === totalPages ||
+                          Math.abs(page - currentPage) <= 1
+                        )
+                        .map((page, index, array) => {
+                          const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+                          return (
+                            <div key={page} className="flex items-center">
+                              <button
+                                onClick={() => setCurrentPage(page)}
+                                className={`min-w-[2rem] h-8 px-2 rounded text-sm font-medium transition-colors ${
+                                  currentPage === page
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-background text-foreground hover:bg-muted border border-border"
+                                }`}
+                              >
+                                {page}
+                              </button>
+                              {showEllipsis && (
+                                <span className="px-1 text-muted-foreground">...</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                    
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <ConfirmDeleteModal
@@ -525,6 +607,7 @@ export default function BillingPage() {
                 setShowDeleteModal(false)
                 setBillingToDelete(null)
               }}
+              isLoading={loading.delete}
             />
           </div>
         </main>

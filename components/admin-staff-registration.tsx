@@ -239,7 +239,7 @@ export function AdminStaffRegistration() {
       </div>
 
       {/* Footer */}
-      <p className="text-center text-xs text-muted-foreground mt-6">© 2025 DentalCare Pro. All rights reserved.</p>
+      <p className="text-center text-xs text-muted-foreground mt-6">© 2025 Dr.Mohammad Alsheikh Dental Center. All rights reserved.</p>
     </div>
   )
 }
