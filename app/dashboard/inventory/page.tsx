@@ -8,7 +8,7 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
-import { Search, ChevronLeft, ChevronRight, Plus, Edit, Trash2 } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Plus, Edit, Trash2, Loader2 } from "lucide-react"
 
 export default function InventoryPage() {
   const { token } = useAuth()
@@ -31,12 +31,16 @@ export default function InventoryPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
 
+  // Add loading state for table
+  const [tableLoading, setTableLoading] = useState(false)
+
   // Fetch inventory on load or token change
   useEffect(() => {
     if (token) fetchInventory()
   }, [token])
 
   const fetchInventory = async () => {
+    setTableLoading(true)
     try {
       const res = await fetch("/api/inventory", {
         headers: { Authorization: `Bearer ${token}` },
@@ -51,6 +55,8 @@ export default function InventoryPage() {
     } catch (error) {
       console.error("Failed to fetch inventory:", error)
       toast.error("Failed to load inventory")
+    } finally {
+      setTableLoading(false)
     }
   }
 
@@ -322,7 +328,16 @@ export default function InventoryPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentItems.length > 0 ? (
+                    {tableLoading ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 sm:px-6 py-8 text-center">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                            <span className="text-gray-600 text-sm">Loading inventory items...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : currentItems.length > 0 ? (
                       currentItems.map((item) => (
                         <tr key={item._id} className="border-b hover:bg-gray-50 transition-colors">
                           <td className="px-4 sm:px-6 py-3 font-medium text-gray-900">
