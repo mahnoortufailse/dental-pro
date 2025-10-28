@@ -5,6 +5,7 @@ import { useAuth } from "./auth-context"
 import { useRouter, usePathname } from "next/navigation"
 import { Users, Calendar, FileText, Package, Users2, LayoutDashboard, LogOut, Stethoscope, Menu, X } from "lucide-react"
 import { useState, useEffect } from "react"
+import Image from "next/image"
 
 export function Sidebar() {
   const { user, logout } = useAuth()
@@ -82,29 +83,44 @@ export function Sidebar() {
         >
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
-        <div className="flex items-center gap-2 ml-4">
-          <div className="w-8 h-8 bg-gradient-to-br from-sidebar-primary to-sidebar-accent rounded-lg flex items-center justify-center">
-            <Stethoscope className="w-5 h-5 text-white" />
-          </div>
-          <h1 className="text-lg font-bold text-sidebar-foreground">DentalCare</h1>
-        </div>
+        {/* Logo with Image */}
+<div className="text-center ">
+  <div className="inline-flex items-center justify-center ml-2">
+    <Image 
+      src="/logo.jpeg" 
+      alt="DR. MOHAMMAD ALSHEIKH DENTAL CENTER" 
+      width={140} 
+      height={80}
+      className="object-contain"
+      priority
+    />
+  </div>
+  
+</div>
       </div>
 
       {isOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setIsOpen(false)} />}
 
       <aside
-        className={`fixed md:relative w-64 bg-sidebar text-sidebar-foreground h-screen flex flex-col border-r border-sidebar-border transition-transform duration-300 z-40 ${
+        className={`fixed md:relative w-64 bg-sidebar text-sidebar-foreground h-screen flex flex-col border-r border-sidebar-border !scrollbar-none transition-transform duration-300 z-40 ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
         {/* Desktop Header */}
         <div className="hidden md:block p-6 border-b border-sidebar-border">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-sidebar-primary to-sidebar-accent rounded-lg flex items-center justify-center">
-              <Stethoscope className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold">DentalCare</h1>
-          </div>
+          <div className=" mb-8 sm:mb-4">
+  <div className="inline-flex items-center justify-center ">
+    <Image 
+      src="/logo.jpeg" 
+      alt="DR. MOHAMMAD ALSHEIKH DENTAL CENTER" 
+      width={180} 
+      height={70}
+      className="object-contain"
+      priority
+    />
+  </div>
+  
+</div>
           <p className="text-xs font-semibold text-sidebar-accent uppercase tracking-wider">{user?.role}</p>
         </div>
 
@@ -112,7 +128,7 @@ export function Sidebar() {
         <div className="md:hidden h-16" />
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-2 space-y-1 overflow-y-hidden ">
           {menuItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)

@@ -7,7 +7,7 @@ import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { generateReportPDF } from "@/lib/pdf-generator"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { FileText, Eye, Trash2, Download, X } from "lucide-react"
+import { FileText, Eye, Trash2, Download, X, Search, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
 
 export default function MedicalReportsPage() {
   const { user, token } = useAuth()
@@ -22,6 +22,11 @@ export default function MedicalReportsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [patientSearch, setPatientSearch] = useState("")
   const [showPatientDropdown, setShowPatientDropdown] = useState(false)
+
+  // Search and pagination state
+  const [searchTerm, setSearchTerm] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   useEffect(() => {
     if (token) {
@@ -107,9 +112,41 @@ export default function MedicalReportsPage() {
     }
   }
 
+  // Filter patients for dropdown
   const filteredPatients = patients.filter((p) => p.name.toLowerCase().includes(patientSearch.toLowerCase()))
 
-  const filteredReports = filterPatient ? reports.filter((r) => r.patientId?._id === filterPatient) : reports
+  // Filter reports based on search term and patient filter
+  const filteredReports = reports.filter((report) => {
+    // Apply patient filter
+    if (filterPatient && report.patientId?._id !== filterPatient) {
+      return false
+    }
+    
+    // Apply search term filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
+      return (
+        report.patientId?.name?.toLowerCase().includes(searchLower) ||
+        report.doctorId?.name?.toLowerCase().includes(searchLower) ||
+        report.procedures?.some((p: any) => p.name.toLowerCase().includes(searchLower)) ||
+        report.findings?.toLowerCase().includes(searchLower) ||
+        report.notes?.toLowerCase().includes(searchLower)
+      )
+    }
+    
+    return true
+  })
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredReports.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentReports = filteredReports.slice(startIndex, endIndex)
+
+  // Reset to first page when search term or items per page changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, itemsPerPage, filterPatient])
 
   return (
     <ProtectedRoute>
@@ -122,125 +159,249 @@ export default function MedicalReportsPage() {
               <p className="text-muted-foreground text-sm mt-1">View and manage appointment reports</p>
             </div>
 
-          {/* Filters */}
-<div className="mb-6 flex flex-col sm:flex-row gap-4">
-  
-    <div className="relative">
-      <input
-        type="text"
-        placeholder="Search patient..."
-        value={patientSearch}
-        onChange={(e) => {
-          setPatientSearch(e.target.value)
-          setShowPatientDropdown(true)
-        }}
-        onFocus={() => setShowPatientDropdown(true)}
-        className="w-48 px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-text"
-      />
-      {showPatientDropdown && filteredPatients.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setFilterPatient("")
-              setPatientSearch("")
-              setShowPatientDropdown(false)
-            }}
-            className="w-full text-left px-4 py-2 hover:bg-muted transition-colors text-sm text-foreground border-b border-border"
-          >
-            All Patients
-          </button>
-          {filteredPatients.map((p) => (
-            <button
-              key={p._id}
-              type="button"
-              onClick={() => {
-                setFilterPatient(p._id)
-                setPatientSearch(p.name)
-                setShowPatientDropdown(false)
-              }}
-              className="w-full text-left px-4 py-2 hover:bg-muted transition-colors text-sm text-foreground"
-            >
-              {p.name}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
- 
-  <button
-    onClick={fetchReports}
-    disabled={loading}
-    className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 h-fit cursor-pointer"
-  >
-    {loading ? "Loading..." : "Refresh"}
-  </button>
-</div>
+            {/* Search and Filters */}
+            <div className="bg-card rounded-lg shadow-md border border-border p-4 mb-6">
+              <div className="flex flex-col lg:flex-row gap-4">
+                {/* Patient Filter */}
+                <div className="flex flex-col sm:flex-row gap-4 flex-1">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Search patient..."
+                      value={patientSearch}
+                      onChange={(e) => {
+                        setPatientSearch(e.target.value)
+                        setShowPatientDropdown(true)
+                      }}
+                      onFocus={() => setShowPatientDropdown(true)}
+                      className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                    />
+                    {showPatientDropdown && filteredPatients.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilterPatient("")
+                            setPatientSearch("")
+                            setShowPatientDropdown(false)
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-muted transition-colors text-sm text-foreground border-b border-border"
+                        >
+                          All Patients
+                        </button>
+                        {filteredPatients.map((p) => (
+                          <button
+                            key={p._id}
+                            type="button"
+                            onClick={() => {
+                              setFilterPatient(p._id)
+                              setPatientSearch(p.name)
+                              setShowPatientDropdown(false)
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-muted transition-colors text-sm text-foreground"
+                          >
+                            {p.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* General Search */}
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Search reports..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Controls */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="itemsPerPage" className="text-sm text-muted-foreground whitespace-nowrap">
+                      Rows:
+                    </label>
+                    <select
+                      id="itemsPerPage"
+                      value={itemsPerPage}
+                      onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                      className="px-2 py-1 bg-input border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary text-foreground text-sm"
+                    >
+                      <option value="5">5</option>
+                      <option value="10">10</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                    </select>
+                  </div>
+                  
+                  <button
+                    onClick={fetchReports}
+                    disabled={loading}
+                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    {loading ? "Loading..." : "Refresh"}
+                  </button>
+                </div>
+              </div>
+            </div>
 
             {/* Reports List */}
-            <div className="grid grid-cols-1 gap-4">
-              {filteredReports.length === 0 ? (
-                <div className="bg-card rounded-lg shadow-md border border-border p-8 text-center">
-                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground">No reports found</p>
+            <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
+              {/* Loading State */}
+              {loading && (
+                <div className="p-8 text-center">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="flex justify-center items-center gap-2">
+                      <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
+                      <div
+                        className="w-3 h-3 bg-primary rounded-full animate-bounce"
+                        style={{ animationDelay: "0.1s" }}
+                      ></div>
+                      <div
+                        className="w-3 h-3 bg-primary rounded-full animate-bounce"
+                        style={{ animationDelay: "0.2s" }}
+                      ></div>
+                    </div>
+                    <span className="text-muted-foreground text-sm">Loading reports...</span>
+                  </div>
                 </div>
-              ) : (
-                filteredReports.map((report) => (
-                  <div
-                    key={report._id}
-                    className="bg-card rounded-lg shadow-md border border-border p-6 hover:shadow-lg transition-shadow"
-                  >
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-foreground">
-                          {report.patientId?.name || "Unknown Patient"}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">Doctor: {report.doctorId?.name || "Unknown"}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Date: {new Date(report.createdAt).toLocaleDateString()}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          <span className="font-medium">Procedures:</span>{" "}
-                          {report.procedures?.map((p: any) => p.name).join(", ") || "N/A"}
+              )}
+
+              {/* Reports Content */}
+              {!loading && (
+                <>
+                  <div className="grid grid-cols-1 gap-4 p-4 sm:p-6">
+                    {currentReports.length === 0 ? (
+                      <div className="bg-muted/40 rounded-lg p-8 text-center">
+                        <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                        <p className="text-muted-foreground">
+                          {searchTerm || filterPatient ? "No reports found matching your criteria" : "No reports found"}
                         </p>
                       </div>
-                      <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-                        <button
-                          onClick={() => handleViewReport(report)}
-                          className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                    ) : (
+                      currentReports.map((report) => (
+                        <div
+                          key={report._id}
+                          className="bg-background rounded-lg border border-border p-4 sm:p-6 hover:shadow-lg transition-shadow"
                         >
-                          <Eye className="w-4 h-4" />
-                          View
+                          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-semibold text-foreground truncate">
+                                {report.patientId?.name || "Unknown Patient"}
+                              </h3>
+                              <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                                <span>Doctor: {report.doctorId?.name || "Unknown"}</span>
+                                <span>Date: {new Date(report.createdAt).toLocaleDateString()}</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                                <span className="font-medium">Procedures:</span>{" "}
+                                {report.procedures?.map((p: any) => p.name).join(", ") || "N/A"}
+                              </p>
+                            </div>
+                            <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                              <button
+                                onClick={() => handleViewReport(report)}
+                                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                              >
+                                <Eye className="w-4 h-4" />
+                                <span className="hidden sm:inline">View</span>
+                              </button>
+                              <button
+                                onClick={() => handleDownloadReport(report)}
+                                className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                              >
+                                <Download className="w-4 h-4" />
+                                <span className="hidden sm:inline">Download</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setReportToDelete(report)
+                                  setShowDeleteModal(true)
+                                }}
+                                className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer text-white"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span className="hidden sm:inline">Delete</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Pagination */}
+                  {filteredReports.length > 0 && (
+                    <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-sm text-muted-foreground">
+                        Showing <span className="font-medium">{filteredReports.length === 0 ? 0 : startIndex + 1}</span> to{" "}
+                        <span className="font-medium">{Math.min(endIndex, filteredReports.length)}</span> of{" "}
+                        <span className="font-medium">{filteredReports.length}</span> results
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
                         </button>
+                        
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter(page => 
+                              page === 1 || 
+                              page === totalPages ||
+                              Math.abs(page - currentPage) <= 1
+                            )
+                            .map((page, index, array) => {
+                              const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+                              return (
+                                <div key={page} className="flex items-center">
+                                  <button
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`min-w-[2rem] h-8 px-2 rounded text-sm font-medium transition-colors ${
+                                      currentPage === page
+                                        ? "bg-primary text-primary-foreground"
+                                        : "bg-background text-foreground hover:bg-muted border border-border"
+                                    }`}
+                                  >
+                                    {page}
+                                  </button>
+                                  {showEllipsis && (
+                                    <span className="px-1 text-muted-foreground">...</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                        </div>
+                        
                         <button
-                          onClick={() => handleDownloadReport(report)}
-                          className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages || totalPages === 0}
+                          className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                          <Download className="w-4 h-4" />
-                          Download
-                        </button>
-                        <button
-                          onClick={() => {
-                            setReportToDelete(report)
-                            setShowDeleteModal(true)
-                          }}
-                          className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer text-white"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
+                          <ChevronRight className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
-                  </div>
-                ))
+                  )}
+                </>
               )}
             </div>
 
-            {/* Report Detail Modal - Enhanced Design */}
+            {/* Report Detail Modal */}
             {showReportModal && selectedReport && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200">
                 <div className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-3xl max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-                  {/* Modal Header - Professional */}
+                  {/* Modal Header */}
                   <div className="flex justify-between items-start p-6 sm:p-8 border-b border-border sticky top-0 bg-gradient-to-r from-card to-muted/30">
                     <div className="min-w-0 pr-4">
                       <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Medical Report</h2>
@@ -263,7 +424,7 @@ export default function MedicalReportsPage() {
                   </div>
 
                   <div className="p-6 sm:p-8 space-y-6 sm:space-y-8">
-                    {/* Patient Info - Professional Card */}
+                    {/* Patient Info */}
                     <div className="bg-gradient-to-br from-blue-50 to-blue-50/50 dark:from-blue-950/20 dark:to-blue-950/10 rounded-xl p-5 sm:p-6 border border-blue-200 dark:border-blue-800">
                       <h3 className="font-bold text-foreground mb-4 text-base sm:text-lg flex items-center gap-2">
                         <span className="w-1 h-6 bg-blue-600 rounded-full"></span>
@@ -293,7 +454,7 @@ export default function MedicalReportsPage() {
                       </div>
                     </div>
 
-                    {/* Doctor Info - Professional Card */}
+                    {/* Doctor Info */}
                     <div className="bg-gradient-to-br from-green-50 to-green-50/50 dark:from-green-950/20 dark:to-green-950/10 rounded-xl p-5 sm:p-6 border border-green-200 dark:border-green-800">
                       <h3 className="font-bold text-foreground mb-4 text-base sm:text-lg flex items-center gap-2">
                         <span className="w-1 h-6 bg-green-600 rounded-full"></span>
@@ -317,7 +478,7 @@ export default function MedicalReportsPage() {
                       </div>
                     </div>
 
-                    {/* Report Details - Professional Sections */}
+                    {/* Report Details */}
                     <div className="space-y-5">
                       <h3 className="font-bold text-foreground text-base sm:text-lg flex items-center gap-2">
                         <span className="w-1 h-6 bg-primary rounded-full"></span>
@@ -391,7 +552,7 @@ export default function MedicalReportsPage() {
                     </div>
                   </div>
 
-                  {/* Modal Footer - Professional */}
+                  {/* Modal Footer */}
                   <div className="flex flex-col xs:flex-row gap-3 p-6 sm:p-8 border-t border-border bg-muted/30">
                     <button
                       onClick={() => handleDownloadReport(selectedReport)}

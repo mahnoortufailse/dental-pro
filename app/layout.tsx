@@ -11,7 +11,7 @@ const onest = Onest({
 })
 
 export const metadata: Metadata = {
-  title: "DentalCare Pro",
+  title: "Dr.Mohammad Alsheikh Dental Center",
   description: "Comprehensive Dental Clinic Management System",
 }
 
