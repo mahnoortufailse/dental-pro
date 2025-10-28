@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { Plus, Edit2, Trash2, DollarSign, Clock, FileText } from "lucide-react"
+import { Plus, Edit2, Trash2, DollarSign, Clock, FileText, Search, ChevronLeft, ChevronRight } from "lucide-react"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { SearchableDropdown } from "@/components/searchable-dropdown"
 
@@ -32,6 +32,11 @@ export default function BillingPage() {
   })
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [billingToDelete, setBillingToDelete] = useState<any>(null)
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
     if (token) {
@@ -160,6 +165,25 @@ export default function BillingPage() {
       toast.error("Error saving billing record")
     }
   }
+
+  // Filter billing records based on search term
+  const filteredBilling = billing.filter((bill) => {
+    if (!searchTerm) return true
+    
+    const patientName = patients.find((p) => p._id === bill.patientId)?.name || "Unknown"
+    return patientName.toLowerCase().includes(searchTerm.toLowerCase())
+  })
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredBilling.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentBilling = filteredBilling.slice(startIndex, endIndex)
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, itemsPerPage])
 
   return (
     <ProtectedRoute allowedRoles={["admin", "receptionist"]}>
@@ -312,6 +336,39 @@ export default function BillingPage() {
 
             {/* Billing Table */}
             <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
+              {/* Search and Controls */}
+              <div className="p-4 border-b border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search patients..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="itemsPerPage" className="text-sm text-muted-foreground whitespace-nowrap">
+                      Rows per page:
+                    </label>
+                    <select
+                      id="itemsPerPage"
+                      value={itemsPerPage}
+                      onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                      className="px-2 py-1 bg-input border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary text-foreground text-sm"
+                    >
+                      <option value="5">5</option>
+                      <option value="10">10</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-muted border-b border-border">
@@ -331,8 +388,8 @@ export default function BillingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {billing.length > 0 ? (
-                      billing.map((bill) => (
+                    {currentBilling.length > 0 ? (
+                      currentBilling.map((bill) => (
                         <tr key={bill._id} className="border-b border-border hover:bg-muted/50 transition-colors">
                           <td className="px-4 sm:px-6 py-3 font-medium text-foreground">
                             {patients.find((p) => p._id === bill.patientId)?.name || "Unknown"}
@@ -385,12 +442,68 @@ export default function BillingPage() {
                     ) : (
                       <tr>
                         <td colSpan={6} className="px-4 sm:px-6 py-8 text-center text-muted-foreground">
-                          No billing records found
+                          {searchTerm ? "No billing records found matching your search" : "No billing records found"}
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium">{filteredBilling.length === 0 ? 0 : startIndex + 1}</span> to{" "}
+                  <span className="font-medium">{Math.min(endIndex, filteredBilling.length)}</span> of{" "}
+                  <span className="font-medium">{filteredBilling.length}</span> results
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => 
+                        page === 1 || 
+                        page === totalPages ||
+                        Math.abs(page - currentPage) <= 1
+                      )
+                      .map((page, index, array) => {
+                        const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+                        return (
+                          <div key={page} className="flex items-center">
+                            <button
+                              onClick={() => setCurrentPage(page)}
+                              className={`min-w-[2rem] h-8 px-2 rounded text-sm font-medium transition-colors ${
+                                currentPage === page
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-background text-foreground hover:bg-muted border border-border"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                            {showEllipsis && (
+                              <span className="px-1 text-muted-foreground">...</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
 

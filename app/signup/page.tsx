@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { AdminStaffRegistration } from "@/components/admin-staff-registration"
+import Image from "next/image"
 
 export default function SignupPage() {
   const { user, isLoading } = useAuth()
@@ -29,20 +30,35 @@ export default function SignupPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="w-full max-w-md">
           {/* Logo and Branding */}
-          <div className="text-center mb-8 sm:mb-10">
-            <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-primary to-accent rounded-2xl mb-4 shadow-lg">
-              <svg
-                className="w-7 h-7 sm:w-8 sm:h-8 text-primary-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+        {/* Logo - Minimalist */}
+        <div className="text-center mb-4 sm:mb-6">
+          <div className="flex flex-col items-center">
+            {/* Image with subtle background */}
+            <div className="mb-2 p-3  rounded-2xl">
+              <Image 
+                src="/logo-removebg-preview.png" 
+                alt="Dental Center" 
+                width={60}
+                height={60}
+                className="object-contain"
+                priority
+              />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">DentalCare Pro</h1>
-            <p className="text-muted-foreground text-xs sm:text-sm mt-1">Professional Clinic Management</p>
+            
+            {/* Clinic Name */}
+            <div className="space-y-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                DR. MOHAMMAD ALSHEIKH
+              </h1>
+              <div className="h-px bg-gradient-to-r from-transparent via-blue-300 to-transparent w-3/4 mx-auto"></div>
+              <h2 className="text-lg sm:text-xl font-semibold text-blue-600">
+                DENTAL CENTER
+              </h2>
+            </div>
           </div>
+          
+          <p className="text-muted-foreground text-xs sm:text-sm mt-4">Professional Clinic Management</p>
+        </div>
 
           <AdminStaffRegistration />
         </div>
