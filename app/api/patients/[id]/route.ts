@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import {
   Patient,
@@ -56,13 +57,30 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const payload = verifyToken(token)
     if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
 
-    const { id } = await params
+    const { id } = params
     const updateData = await request.json()
 
-    console.log("  PUT update data received:", updateData) // Debug log
+    // Handle email in update data - convert empty strings to null
+    if (updateData.email !== undefined) {
+      updateData.email = updateData.email?.trim() || null
+      
+      // Check for email uniqueness only if email is provided
+      if (updateData.email) {
+        const existingPatient = await Patient.findOne({ 
+          email: updateData.email.toLowerCase(), 
+          _id: { $ne: id } 
+        })
+        if (existingPatient) {
+          return NextResponse.json(
+            { error: "Email already exists in patient records. Please use a different email." },
+            { status: 409 }
+          )
+        }
+      }
+    }
 
     // Validate critical credentials if they're being updated
-    if (updateData.phone || updateData.email || updateData.dob || updateData.insuranceProvider || updateData.idNumber) {
+    if (updateData.phone || updateData.dob || updateData.idNumber) {
       const patient = await Patient.findById(id)
       if (!patient) {
         return NextResponse.json({ error: "Patient not found" }, { status: 404 })
@@ -86,41 +104,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    // ALWAYS recalculate credential status on update - FIXED
-    const patient = await Patient.findById(id)
-    if (!patient) {
-      return NextResponse.json({ error: "Patient not found" }, { status: 404 })
-    }
-
-    // Merge existing data with update data to get complete picture
-    const mergedData = { ...patient.toObject(), ...updateData }
-
-    console.log("  Merged data for credential check:", {
-      // Debug log
-      insuranceNumber: mergedData.insuranceNumber,
-      address: mergedData.address,
-      insuranceProvider: mergedData.insuranceProvider,
-      idNumber: mergedData.idNumber,
-    })
-
-    const missingNonCriticalCredentials = []
-    if (!mergedData.email?.trim()) missingNonCriticalCredentials.push("Email")
-    if (!mergedData.insuranceProvider?.trim()) missingNonCriticalCredentials.push("Insurance Provider")
-    if (!mergedData.insuranceNumber?.trim()) missingNonCriticalCredentials.push("Insurance Number")
-    if (!mergedData.address?.trim()) missingNonCriticalCredentials.push("Address")
-
-    console.log("  Missing non-critical credentials:", missingNonCriticalCredentials) // Debug log
-
-    // Update credential status based on non-critical fields
-    updateData.credentialStatus = missingNonCriticalCredentials.length === 0 ? "complete" : "incomplete"
-    updateData.missingCredentials = missingNonCriticalCredentials
-
-    console.log("  Final update data with credential status:", {
-      // Debug log
-      credentialStatus: updateData.credentialStatus,
-      missingCredentials: updateData.missingCredentials,
-    })
-
     const updatedPatient = await Patient.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
@@ -130,41 +113,18 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Patient not found" }, { status: 404 })
     }
 
-    console.log("  Patient updated successfully:", {
-      // Debug log
-      id: updatedPatient._id,
-      credentialStatus: updatedPatient.credentialStatus,
-      missingCredentials: updatedPatient.missingCredentials,
-      insuranceNumber: updatedPatient.insuranceNumber,
-    })
-
-    if (updateData.assignedDoctorId && updateData.assignedDoctorId !== patient?.assignedDoctorId?.toString()) {
-      console.log("  Doctor assignment detected, sending email notification")
-      const newDoctor = await User.findById(updateData.assignedDoctorId)
-
-      if (newDoctor && newDoctor.email && updatedPatient.email) {
-        const { sendDoctorAssignmentEmail } = await import("@/lib/nodemailer-service")
-
-        const emailResult = await sendDoctorAssignmentEmail(
-          newDoctor.email,
-          newDoctor.name,
-          updatedPatient.name,
-          updatedPatient.email,
-        )
-
-        if (!emailResult.success) {
-          console.warn("  Doctor assignment email failed:", emailResult.error)
-        } else {
-          console.log("  Doctor assignment email sent successfully:", emailResult.messageId)
-        }
-      } else {
-        console.warn("  Doctor or patient email not found — Doctor assignment email skipped")
-      }
-    }
-
     return NextResponse.json({ success: true, patient: updatedPatient })
   } catch (error) {
     console.error("  PUT /api/patients error:", error)
+    
+    // Handle duplicate key error specifically
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { error: "Email already exists in patient records. Please use a different email." },
+        { status: 409 }
+      )
+    }
+    
     const errorMessage = error instanceof Error ? error.message : "Failed to update patient"
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }

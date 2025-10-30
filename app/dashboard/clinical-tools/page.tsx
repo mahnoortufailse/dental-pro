@@ -639,58 +639,67 @@ export default function ClinicalToolsPage() {
                     </div>
 
                     {/* Tooth Chart Tab */}
-                    {activeTab === "tooth-chart" && (
-                      <>
-                        {loading.toothChart ? (
-                          <div className="flex items-center justify-center py-12">
-                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                          </div>
-                        ) : !toothChart ? (
-                          <div className="text-center py-12">
-                            <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                            <p className="text-muted-foreground mb-4">No tooth chart created yet</p>
-                            <button
-                              onClick={handleCreateToothChart}
-                              disabled={loading.createChart}
-                              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                            >
-                              {loading.createChart && <Loader2 className="w-4 h-4 animate-spin" />}
-                              {loading.createChart ? "Creating..." : "Create Tooth Chart"}
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <ToothChartVisual teeth={toothChart.teeth || {}} onToothClick={handleToothClick} />
+{activeTab === "tooth-chart" && (
+  <>
+    {loading.toothChart ? (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    ) : !toothChart ? (
+      <div className="text-center py-12">
+        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+        <p className="text-muted-foreground mb-4">No tooth chart created yet</p>
+        <button
+          onClick={handleCreateToothChart}
+          disabled={loading.createChart}
+          className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {loading.createChart && <Loader2 className="w-4 h-4 animate-spin" />}
+          {loading.createChart ? "Creating..." : "Create Tooth Chart"}
+        </button>
+      </div>
+    ) : (
+      <>
+        {/* Save Button and Note on Top */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+          <p className="text-sm text-muted-foreground mb-2 sm:mb-0">
+            ⚠️ Please make sure to <span className="font-semibold text-foreground">save the chart</span> after updating any tooth status.
+          </p>
+          <button
+            onClick={handleSaveToothChart}
+            disabled={loading.saveChart}
+            className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {loading.saveChart && <Loader2 className="w-4 h-4 animate-spin" />}
+            {loading.saveChart ? "Saving..." : "Save Chart"}
+          </button>
+        </div>
 
-                            <div className="mt-6">
-                              <label className="block text-sm font-semibold text-foreground mb-2">Overall Notes</label>
-                              <textarea
-                                value={toothChart.overallNotes || ""}
-                                onChange={(e) =>
-                                  setToothChart({
-                                    ...toothChart,
-                                    overallNotes: e.target.value,
-                                  })
-                                }
-                                disabled={loading.saveChart}
-                                className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                rows={4}
-                                placeholder="Add clinical notes about the patient's dental condition..."
-                              />
-                            </div>
+        {/* Tooth Chart Visual */}
+        <ToothChartVisual teeth={toothChart.teeth || {}} onToothClick={handleToothClick} />
 
-                            <button
-                              onClick={handleSaveToothChart}
-                              disabled={loading.saveChart}
-                              className="mt-6 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                            >
-                              {loading.saveChart && <Loader2 className="w-4 h-4 animate-spin" />}
-                              {loading.saveChart ? "Saving..." : "Save Chart"}
-                            </button>
-                          </>
-                        )}
-                      </>
-                    )}
+        {/* Overall Notes */}
+        <div className="mt-6">
+          <label className="block text-sm font-semibold text-foreground mb-2">Overall Notes</label>
+          <textarea
+            value={toothChart.overallNotes || ""}
+            onChange={(e) =>
+              setToothChart({
+                ...toothChart,
+                overallNotes: e.target.value,
+              })
+            }
+            disabled={loading.saveChart}
+            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            rows={4}
+            placeholder="Add clinical notes about the patient's dental condition..."
+          />
+        </div>
+      </>
+    )}
+  </>
+)}
+
 
                     {/* Medical History Tab */}
                     {activeTab === "medical-history" && (

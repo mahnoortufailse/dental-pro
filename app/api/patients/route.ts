@@ -99,13 +99,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Phone number must be 10-15 digits after +" }, { status: 400 })
     }
 
-    if (email?.trim()) {
-      const existingUser = await User.findOne({ email: email.toLowerCase() })
+    // Handle email properly - convert empty string to null
+    const emailToUse = email?.trim() || null
+
+    // Only check for email uniqueness if email is provided and not empty
+    if (emailToUse && emailToUse !== "") {
+      // Check if email exists in staff records
+      const existingUser = await User.findOne({ email: emailToUse.toLowerCase() })
       if (existingUser) {
-        console.log("  Email exists in staff records:", email)
+        console.log("  Email exists in staff records:", emailToUse)
         return NextResponse.json(
           {
             error: "Email already exists in staff records. Please use a different email.",
+          },
+          { status: 409 },
+        )
+      }
+
+      // Check if email exists in patient records (only for non-null emails)
+      const existingPatient = await Patient.findOne({ 
+        email: emailToUse.toLowerCase(),
+        _id: { $ne: null } // This ensures we're only checking existing patients
+      })
+      if (existingPatient) {
+        console.log("  Email exists in patient records:", emailToUse)
+        return NextResponse.json(
+          {
+            error: "Email already exists in patient records. Please use a different email.",
           },
           { status: 409 },
         )
@@ -134,14 +154,14 @@ export async function POST(request: NextRequest) {
 
     const formattedPhone = formatPhoneForDatabase(phone)
 
-    const newPatient = await Patient.create({
+    // Create patient data object
+    const patientData: any = {
       name,
       phone: formattedPhone,
-      email: email?.toLowerCase() || "", // Ensure empty string if not provided
       dob,
       idNumber,
       address: address || "",
-      insuranceProvider: insuranceProvider || "", // Ensure empty string if not provided
+      insuranceProvider: insuranceProvider || "",
       insuranceNumber: insuranceNumber || "",
       allergies,
       medicalConditions,
@@ -156,41 +176,32 @@ export async function POST(request: NextRequest) {
         },
       ],
       medicalHistory: "",
-    })
-     
+    }
 
-    try {
-			const { sendAccountConfirmation } = await import(
-				"@/lib/whatsapp-service"
-			);
-			const verificationLink = `${
-				process.env.NEXT_PUBLIC_APP_URL
-			}/verify-email?email=${encodeURIComponent(email)}`;
-			const whatsappResult = await sendAccountConfirmation(
-				formattedPhone,
-				name,
-				verificationLink
-			);
-			if (!whatsappResult.success) {
-				console.warn(
-					"  WhatsApp notification failed for patient registration:",
-					whatsappResult.error
-				);
-			} else {
-				console.log(
-					"  WhatsApp patient registration notification sent:",
-					whatsappResult.messageId
-				);
-			}
-		} catch (whatsappError) {
-			console.error("  Failed to send WhatsApp notification:", whatsappError);
-		}
+    // Only add email if it's not null/empty
+    if (emailToUse && emailToUse !== "") {
+      patientData.email = emailToUse.toLowerCase()
+    }
+
+    const newPatient = await Patient.create(patientData)
+
     await newPatient.populate("assignedDoctorId", "name email specialty")
     console.log("  Patient created successfully:", newPatient._id)
 
     return NextResponse.json({ success: true, patient: newPatient })
-  } catch (error) {
+  } catch (error: any) {
     console.error("  POST /api/patients error:", error)
+    
+    // Handle duplicate key error specifically
+    if (error.code === 11000) {
+      if (error.keyPattern && error.keyPattern.email) {
+        return NextResponse.json(
+          { error: "Email already exists in patient records. Please use a different email." },
+          { status: 409 }
+        )
+      }
+    }
+    
     const errorMessage = error instanceof Error ? error.message : "Failed to add patient"
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
@@ -207,6 +218,25 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const { id } = params
     const updateData = await request.json()
+
+    // Handle email in update data - convert empty strings to null
+    if (updateData.email !== undefined) {
+      updateData.email = updateData.email?.trim() || null
+      
+      // Check for email uniqueness only if email is provided and not null/empty
+      if (updateData.email && updateData.email !== "") {
+        const existingPatient = await Patient.findOne({ 
+          email: updateData.email.toLowerCase(), 
+          _id: { $ne: id } 
+        })
+        if (existingPatient) {
+          return NextResponse.json(
+            { error: "Email already exists in patient records. Please use a different email." },
+            { status: 409 }
+          )
+        }
+      }
+    }
 
     // Validate critical credentials if they're being updated
     if (updateData.phone || updateData.dob || updateData.idNumber) {
@@ -233,7 +263,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    const updatedPatient = await Patient.findByIdAndUpdate(id, updateData, {
+    // Prepare update data - ensure email is properly handled
+    const updateDataToUse: any = { ...updateData }
+    if (updateDataToUse.email === "") {
+      updateDataToUse.email = null
+    }
+
+    const updatedPatient = await Patient.findByIdAndUpdate(id, updateDataToUse, {
       new: true,
       runValidators: true,
     }).populate("assignedDoctorId", "name email specialty")
@@ -243,9 +279,44 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     return NextResponse.json({ success: true, patient: updatedPatient })
-  } catch (error) {
+  } catch (error: any) {
     console.error("  PUT /api/patients error:", error)
+    
+    // Handle duplicate key error specifically
+    if (error.code === 11000) {
+      if (error.keyPattern && error.keyPattern.email) {
+        return NextResponse.json(
+          { error: "Email already exists in patient records. Please use a different email." },
+          { status: 409 }
+        )
+      }
+    }
+    
     const errorMessage = error instanceof Error ? error.message : "Failed to update patient"
     return NextResponse.json({ error: errorMessage }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    await connectDB()
+    const token = request.headers.get("authorization")?.split(" ")[1]
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    const payload = verifyToken(token)
+    if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    if (payload.role === "doctor") return NextResponse.json({ error: "Doctors cannot delete patients" }, { status: 403 })
+
+    const { id } = params
+
+    const deletedPatient = await Patient.findByIdAndDelete(id)
+    if (!deletedPatient) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, message: "Patient deleted successfully" })
+  } catch (error) {
+    console.error("  DELETE /api/patients error:", error)
+    return NextResponse.json({ error: "Failed to delete patient" }, { status: 500 })
   }
 }

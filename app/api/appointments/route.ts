@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { Appointment, connectDB, User } from "@/lib/db"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
 import { sendAppointmentConfirmation } from "@/lib/whatsapp-service"
+import { validateAppointmentScheduling } from "@/lib/appointment-validation"
 
 export async function GET(request: NextRequest) {
   try {
@@ -97,6 +98,12 @@ export async function POST(request: NextRequest) {
       time,
       type,
     })
+
+    const validation = await validateAppointmentScheduling(doctorId, date, time, duration || 30)
+    if (!validation.isValid) {
+      console.warn("[DEBUG] Validation failed:", validation.error)
+      return NextResponse.json({ error: validation.error }, { status: 409 })
+    }
 
     const doctor = await User.findById(doctorId)
     console.log("[DEBUG] Doctor found:", doctor ? doctor.name : "No doctor found")
