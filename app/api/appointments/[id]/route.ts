@@ -1,359 +1,321 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { Appointment, connectDB, User } from "@/lib/db";
-import { verifyToken } from "@/lib/auth";
-import {
-	sendAppointmentReschedule,
-	sendAppointmentCancellation,
-} from "@/lib/whatsapp-service";
+//@ts-nocheck
+import { type NextRequest, NextResponse } from "next/server"
+import { Appointment, connectDB, User } from "@/lib/db"
+import { verifyToken } from "@/lib/auth"
+import { sendAppointmentReschedule, sendAppointmentCancellation } from "@/lib/whatsapp-service"
+import { validateAppointmentScheduling } from "@/lib/appointment-validation"
 
-export async function PUT(
-	request: NextRequest,
-	{ params }: { params: { id: string } }
-) {
-	try {
-		console.log("🟢 [PUT] Appointment update called");
-		await connectDB();
-		console.log("🟢 [PUT] Database connected successfully");
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    console.log("🟢 [GET] Fetching appointment details")
+    await connectDB()
 
-		const token = request.headers.get("authorization")?.split(" ")[1];
-		if (!token) {
-			console.warn("🔴 [PUT] No token found in request");
-			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-		}
+    const token = request.headers.get("authorization")?.split(" ")[1]
+    if (!token) {
+      console.warn("🔴 [GET] No token found in request")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-		const payload = verifyToken(token);
-		if (!payload) {
-			console.warn("🔴 [PUT] Invalid token received");
-			return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-		}
+    const payload = verifyToken(token)
+    if (!payload) {
+      console.warn("🔴 [GET] Invalid token received")
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
 
-		const { id } = await params;
-		const updateData = await request.json();
-		console.log("🟠 [PUT] Update data received:", updateData);
+    const { id } = await params
+    console.log("🟠 [GET] Fetching appointment with ID:", id)
 
-		// Doctor permissions check
-		if (payload.role === "doctor") {
-			if (
-				updateData.status &&
-				!["cancelled", "completed"].includes(updateData.status)
-			) {
-				console.warn(
-					"🔴 [PUT] Doctor trying to set invalid status:",
-					updateData.status
-				);
-				return NextResponse.json(
-					{ error: "Doctors can only cancel or complete appointments" },
-					{ status: 403 }
-				);
-			}
+    const appointment = await Appointment.findById(id)
+    if (!appointment) {
+      console.warn("🔴 [GET] Appointment not found:", id)
+      return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+    }
 
-			const appointment = await Appointment.findById(id);
-			if (appointment && appointment.doctorId !== payload.userId) {
-				console.warn(
-					"🔴 [PUT] Doctor trying to update another doctor's appointment"
-				);
-				return NextResponse.json(
-					{ error: "You can only manage your own appointments" },
-					{ status: 403 }
-				);
-			}
-		} else if (payload.role !== "admin" && payload.role !== "receptionist") {
-			console.warn(
-				"🔴 [PUT] Unauthorized role tried to update appointment:",
-				payload.role
-			);
-			return NextResponse.json({ error: "Access denied" }, { status: 403 });
-		}
+    // Check permissions - user can view their own appointment or admin/receptionist can view any
+    if (payload.role === "patient" && appointment.patientId !== payload.userId) {
+      console.warn("🔴 [GET] Patient trying to view another patient's appointment")
+      return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    }
 
-		const originalAppointment = await Appointment.findById(id);
-		if (!originalAppointment) {
-			console.warn("🔴 [PUT] Appointment not found for ID:", id);
-			return NextResponse.json(
-				{ error: "Appointment not found" },
-				{ status: 404 }
-			);
-		}
+    if (payload.role === "doctor" && appointment.doctorId !== payload.userId) {
+      console.warn("🔴 [GET] Doctor trying to view another doctor's appointment")
+      return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    }
 
-		console.log(
-			"🟠 [PUT] Original appointment found:",
-			originalAppointment.status
-		);
-
-		const updatedAppointment = await Appointment.findByIdAndUpdate(
-			id,
-			updateData,
-			{ new: true }
-		);
-		if (!updatedAppointment) {
-			console.warn("🔴 [PUT] Failed to update appointment with ID:", id);
-			return NextResponse.json(
-				{ error: "Appointment not found after update" },
-				{ status: 404 }
-			);
-		}
-
-		console.log("🟢 [PUT] Appointment updated successfully");
-
-		// Fetch patient
-		const { Patient } = await import("@/lib/db");
-		const patient = await Patient.findById(originalAppointment.patientId);
-		console.log(
-			"🟠 [PUT] Patient found:",
-			patient ? patient.name : "❌ No patient found"
-		);
-
-		if (patient && patient.phone) {
-			console.log("🟢 [PUT] Patient phone detected:", patient.phone);
-
-			// Appointment cancellation notification
-			if (
-				updateData.status === "cancelled" &&
-				originalAppointment.status !== "cancelled"
-			) {
-				console.log(
-					"🟠 [PUT] Appointment marked as cancelled — sending WhatsApp cancellation..."
-				);
-
-				const whatsappResult = await sendAppointmentCancellation(
-					patient.phone,
-					originalAppointment.patientName,
-					originalAppointment.doctorName,
-					originalAppointment.date
-				);
-
-				console.log("🟣 [PUT] WhatsApp cancellation result:", whatsappResult);
-
-				if (!whatsappResult.success) {
-					console.warn(
-						"⚠️ [PUT] WhatsApp cancellation failed:",
-						whatsappResult.error
-					);
-				} else {
-					console.log(
-						"✅ [PUT] WhatsApp cancellation sent successfully:",
-						whatsappResult.messageId
-					);
-				}
-
-				if (patient.email) {
-					console.log(
-						"  Sending email cancellation to patient:",
-						patient.email
-					);
-					const { sendAppointmentCancellationEmail } = await import(
-						"@/lib/nodemailer-service"
-					);
-					const emailResult = await sendAppointmentCancellationEmail(
-						patient.email,
-						originalAppointment.patientName,
-						originalAppointment.doctorName,
-						originalAppointment.date,
-						originalAppointment.time
-					);
-
-					if (!emailResult.success) {
-						console.warn("  Email cancellation failed:", emailResult.error);
-					} else {
-						console.log(
-							"  Email cancellation sent successfully:",
-							emailResult.messageId
-						);
-					}
-				}
-
-				// Appointment reschedule notification
-			} else if (
-				(updateData.date && updateData.date !== originalAppointment.date) ||
-				(updateData.time && updateData.time !== originalAppointment.time)
-			) {
-				const newDate = updateData.date || originalAppointment.date;
-				const newTime = updateData.time || originalAppointment.time;
-
-				console.log(
-					"🟠 [PUT] Appointment rescheduled — sending WhatsApp notification...",
-					{
-						newDate,
-						newTime,
-					}
-				);
-
-				const whatsappResult = await sendAppointmentReschedule(
-					patient.phone,
-					originalAppointment.patientName,
-					originalAppointment.doctorName,
-					newDate,
-					newTime
-				);
-
-				console.log("🟣 [PUT] WhatsApp reschedule result:", whatsappResult);
-
-				if (!whatsappResult.success) {
-					console.warn(
-						"⚠️ [PUT] WhatsApp reschedule failed:",
-						whatsappResult.error
-					);
-				} else {
-					console.log(
-						"✅ [PUT] WhatsApp reschedule sent successfully:",
-						whatsappResult.messageId
-					);
-				}
-
-				if (patient.email) {
-					console.log("  Sending email reschedule to patient:", patient.email);
-					const { sendAppointmentRescheduleEmail } = await import(
-						"@/lib/nodemailer-service"
-					);
-					const emailResult = await sendAppointmentRescheduleEmail(
-						patient.email,
-						originalAppointment.patientName,
-						originalAppointment.doctorName,
-						newDate,
-						newTime,
-						originalAppointment.date,
-						originalAppointment.time
-					);
-
-					if (!emailResult.success) {
-						console.warn("  Email reschedule failed:", emailResult.error);
-					} else {
-						console.log(
-							"  Email reschedule sent successfully:",
-							emailResult.messageId
-						);
-					}
-				}
-			} else {
-				console.log(
-					"ℹ️ [PUT] No WhatsApp notification required for this update"
-				);
-			}
-		} else {
-			console.warn(
-				"❌ [PUT] Patient phone not found — WhatsApp message skipped"
-			);
-		}
-
-		return NextResponse.json({
-			success: true,
-			appointment: updatedAppointment,
-		});
-	} catch (error) {
-		console.error("🔴 [PUT] Unexpected error updating appointment:", error);
-		return NextResponse.json(
-			{ error: "Failed to update appointment" },
-			{ status: 500 }
-		);
-	}
+    console.log("🟢 [GET] Appointment fetched successfully")
+    return NextResponse.json({
+      success: true,
+      appointment,
+    })
+  } catch (error) {
+    console.error("🔴 [GET] Unexpected error fetching appointment:", error)
+    return NextResponse.json({ error: "Failed to fetch appointment" }, { status: 500 })
+  }
 }
 
-export async function DELETE(
-	request: NextRequest,
-	{ params }: { params: { id: string } }
-) {
-	try {
-		console.log("🟢 [DELETE] Appointment deletion called");
-		await connectDB();
-		console.log("🟢 [DELETE] Database connected successfully");
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    console.log("🟢 [PUT] Appointment update called")
+    await connectDB()
+    console.log("🟢 [PUT] Database connected successfully")
 
-		const token = request.headers.get("authorization")?.split(" ")[1];
-		if (!token)
-			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const token = request.headers.get("authorization")?.split(" ")[1]
+    if (!token) {
+      console.warn("🔴 [PUT] No token found in request")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-		const payload = verifyToken(token);
-		if (!payload)
-			return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    const payload = verifyToken(token)
+    if (!payload) {
+      console.warn("🔴 [PUT] Invalid token received")
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
 
-		if (payload.role === "doctor") {
-			console.warn("🔴 [DELETE] Doctor not allowed to delete appointment");
-			return NextResponse.json({ error: "Access denied" }, { status: 403 });
-		}
+    const { id } = await params
+    const updateData = await request.json()
+    console.log("🟠 [PUT] Update data received:", updateData)
 
-		const { id } = params;
-		console.log("🟠 [DELETE] Deleting appointment with ID:", id);
+    // Doctor permissions check
+    if (payload.role === "doctor") {
+      if (updateData.status && !["cancelled", "completed", "closed"].includes(updateData.status)) {
+        console.warn("🔴 [PUT] Doctor trying to set invalid status:", updateData.status)
+        return NextResponse.json({ error: "Doctors can only cancel, close, or complete appointments" }, { status: 403 })
+      }
 
-		const deletedAppointment = await Appointment.findByIdAndDelete(id);
-		if (!deletedAppointment) {
-			console.warn("🔴 [DELETE] Appointment not found:", id);
-			return NextResponse.json(
-				{ error: "Appointment not found" },
-				{ status: 404 }
-			);
-		}
+      const appointment = await Appointment.findById(id)
+      if (appointment && appointment.doctorId !== payload.userId) {
+        console.warn("🔴 [PUT] Doctor trying to update another doctor's appointment")
+        return NextResponse.json({ error: "You can only manage your own appointments" }, { status: 403 })
+      }
+    } else if (payload.role !== "admin" && payload.role !== "receptionist") {
+      console.warn("🔴 [PUT] Unauthorized role tried to update appointment:", payload.role)
+      return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    }
 
-		console.log(
-			"🟢 [DELETE] Appointment deleted successfully:",
-			deletedAppointment._id
-		);
+    const originalAppointment = await Appointment.findById(id)
+    if (!originalAppointment) {
+      console.warn("🔴 [PUT] Appointment not found for ID:", id)
+      return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+    }
 
-		const patient = await User.findById(deletedAppointment.patientId);
-		console.log(
-			"🟠 [DELETE] Patient found for notification:",
-			patient ? patient.name : "❌ None"
-		);
+    console.log("🟠 [PUT] Original appointment found:", originalAppointment.status)
 
-		if (patient && patient.phone) {
-			console.log(
-				"🟢 [DELETE] Sending WhatsApp cancellation notification to:",
-				patient.phone
-			);
+    if (updateData.date || updateData.time) {
+      const newDate = updateData.date || originalAppointment.date
+      const newTime = updateData.time || originalAppointment.time
+      const newDuration = updateData.duration || originalAppointment.duration || 30
 
-			const whatsappResult = await sendAppointmentCancellation(
-				patient.phone,
-				deletedAppointment.patientName,
-				deletedAppointment.doctorName,
-				deletedAppointment.date
-			);
+      // Only check if date/time actually changed
+      if (newDate !== originalAppointment.date || newTime !== originalAppointment.time) {
+        const validation = await validateAppointmentScheduling(
+          originalAppointment.doctorId,
+          newDate,
+          newTime,
+          newDuration,
+          id, // Exclude current appointment from validation
+        )
 
-			console.log("🟣 [DELETE] WhatsApp cancellation result:", whatsappResult);
+        if (!validation.isValid) {
+          console.warn("🔴 [PUT] Validation failed:", validation.error)
+          return NextResponse.json({ error: validation.error }, { status: 409 })
+        }
+      }
+    }
 
-			if (!whatsappResult.success) {
-				console.warn(
-					"⚠️ [DELETE] WhatsApp cancellation failed:",
-					whatsappResult.error
-				);
-			} else {
-				console.log(
-					"✅ [DELETE] WhatsApp cancellation sent successfully:",
-					whatsappResult.messageId
-				);
-			}
-		} else {
-			console.warn("❌ [DELETE] Patient phone not found — WhatsApp skipped");
-		}
+    const updatedAppointment = await Appointment.findByIdAndUpdate(id, updateData, { new: true })
+    if (!updatedAppointment) {
+      console.warn("🔴 [PUT] Failed to update appointment with ID:", id)
+      return NextResponse.json({ error: "Appointment not found after update" }, { status: 404 })
+    }
 
-		if (patient && patient.email) {
-			console.log("  Sending email cancellation to patient:", patient.email);
-			const { sendAppointmentCancellationEmail } = await import(
-				"@/lib/nodemailer-service"
-			);
-			const emailResult = await sendAppointmentCancellationEmail(
-				patient.email,
-				deletedAppointment.patientName,
-				deletedAppointment.doctorName,
-				deletedAppointment.date,
-				deletedAppointment.time
-			);
+    console.log("🟢 [PUT] Appointment updated successfully")
 
-			if (!emailResult.success) {
-				console.warn("  Email cancellation failed:", emailResult.error);
-			} else {
-				console.log(
-					"  Email cancellation sent successfully:",
-					emailResult.messageId
-				);
-			}
-		}
+    // Fetch patient
+    const { Patient } = await import("@/lib/db")
+    const patient = await Patient.findById(originalAppointment.patientId)
+    console.log("🟠 [PUT] Patient found:", patient ? patient.name : "❌ No patient found")
 
-		return NextResponse.json({
-			success: true,
-			message: "Appointment deleted successfully",
-		});
-	} catch (error) {
-		console.error("🔴 [DELETE] Unexpected error deleting appointment:", error);
-		return NextResponse.json(
-			{ error: "Failed to delete appointment" },
-			{ status: 500 }
-		);
-	}
+    if (patient && patient.phone) {
+      console.log("🟢 [PUT] Patient phone detected:", patient.phone)
+
+      // Appointment cancellation notification
+      if (updateData.status === "cancelled" && originalAppointment.status !== "cancelled") {
+        console.log("🟠 [PUT] Appointment marked as cancelled — sending WhatsApp cancellation...")
+
+        const whatsappResult = await sendAppointmentCancellation(
+          patient.phone,
+          originalAppointment.patientName,
+          originalAppointment.doctorName,
+          originalAppointment.date,
+        )
+
+        console.log("🟣 [PUT] WhatsApp cancellation result:", whatsappResult)
+
+        if (!whatsappResult.success) {
+          console.warn("⚠️ [PUT] WhatsApp cancellation failed:", whatsappResult.error)
+        } else {
+          console.log("✅ [PUT] WhatsApp cancellation sent successfully:", whatsappResult.messageId)
+        }
+
+        if (patient.email) {
+          console.log("  Sending email cancellation to patient:", patient.email)
+          const { sendAppointmentCancellationEmail } = await import("@/lib/nodemailer-service")
+          const emailResult = await sendAppointmentCancellationEmail(
+            patient.email,
+            originalAppointment.patientName,
+            originalAppointment.doctorName,
+            originalAppointment.date,
+            originalAppointment.time,
+          )
+
+          if (!emailResult.success) {
+            console.warn("  Email cancellation failed:", emailResult.error)
+          } else {
+            console.log("  Email cancellation sent successfully:", emailResult.messageId)
+          }
+        }
+
+        // Appointment reschedule notification
+      } else if (
+        (updateData.date && updateData.date !== originalAppointment.date) ||
+        (updateData.time && updateData.time !== originalAppointment.time)
+      ) {
+        const newDate = updateData.date || originalAppointment.date
+        const newTime = updateData.time || originalAppointment.time
+
+        console.log("🟠 [PUT] Appointment rescheduled — sending WhatsApp notification...", {
+          newDate,
+          newTime,
+        })
+
+        const whatsappResult = await sendAppointmentReschedule(
+          patient.phone,
+          originalAppointment.patientName,
+          originalAppointment.doctorName,
+          newDate,
+          newTime,
+        )
+
+        console.log("🟣 [PUT] WhatsApp reschedule result:", whatsappResult)
+
+        if (!whatsappResult.success) {
+          console.warn("⚠️ [PUT] WhatsApp reschedule failed:", whatsappResult.error)
+        } else {
+          console.log("✅ [PUT] WhatsApp reschedule sent successfully:", whatsappResult.messageId)
+        }
+
+        if (patient.email) {
+          console.log("  Sending email reschedule to patient:", patient.email)
+          const { sendAppointmentRescheduleEmail } = await import("@/lib/nodemailer-service")
+          const emailResult = await sendAppointmentRescheduleEmail(
+            patient.email,
+            originalAppointment.patientName,
+            originalAppointment.doctorName,
+            newDate,
+            newTime,
+            originalAppointment.date,
+            originalAppointment.time,
+          )
+
+          if (!emailResult.success) {
+            console.warn("  Email reschedule failed:", emailResult.error)
+          } else {
+            console.log("  Email reschedule sent successfully:", emailResult.messageId)
+          }
+        }
+      } else {
+        console.log("ℹ️ [PUT] No WhatsApp notification required for this update")
+      }
+    } else {
+      console.warn("❌ [PUT] Patient phone not found — WhatsApp message skipped")
+    }
+
+    return NextResponse.json({
+      success: true,
+      appointment: updatedAppointment,
+    })
+  } catch (error) {
+    console.error("🔴 [PUT] Unexpected error updating appointment:", error)
+    return NextResponse.json({ error: "Failed to update appointment" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    console.log("🟢 [DELETE] Appointment deletion called")
+    await connectDB()
+    console.log("🟢 [DELETE] Database connected successfully")
+
+    const token = request.headers.get("authorization")?.split(" ")[1]
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    const payload = verifyToken(token)
+    if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+
+    if (payload.role === "doctor") {
+      console.warn("🔴 [DELETE] Doctor not allowed to delete appointment")
+      return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    }
+
+    const { id } = await params
+    console.log("🟠 [DELETE] Deleting appointment with ID:", id)
+
+    const deletedAppointment = await Appointment.findByIdAndDelete(id)
+    if (!deletedAppointment) {
+      console.warn("🔴 [DELETE] Appointment not found:", id)
+      return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+    }
+
+    console.log("🟢 [DELETE] Appointment deleted successfully:", deletedAppointment._id)
+
+    const patient = await User.findById(deletedAppointment.patientId)
+    console.log("🟠 [DELETE] Patient found for notification:", patient ? patient.name : "❌ None")
+
+    if (patient && patient.phone) {
+      console.log("🟢 [DELETE] Sending WhatsApp cancellation notification to:", patient.phone)
+
+      const whatsappResult = await sendAppointmentCancellation(
+        patient.phone,
+        deletedAppointment.patientName,
+        deletedAppointment.doctorName,
+        deletedAppointment.date,
+      )
+
+      console.log("🟣 [DELETE] WhatsApp cancellation result:", whatsappResult)
+
+      if (!whatsappResult.success) {
+        console.warn("⚠️ [DELETE] WhatsApp cancellation failed:", whatsappResult.error)
+      } else {
+        console.log("✅ [DELETE] WhatsApp cancellation sent successfully:", whatsappResult.messageId)
+      }
+    } else {
+      console.warn("❌ [DELETE] Patient phone not found — WhatsApp skipped")
+    }
+
+    if (patient && patient.email) {
+      console.log("  Sending email cancellation to patient:", patient.email)
+      const { sendAppointmentCancellationEmail } = await import("@/lib/nodemailer-service")
+      const emailResult = await sendAppointmentCancellationEmail(
+        patient.email,
+        deletedAppointment.patientName,
+        deletedAppointment.doctorName,
+        deletedAppointment.date,
+        deletedAppointment.time,
+      )
+
+      if (!emailResult.success) {
+        console.warn("  Email cancellation failed:", emailResult.error)
+      } else {
+        console.log("  Email cancellation sent successfully:", emailResult.messageId)
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Appointment deleted successfully",
+    })
+  } catch (error) {
+    console.error("🔴 [DELETE] Unexpected error deleting appointment:", error)
+    return NextResponse.json({ error: "Failed to delete appointment" }, { status: 500 })
+  }
 }

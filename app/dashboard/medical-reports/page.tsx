@@ -12,6 +12,8 @@ import { FileText, Eye, Trash2, Download, X, Search, ChevronLeft, ChevronRight, 
 export default function MedicalReportsPage() {
   const { user, token } = useAuth()
   const [reports, setReports] = useState([])
+  const [allPatients, setAllPatients] = useState([])
+  const [patientReportStatus, setPatientReportStatus] = useState({}) // Track which patients have reports
   const [loading, setLoading] = useState(false)
   const [selectedReport, setSelectedReport] = useState(null)
   const [showReportModal, setShowReportModal] = useState(false)
@@ -33,6 +35,8 @@ export default function MedicalReportsPage() {
       fetchReports()
       if (user?.role !== "doctor") {
         fetchPatients()
+      } else {
+        fetchAllPatients()
       }
     }
   }, [token, user])
@@ -46,6 +50,14 @@ export default function MedicalReportsPage() {
       if (res.ok) {
         const data = await res.json()
         setReports(data.reports || [])
+
+        if (user?.role === "doctor") {
+          const statusMap: any = {}
+          data.reports.forEach((report: any) => {
+            statusMap[report.patientId?._id] = "created"
+          })
+          setPatientReportStatus(statusMap)
+        }
       } else {
         toast.error("Failed to fetch reports")
       }
@@ -65,6 +77,20 @@ export default function MedicalReportsPage() {
       if (res.ok) {
         const data = await res.json()
         setPatients(data.patients || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch patients:", error)
+    }
+  }
+
+  const fetchAllPatients = async () => {
+    try {
+      const res = await fetch("/api/patients", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAllPatients(data.patients || [])
       }
     } catch (error) {
       console.error("Failed to fetch patients:", error)
@@ -112,28 +138,46 @@ export default function MedicalReportsPage() {
     }
   }
 
-  // Filter patients for dropdown
-  const filteredPatients = patients.filter((p) => p.name.toLowerCase().includes(patientSearch.toLowerCase()))
+  const patientsForDropdown = user?.role === "doctor" ? allPatients : patients
+  const filteredPatients = patientsForDropdown.filter((p) => p.name.toLowerCase().includes(patientSearch.toLowerCase()))
 
-  // Filter reports based on search term and patient filter
-  const filteredReports = reports.filter((report) => {
+  const displayData =
+    user?.role === "doctor"
+      ? allPatients.map((patient: any) => ({
+          ...patient,
+          reportStatus: patientReportStatus[patient._id] || "pending",
+          report: reports.find((r) => r.patientId?._id === patient._id),
+        }))
+      : reports
+
+  // Filter reports/patients based on search term and patient filter
+  const filteredReports = displayData.filter((item: any) => {
     // Apply patient filter
-    if (filterPatient && report.patientId?._id !== filterPatient) {
-      return false
+    if (filterPatient) {
+      const itemId = item._id || item.patientId?._id
+      if (itemId !== filterPatient) {
+        return false
+      }
     }
-    
+
     // Apply search term filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase()
-      return (
-        report.patientId?.name?.toLowerCase().includes(searchLower) ||
-        report.doctorId?.name?.toLowerCase().includes(searchLower) ||
-        report.procedures?.some((p: any) => p.name.toLowerCase().includes(searchLower)) ||
-        report.findings?.toLowerCase().includes(searchLower) ||
-        report.notes?.toLowerCase().includes(searchLower)
-      )
+      if (user?.role === "doctor") {
+        // For doctors, search in patient name
+        return item.name?.toLowerCase().includes(searchLower)
+      } else {
+        // For others, search in report details
+        return (
+          item.patientId?.name?.toLowerCase().includes(searchLower) ||
+          item.doctorId?.name?.toLowerCase().includes(searchLower) ||
+          item.procedures?.some((p: any) => p.name.toLowerCase().includes(searchLower)) ||
+          item.findings?.toLowerCase().includes(searchLower) ||
+          item.notes?.toLowerCase().includes(searchLower)
+        )
+      }
     }
-    
+
     return true
   })
 
@@ -155,8 +199,14 @@ export default function MedicalReportsPage() {
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Medical Reports</h1>
-              <p className="text-muted-foreground text-sm mt-1">View and manage appointment reports</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                {user?.role === "doctor" ? "Patient Medical Reports Status" : "Medical Reports"}
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                {user?.role === "doctor"
+                  ? "View all patients and their medical report status"
+                  : "View and manage appointment reports"}
+              </p>
             </div>
 
             {/* Search and Filters */}
@@ -212,7 +262,7 @@ export default function MedicalReportsPage() {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <input
                       type="text"
-                      placeholder="Search reports..."
+                      placeholder={user?.role === "doctor" ? "Search patients..." : "Search reports..."}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
@@ -238,20 +288,20 @@ export default function MedicalReportsPage() {
                       <option value="50">50</option>
                     </select>
                   </div>
-                  
+
                   <button
                     onClick={fetchReports}
                     disabled={loading}
                     className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 cursor-pointer"
                   >
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                     {loading ? "Loading..." : "Refresh"}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Reports List */}
+            {/* Reports/Patients List */}
             <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
               {/* Loading State */}
               {loading && (
@@ -268,12 +318,12 @@ export default function MedicalReportsPage() {
                         style={{ animationDelay: "0.2s" }}
                       ></div>
                     </div>
-                    <span className="text-muted-foreground text-sm">Loading reports...</span>
+                    <span className="text-muted-foreground text-sm">Loading...</span>
                   </div>
                 </div>
               )}
 
-              {/* Reports Content */}
+              {/* Content */}
               {!loading && (
                 <>
                   <div className="grid grid-cols-1 gap-4 p-4 sm:p-6">
@@ -281,9 +331,57 @@ export default function MedicalReportsPage() {
                       <div className="bg-muted/40 rounded-lg p-8 text-center">
                         <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
                         <p className="text-muted-foreground">
-                          {searchTerm || filterPatient ? "No reports found matching your criteria" : "No reports found"}
+                          {searchTerm || filterPatient ? "No results found matching your criteria" : "No data found"}
                         </p>
                       </div>
+                    ) : user?.role === "doctor" ? (
+                      currentReports.map((patient: any) => (
+                        <div
+                          key={patient._id}
+                          className="bg-background rounded-lg border border-border p-4 sm:p-6 hover:shadow-lg transition-shadow"
+                        >
+                          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-semibold text-foreground truncate">{patient.name}</h3>
+                              <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                                <span>Email: {patient.email || "N/A"}</span>
+                                <span>Phone: {patient.phone || "N/A"}</span>
+                              </div>
+                              <div className="mt-3">
+                                <span
+                                  className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                                    patient.reportStatus === "created"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                  }`}
+                                >
+                                  {patient.reportStatus === "created" ? "✓ Report Created" : "⏳ Pending Report"}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                              {patient.report && (
+                                <>
+                                  <button
+                                    onClick={() => handleViewReport(patient.report)}
+                                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    <span className="hidden sm:inline">View</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDownloadReport(patient.report)}
+                                    className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Download</span>
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
                     ) : (
                       currentReports.map((report) => (
                         <div
@@ -340,29 +438,25 @@ export default function MedicalReportsPage() {
                   {filteredReports.length > 0 && (
                     <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div className="text-sm text-muted-foreground">
-                        Showing <span className="font-medium">{filteredReports.length === 0 ? 0 : startIndex + 1}</span> to{" "}
-                        <span className="font-medium">{Math.min(endIndex, filteredReports.length)}</span> of{" "}
+                        Showing <span className="font-medium">{filteredReports.length === 0 ? 0 : startIndex + 1}</span>{" "}
+                        to <span className="font-medium">{Math.min(endIndex, filteredReports.length)}</span> of{" "}
                         <span className="font-medium">{filteredReports.length}</span> results
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                           disabled={currentPage === 1}
                           className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </button>
-                        
+
                         <div className="flex items-center gap-1">
                           {Array.from({ length: totalPages }, (_, i) => i + 1)
-                            .filter(page => 
-                              page === 1 || 
-                              page === totalPages ||
-                              Math.abs(page - currentPage) <= 1
-                            )
+                            .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                             .map((page, index, array) => {
-                              const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+                              const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1
                               return (
                                 <div key={page} className="flex items-center">
                                   <button
@@ -375,16 +469,14 @@ export default function MedicalReportsPage() {
                                   >
                                     {page}
                                   </button>
-                                  {showEllipsis && (
-                                    <span className="px-1 text-muted-foreground">...</span>
-                                  )}
+                                  {showEllipsis && <span className="px-1 text-muted-foreground">...</span>}
                                 </div>
-                              );
+                              )
                             })}
                         </div>
-                        
+
                         <button
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                           disabled={currentPage === totalPages || totalPages === 0}
                           className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >

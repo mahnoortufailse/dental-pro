@@ -37,18 +37,18 @@ userSchema.pre("save", async function (next) {
 const patientSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true },
-  email: { 
-    type: String, 
+  email: {
+    type: String,
     required: false,
-    default: "" // Add default value
+    default: null,
   },
   dob: { type: String, required: true },
   idNumber: { type: String, default: "" },
   address: { type: String, default: "" },
-  insuranceProvider: { 
-    type: String, 
+  insuranceProvider: {
+    type: String,
     required: false,
-    default: "" // Add default value
+    default: "",
   },
   insuranceNumber: { type: String, default: "" },
   allergies: { type: [String], default: [] },
@@ -72,8 +72,14 @@ const patientSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 })
 
-patientSchema.pre("save", async (next) => {
-  next()
+// Create partial unique index for email - only enforce uniqueness for non-null emails
+patientSchema.index({ 
+  email: 1 
+}, { 
+  unique: true, 
+  partialFilterExpression: { 
+    email: { $type: "string", $ne: "" } 
+  } 
 })
 
 const appointmentSchema = new mongoose.Schema({
@@ -84,7 +90,7 @@ const appointmentSchema = new mongoose.Schema({
   date: { type: String, required: true },
   time: { type: String, required: true },
   type: { type: String, enum: ["Consultation", "Cleaning", "Filling", "Root Canal"], required: true },
-  status: { type: String, enum: ["pending", "confirmed", "completed"], default: "pending" },
+  status: { type: String, enum: ["pending", "confirmed", "completed", "cancelled", "closed"], default: "pending" },
   roomNumber: String,
   duration: Number,
   createdAt: { type: Date, default: Date.now },
