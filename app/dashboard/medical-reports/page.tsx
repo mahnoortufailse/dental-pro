@@ -7,13 +7,14 @@ import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { generateReportPDF } from "@/lib/pdf-generator"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { FileText, Eye, Trash2, Download, X, Search, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
+import { FileText, Eye, Trash2, Download, X, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
 
 export default function MedicalReportsPage() {
   const { user, token } = useAuth()
   const [reports, setReports] = useState([])
   const [allPatients, setAllPatients] = useState([])
-  const [patientReportStatus, setPatientReportStatus] = useState({}) // Track which patients have reports
+  const [appointmentPatients, setAppointmentPatients] = useState([])
+  const [patientReportStatus, setPatientReportStatus] = useState({})
   const [loading, setLoading] = useState(false)
   const [selectedReport, setSelectedReport] = useState(null)
   const [showReportModal, setShowReportModal] = useState(false)
@@ -36,10 +37,42 @@ export default function MedicalReportsPage() {
       if (user?.role !== "doctor") {
         fetchPatients()
       } else {
-        fetchAllPatients()
+        fetchReportsAndPatients()
       }
     }
   }, [token, user])
+
+  const fetchReportsAndPatients = async () => {
+    try {
+      // First fetch appointments for this doctor
+      const appointmentsRes = await fetch("/api/appointments", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (appointmentsRes.ok) {
+        const appointmentsData = await appointmentsRes.json()
+        const appointments = appointmentsData.appointments || []
+
+        // Get unique patient IDs from appointments
+        const patientIds = [...new Set(appointments.map((apt: any) => apt.patientId))]
+
+        // Fetch all patients to get their full details
+        const patientsRes = await fetch("/api/patients", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (patientsRes.ok) {
+          const patientsData = await patientsRes.json()
+          const allPatientsList = patientsData.patients || []
+
+          // Filter to only patients with appointments to this doctor
+          const patientsWithAppointments = allPatientsList.filter((p: any) => patientIds.includes(p._id))
+
+          setAppointmentPatients(patientsWithAppointments)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch reports and patients:", error)
+    }
+  }
 
   const fetchReports = async () => {
     setLoading(true)
@@ -53,6 +86,9 @@ export default function MedicalReportsPage() {
 
         if (user?.role === "doctor") {
           const statusMap: any = {}
+          appointmentPatients.forEach((patient: any) => {
+            statusMap[patient._id] = "pending"
+          })
           data.reports.forEach((report: any) => {
             statusMap[report.patientId?._id] = "created"
           })
@@ -77,20 +113,6 @@ export default function MedicalReportsPage() {
       if (res.ok) {
         const data = await res.json()
         setPatients(data.patients || [])
-      }
-    } catch (error) {
-      console.error("Failed to fetch patients:", error)
-    }
-  }
-
-  const fetchAllPatients = async () => {
-    try {
-      const res = await fetch("/api/patients", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setAllPatients(data.patients || [])
       }
     } catch (error) {
       console.error("Failed to fetch patients:", error)
@@ -138,12 +160,12 @@ export default function MedicalReportsPage() {
     }
   }
 
-  const patientsForDropdown = user?.role === "doctor" ? allPatients : patients
+  const patientsForDropdown = user?.role === "doctor" ? appointmentPatients : patients
   const filteredPatients = patientsForDropdown.filter((p) => p.name.toLowerCase().includes(patientSearch.toLowerCase()))
 
   const displayData =
     user?.role === "doctor"
-      ? allPatients.map((patient: any) => ({
+      ? appointmentPatients.map((patient: any) => ({
           ...patient,
           reportStatus: patientReportStatus[patient._id] || "pending",
           report: reports.find((r) => r.patientId?._id === patient._id),
@@ -258,7 +280,7 @@ export default function MedicalReportsPage() {
                   </div>
 
                   {/* General Search */}
-                  <div className="relative flex-1">
+                  {/* <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <input
                       type="text"
@@ -267,7 +289,7 @@ export default function MedicalReportsPage() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
                     />
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Controls */}

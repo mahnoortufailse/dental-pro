@@ -7,23 +7,22 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { ChevronLeft, ChevronRight, Plus, FileText, X, CheckCircle, Loader2 } from "lucide-react"
+import { Plus, Loader2 } from "lucide-react"
 import { AppointmentActionModal } from "@/components/appointment-action-modal"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
-import { SearchableDropdown } from "@/components/searchable-dropdown" // Import the component
+import { SearchableDropdown } from "@/components/searchable-dropdown"
+import { AppointmentsTableView } from "@/components/appointments-table-view"
 import { useRouter } from "next/navigation"
 import { StatCard } from "@/components/appointment-stats-card"
 import { Calendar, Clock, CheckCircle2, XCircle } from "lucide-react"
 
-export default function AppointmentsPage() {
+export default function AppointmentsTablePage() {
   const { user, token } = useAuth()
   const [appointments, setAppointments] = useState([])
-  const [currentDate, setCurrentDate] = useState(new Date())
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [showReportForm, setShowReportForm] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [appointmentActionModal, setAppointmentActionModal] = useState<{
     isOpen: boolean
     action: "close" | "cancel" | null
@@ -176,37 +175,6 @@ export default function AppointmentsPage() {
     }
   }
 
-  const getDaysInMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
-  }
-
-  const getFirstDayOfMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
-  }
-
-  const getAppointmentsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0]
-    return appointments.filter((apt) => apt.date === dateStr)
-  }
-
-  const handlePreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))
-  }
-
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))
-  }
-
-  const handleDateClick = (day: number) => {
-    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
-    const dateStr = date.toISOString().split("T")[0]
-    setSelectedDate(dateStr)
-    setFormData({
-      ...formData,
-      date: dateStr,
-    })
-  }
-
   const handleDeleteAppointment = async (appointmentId: string) => {
     setLoading((prev) => ({ ...prev, deleteAppointment: true }))
     try {
@@ -350,18 +318,16 @@ export default function AppointmentsPage() {
 
     const timeConflict = appointments.some((apt) => {
       if (editingId && (apt._id === editingId || apt.id === editingId)) {
-        return false // Skip current appointment if editing
+        return false
       }
       if (apt.status === "cancelled" || apt.status === "closed" || apt.status === "completed") {
         return false
       }
 
-      // Only check appointments for the same doctor and date
       if (apt.doctorId !== formData.doctorId || apt.date !== formData.date) {
         return false
       }
 
-      // Convert times to minutes for accurate overlap calculation
       const aptStartMin = timeToMinutes(apt.time)
       const aptDuration = apt.duration || 30
       const aptEndMin = aptStartMin + aptDuration
@@ -370,8 +336,6 @@ export default function AppointmentsPage() {
       const newDuration = formData.duration || 30
       const newEndMin = newStartMin + newDuration
 
-      // Check if time ranges overlap
-      // Ranges overlap if: start1 < end2 AND start2 < end1
       return newStartMin < aptEndMin && aptStartMin < newEndMin
     })
 
@@ -416,12 +380,12 @@ export default function AppointmentsPage() {
         const newEndTime = `${String(newEndHours).padStart(2, "0")}:${String(newEndMins).padStart(2, "0")}`
 
         toast.error(
-          `Doctor ${formData.doctorName} has a conflicting appointment from ${conflictingApt.time} to ${aptEndTime} on ${formData.date}. Your appointment would be from ${formData.time} to ${newEndTime}.`,
+          `Doctor ${formData.doctorName} has another appointment from ${conflictingApt.time} to ${aptEndTime} on ${formData.date}. Please choose a different time.`,
         )
       }
       return
     }
-
+    
     const loadingKey = editingId ? "updateAppointment" : "addAppointment"
     setLoading((prev) => ({ ...prev, [loadingKey]: true }))
 
@@ -555,33 +519,6 @@ export default function AppointmentsPage() {
     }
   }
 
-  const daysInMonth = getDaysInMonth(currentDate)
-  const firstDay = getFirstDayOfMonth(currentDate)
-  const monthName = currentDate.toLocaleString("default", { month: "long", year: "numeric" })
-
-  const calendarDays = []
-  for (let i = 0; i < firstDay; i++) {
-    calendarDays.push(null)
-  }
-  for (let i = 1; i <= daysInMonth; i++) {
-    calendarDays.push(i)
-  }
-
-  const selectedDateAppointments = selectedDate ? appointments.filter((apt) => apt.date === selectedDate) : []
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800"
-      case "cancelled":
-        return "bg-red-100 text-red-800"
-      case "confirmed":
-        return "bg-blue-100 text-blue-800"
-      default:
-        return "bg-yellow-100 text-yellow-800"
-    }
-  }
-
   const totalAppointments = appointments.length
   const confirmedAppointments = appointments.filter((apt) => apt.status === "confirmed").length
   const completedAppointments = appointments.filter((apt) => apt.status === "completed").length
@@ -595,8 +532,8 @@ export default function AppointmentsPage() {
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Appointments Calendar</h1>
-                <p className="text-muted-foreground text-sm mt-1">View and manage appointments</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Appointments Table</h1>
+                <p className="text-muted-foreground text-sm mt-1">View and manage all appointments</p>
               </div>
             </div>
 
@@ -622,314 +559,54 @@ export default function AppointmentsPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <div className="bg-card rounded-lg shadow-md border border-border p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <button
-                      onClick={handlePreviousMonth}
-                      disabled={loading.appointments}
-                      className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <h2 className="text-xl font-bold text-foreground">{monthName}</h2>
-                    <button
-                      onClick={handleNextMonth}
-                      disabled={loading.appointments}
-                      className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-2 mb-4">
-                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                      <div key={day} className="text-center font-semibold text-muted-foreground text-sm py-2">
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-2">
-                    {calendarDays.map((day, idx) => {
-                      const dayAppointments = day
-                        ? getAppointmentsForDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))
-                        : []
-                      const dateStr = day
-                        ? new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split("T")[0]
-                        : null
-                      const isSelected = dateStr === selectedDate
-
-                      return (
-                        <div
-                          key={idx}
-                          onClick={() => day && !loading.appointments && handleDateClick(day)}
-                          className={`aspect-square p-2 rounded-lg border-2 transition-colors ${
-                            day && !loading.appointments ? "cursor-pointer" : "cursor-not-allowed"
-                          } ${
-                            isSelected
-                              ? "border-accent bg-accent/20"
-                              : day
-                                ? dayAppointments.length > 0
-                                  ? "border-primary bg-primary/10"
-                                  : "border-border hover:border-primary"
-                                : "border-transparent"
-                          } ${loading.appointments ? "opacity-50" : ""}`}
-                        >
-                          {day && (
-                            <div className="h-full flex flex-col">
-                              <span className="font-semibold text-sm text-foreground">{day}</span>
-                              {dayAppointments.length > 0 && (
-                                <div className="text-xs text-primary font-medium mt-1">
-                                  {dayAppointments.length} apt{dayAppointments.length > 1 ? "s" : ""}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                {user?.role !== "doctor" && (
-                  <button
-                    onClick={() => {
-                      setEditingId(null)
-                      setShowForm(!showForm)
-                      setFormErrors({})
-                    }}
-                    disabled={loading.appointments || loading.patients || loading.doctors}
-                    className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {loading.appointments || loading.patients || loading.doctors ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Plus className="w-4 h-4" />
-                    )}
-                    New Appointment
-                  </button>
-                )}
-
-                {selectedDate && (
-                  <div className="bg-card rounded-lg shadow-md border border-border p-6">
-                    <h3 className="font-bold text-foreground mb-4">
-                      Appointments for {new Date(selectedDate).toLocaleDateString()}
-                    </h3>
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {loading.appointments ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                        </div>
-                      ) : selectedDateAppointments.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No appointments on this date</p>
-                      ) : (
-                        selectedDateAppointments.map((apt) => (
-                          <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
-                            <div className="flex justify-between items-start gap-2 mb-2">
-                              <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
-                              <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
-                                {apt.status}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {apt.time} - {apt.type}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Room: {apt.roomNumber}</p>
-                            <div className="flex gap-2 mt-2 flex-wrap">
-                              {user?.role !== "doctor" && (
-                                <>
-                                  {apt.status !== "completed" && apt.status !== "closed" && (
-                                    <button
-                                      onClick={() => handleEditAppointment(apt)}
-                                      disabled={
-                                        loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
-                                      }
-                                      className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                                    >
-                                      Edit
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => {
-                                      setAppointmentToDelete(apt)
-                                      setShowDeleteModal(true)
-                                    }}
-                                    disabled={loading.deleteAppointment}
-                                    className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer"
-                                  >
-                                    Delete
-                                  </button>
-                                  <button
-                                    onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
-                                    disabled={loading.appointments}
-                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                                  >
-                                    View Details
-                                  </button>
-                                </>
-                              )}
-                              {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "completed" && (
-                                <>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedAppointment(apt)
-                                      setShowReportForm(true)
-                                      setReportErrors({})
-                                    }}
-                                    disabled={loading.createReport}
-                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                  >
-                                    <FileText className="w-3 h-3" />
-                                    Report
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      setAppointmentActionModal({
-                                        isOpen: true,
-                                        action: "close",
-                                        appointmentId: apt._id || apt.id,
-                                      })
-                                    }
-                                    disabled={loading.completeAppointment}
-                                    className="text-xs text-green-600 hover:underline disabled:text-green-600/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                  >
-                                    <CheckCircle className="w-3 h-3" />
-                                    Close
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      setAppointmentActionModal({
-                                        isOpen: true,
-                                        action: "cancel",
-                                        appointmentId: apt._id || apt.id,
-                                      })
-                                    }
-                                    disabled={loading.cancelAppointment}
-                                    className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                  >
-                                    <X className="w-3 h-3" />
-                                    Cancel
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="bg-card rounded-lg shadow-md border border-border p-6">
-                  <h3 className="font-bold text-foreground mb-4">Upcoming Appointments</h3>
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {loading.appointments ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : appointments.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No appointments scheduled</p>
-                    ) : (
-                      appointments.slice(0, 5).map((apt) => (
-                        <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
-                          <div className="flex justify-between items-start gap-2 mb-1">
-                            <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
-                            <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
-                              {apt.status}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {apt.date} at {apt.time}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{apt.type}</p>
-                          <div className="flex gap-2 mt-2 flex-wrap">
-                            {user?.role !== "doctor" && (
-                              <>
-                                {apt.status !== "completed" && apt.status !== "closed" && (
-                                  <button
-                                    onClick={() => handleEditAppointment(apt)}
-                                    disabled={
-                                      loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
-                                    }
-                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                                  >
-                                    Edit
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => {
-                                    setAppointmentToDelete(apt)
-                                    setShowDeleteModal(true)
-                                  }}
-                                  disabled={loading.deleteAppointment}
-                                  className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                  Delete
-                                </button>
-                                <button
-                                  onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
-                                  disabled={loading.appointments}
-                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                  View Details
-                                </button>
-                              </>
-                            )}
-                            {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "completed" && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    setSelectedAppointment(apt)
-                                    setShowReportForm(true)
-                                    setReportErrors({})
-                                  }}
-                                  disabled={loading.createReport}
-                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                >
-                                  <FileText className="w-3 h-3" />
-                                  Report
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    setAppointmentActionModal({
-                                      isOpen: true,
-                                      action: "close",
-                                      appointmentId: apt._id || apt.id,
-                                    })
-                                  }
-                                  disabled={loading.completeAppointment}
-                                  className="text-xs text-green-600 hover:underline disabled:text-green-600/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                >
-                                  <CheckCircle className="w-3 h-3" />
-                                  Close
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    setAppointmentActionModal({
-                                      isOpen: true,
-                                      action: "cancel",
-                                      appointmentId: apt._id || apt.id,
-                                    })
-                                  }
-                                  disabled={loading.cancelAppointment}
-                                  className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                >
-                                  <X className="w-3 h-3" />
-                                  Cancel
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
+            <div className="space-y-4">
+              {user?.role !== "doctor" && (
+                <button
+                  onClick={() => {
+                    setEditingId(null)
+                    setShowForm(!showForm)
+                    setFormErrors({})
+                  }}
+                  disabled={loading.appointments || loading.patients || loading.doctors}
+                  className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {loading.appointments || loading.patients || loading.doctors ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  New Appointment
+                </button>
+              )}
+              <AppointmentsTableView
+                appointments={appointments}
+                userRole={user?.role || ""}
+                loading={loading}
+                onEdit={handleEditAppointment}
+                onDelete={(apt) => {
+                  setAppointmentToDelete(apt)
+                  setShowDeleteModal(true)
+                }}
+                onCreateReport={(apt) => {
+                  setSelectedAppointment(apt)
+                  setShowReportForm(true)
+                  setReportErrors({})
+                }}
+                onClose={(appointmentId) =>
+                  setAppointmentActionModal({
+                    isOpen: true,
+                    action: "close",
+                    appointmentId,
+                  })
+                }
+                onCancel={(appointmentId) =>
+                  setAppointmentActionModal({
+                    isOpen: true,
+                    action: "cancel",
+                    appointmentId,
+                  })
+                }
+              />
             </div>
 
             {showForm && user?.role !== "doctor" && (

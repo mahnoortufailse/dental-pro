@@ -29,345 +29,212 @@ export function generateReportPDF(report: ReportData) {
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
-  let yPosition = 20
+  let y = 58
 
   // Colors
-  const primaryColor = [59, 130, 246] // Blue-500
-  const secondaryColor = [107, 114, 128] // Gray-500
-  const accentColor = [16, 185, 129] // Green-500
-  const dangerColor = [239, 68, 68] // Red-500
+  const blue = [23, 78, 166]
+  const lightBlue = [231, 238, 255]
+  const gray = [70, 70, 70]
+  const softGray = [248, 249, 250]
+  const green = [34, 197, 94]
+  const red = [239, 68, 68]
 
-  // Header with gradient background
-  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2])
-  doc.rect(0, 0, pageWidth, 80, 'F')
-  
-  // Clinic Logo/Name
-  doc.setFontSize(28)
-  doc.setTextColor(255, 255, 255)
+  /* -------------------- HEADER -------------------- */
+  const headerHeight = 52
+  doc.setFillColor(blue[0], blue[1], blue[2])
+  doc.rect(0, 0, pageWidth, headerHeight, "F")
+
   doc.setFont("helvetica", "bold")
-  doc.text("DENTAL CARE PRO", pageWidth / 2, 35, { align: "center" })
-  
-  doc.setFontSize(12)
-  doc.setTextColor(255, 255, 255, 0.8)
-  doc.setFont("helvetica", "normal")
-  doc.text("Professional Dental Healthcare", pageWidth / 2, 45, { align: "center" })
-  
-  // Report Title
+  doc.setFontSize(22)
+  doc.setTextColor(255, 255, 255)
+  doc.text("Dr. Mohammad Alsheikh", 20, 20)
+  doc.text("Dental Center", 20, 30)
+
+  doc.setFont("helvetica", "italic")
+  doc.setFontSize(11)
+  doc.text("Your Smile, Our Priority", 20, 40)
+
+  doc.setDrawColor(255, 255, 255)
+  doc.setLineWidth(0.5)
+  doc.line(15, 45, pageWidth - 15, 45)
+
+  doc.setFont("helvetica", "bold")
   doc.setFontSize(18)
-  doc.setTextColor(255, 255, 255)
-  doc.setFont("helvetica", "bold")
-  doc.text("MEDICAL REPORT", pageWidth / 2, 60, { align: "center" })
-
-  yPosition = 90
-
-  // Report Metadata
-  doc.setFontSize(10)
-  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2])
+  doc.text("MEDICAL REPORT", pageWidth - 20, 22, { align: "right" })
   doc.setFont("helvetica", "normal")
-  
+  doc.setFontSize(10)
+  doc.text("Confidential Patient Document", pageWidth - 20, 31, { align: "right" })
+
+  /* -------------------- REPORT INFO STRIP -------------------- */
+  doc.setFillColor(lightBlue[0], lightBlue[1], lightBlue[2])
+  doc.roundedRect(15, y - 12, pageWidth - 30, 15, 3, 3, "F")
+
   const reportDate = format(new Date(report.createdAt), "MMMM dd, yyyy")
   const reportTime = format(new Date(report.createdAt), "hh:mm a")
-  
-  doc.text(`Report Date: ${reportDate}`, 20, yPosition)
-  doc.text(`Time: ${reportTime}`, 20, yPosition + 5)
-  doc.text(`Report ID: DC-${report._id.slice(-8).toUpperCase()}`, pageWidth - 20, yPosition, { align: "right" })
-  doc.text(`Confidential Medical Document`, pageWidth - 20, yPosition + 5, { align: "right" })
+  const reportID = `DC-${report._id.slice(-6).toUpperCase()}`
 
-  yPosition += 20
-
-  // Two Column Layout
-  const columnWidth = (pageWidth - 60) / 2
-  const leftColumn = 20
-  const rightColumn = leftColumn + columnWidth + 20
-
-  // Patient Information Card
-  drawRoundedRect(doc, leftColumn, yPosition, columnWidth, 80, 5)
-  doc.setFillColor(248, 250, 252)
-  doc.rect(leftColumn, yPosition, columnWidth, 80, 'F')
-  
-  doc.setFontSize(12)
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
   doc.setFont("helvetica", "bold")
-  doc.text("PATIENT INFORMATION", leftColumn + 10, yPosition + 15)
-
   doc.setFontSize(9)
-  doc.setTextColor(0, 0, 0)
-  doc.setFont("helvetica", "normal")
-  
-  let patientY = yPosition + 25
-  doc.text(`Name: ${report.patientId?.name || "N/A"}`, leftColumn + 10, patientY)
-  patientY += 6
-  doc.text(`Email: ${report.patientId?.email || "N/A"}`, leftColumn + 10, patientY)
-  patientY += 6
-  doc.text(`Phone: ${report.patientId?.phone || "N/A"}`, leftColumn + 10, patientY)
-  patientY += 6
-  
-  if (report.patientId?.dateOfBirth) {
-    const dob = format(new Date(report.patientId.dateOfBirth), "MMMM dd, yyyy")
-    doc.text(`Date of Birth: ${dob}`, leftColumn + 10, patientY)
-    patientY += 6
-  }
-  
-  if (report.patientId?.address) {
-    const addressLines = doc.splitTextToSize(`Address: ${report.patientId.address}`, columnWidth - 20)
-    doc.text(addressLines, leftColumn + 10, patientY)
-  }
+  doc.setTextColor(blue[0], blue[1], blue[2])
+  doc.text(`Report ID: ${reportID}`, 22, y - 3)
+  doc.text(`Date: ${reportDate}`, pageWidth / 2, y - 3, { align: "center" })
+  doc.text(`Time: ${reportTime}`, pageWidth - 22, y - 3, { align: "right" })
 
-  // Doctor Information Card
-  drawRoundedRect(doc, rightColumn, yPosition, columnWidth, 80, 5)
-  doc.setFillColor(248, 250, 252)
-  doc.rect(rightColumn, yPosition, columnWidth, 80, 'F')
-  
-  doc.setFontSize(12)
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
-  doc.setFont("helvetica", "bold")
-  doc.text("ATTENDING PHYSICIAN", rightColumn + 10, yPosition + 15)
+  y += 16
 
-  doc.setFontSize(9)
-  doc.setTextColor(0, 0, 0)
-  doc.setFont("helvetica", "normal")
-  
-  let doctorY = yPosition + 25
-  doc.text(`Dr. ${report.doctorId?.name || "N/A"}`, rightColumn + 10, doctorY)
-  doctorY += 6
-  doc.text(`Specialty: ${report.doctorId?.specialty || "General Dentistry"}`, rightColumn + 10, doctorY)
-  doctorY += 6
-  if (report.doctorId?.email) {
-    doc.text(`Email: ${report.doctorId.email}`, rightColumn + 10, doctorY)
-    doctorY += 6
-  }
-  if (report.doctorId?.licenseNumber) {
-    doc.text(`License: ${report.doctorId.licenseNumber}`, rightColumn + 10, doctorY)
-  }
+  /* -------------------- PATIENT INFO -------------------- */
+  y = drawSectionTitle(doc, "PATIENT INFORMATION", y, blue)
+  y = drawInfoCard(doc, [
+    `Name: ${report.patientId?.name || "N/A"}`,
+    `Email: ${report.patientId?.email || "N/A"}`,
+    `Phone: ${report.patientId?.phone || "N/A"}`,
+    report.patientId?.dateOfBirth ? `Date of Birth: ${format(new Date(report.patientId.dateOfBirth), "MMMM dd, yyyy")}` : "",
+    report.patientId?.address ? `Address: ${report.patientId.address}` : "",
+  ].filter(Boolean), y, softGray)
 
-  yPosition += 100
+  /* -------------------- DOCTOR INFO -------------------- */
+  y = drawSectionTitle(doc, "ATTENDING DOCTOR", y, blue)
+  y = drawInfoCard(doc, [
+    `Name: Dr. ${report.doctorId?.name || "N/A"}`,
+    `Specialty: ${report.doctorId?.specialty || "General Dentistry"}`,
+    report.doctorId?.email ? `Email: ${report.doctorId.email}` : "",
+    report.doctorId?.licenseNumber ? `License #: ${report.doctorId.licenseNumber}` : "",
+  ].filter(Boolean), y, softGray)
 
-  // Procedures Section
-  doc.setFontSize(14)
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
-  doc.setFont("helvetica", "bold")
-  doc.text("PROCEDURES PERFORMED", 20, yPosition)
-  
-  yPosition += 10
-  
-  if (report.procedures && report.procedures.length > 0) {
-    drawRoundedRect(doc, 20, yPosition, pageWidth - 40, 15 + (report.procedures.length * 25), 5)
-    doc.setFillColor(255, 255, 255)
-    doc.rect(20, yPosition, pageWidth - 40, 15 + (report.procedures.length * 25), 'F')
-    
-    let procY = yPosition + 10
-    report.procedures.forEach((proc, index) => {
-      // Procedure header with number
-      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2])
-      doc.rect(25, procY - 5, pageWidth - 50, 15, 'F')
-      
+  /* -------------------- PROCEDURES -------------------- */
+  y = drawSectionTitle(doc, "PROCEDURES PERFORMED", y, blue)
+  if (report.procedures?.length) {
+    for (const [i, p] of report.procedures.entries()) {
+      y = checkNewPage(doc, y, pageHeight)
+      const startY = y + 3
+      doc.setFillColor(255, 255, 255)
+      doc.roundedRect(20, startY, pageWidth - 40, 20, 3, 3, "F")
+
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(blue[0], blue[1], blue[2])
       doc.setFontSize(10)
-      doc.setTextColor(255, 255, 255)
-      doc.setFont("helvetica", "bold")
-      doc.text(`Procedure ${index + 1}: ${proc.name}`, 30, procY + 3)
-      
-      procY += 12
-      
-      // Procedure details
-      doc.setFontSize(9)
-      doc.setTextColor(0, 0, 0)
+      doc.text(`${i + 1}. ${p.name}`, 26, startY + 8)
+
       doc.setFont("helvetica", "normal")
-      
-      if (proc.tooth) {
-        doc.text(`Tooth: ${proc.tooth}`, 30, procY)
-        procY += 5
-      }
-      
-      if (proc.status) {
-        const statusColor = proc.status.toLowerCase() === 'completed' ? accentColor : dangerColor
-        doc.setTextColor(statusColor[0], statusColor[1], statusColor[2])
-        doc.text(`Status: ${proc.status}`, 30, procY)
+      doc.setFontSize(9)
+      doc.setTextColor(gray[0], gray[1], gray[2])
+      if (p.tooth) doc.text(`Tooth: ${p.tooth}`, 26, startY + 15)
+      if (p.status) {
+        const color = p.status.toLowerCase() === "completed" ? green : red
+        doc.setTextColor(color[0], color[1], color[2])
+        doc.text(`Status: ${p.status}`, pageWidth - 26, startY + 15, { align: "right" })
         doc.setTextColor(0, 0, 0)
-        procY += 5
       }
-      
-      if (proc.description) {
-        const descLines = doc.splitTextToSize(`Description: ${proc.description}`, pageWidth - 70)
-        doc.text(descLines, 30, procY)
-        procY += descLines.length * 4
+
+      y += 23
+      if (p.description) {
+        const desc = doc.splitTextToSize(`Description: ${p.description}`, pageWidth - 50)
+        doc.text(desc, 28, y)
+        y += desc.length * 4 + 4
       }
-      
-      procY += 8
-    })
-    
-    yPosition += 20 + (report.procedures.length * 25)
+    }
   } else {
-    doc.setFontSize(10)
-    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2])
-    doc.text("No procedures recorded", 25, yPosition)
-    yPosition += 15
+    y = drawInfoCard(doc, ["No procedures recorded."], y, softGray)
   }
 
-  // Check for new page
-  if (yPosition > pageHeight - 100) {
-    doc.addPage()
-    yPosition = 20
-  }
+  /* -------------------- FINDINGS -------------------- */
+  y = checkNewPage(doc, y, pageHeight)
+  y = drawSectionTitle(doc, "CLINICAL FINDINGS", y, blue)
+  y = drawParagraphCard(doc, report.findings || "No findings recorded.", y, pageWidth)
 
-  // Findings Section
-  doc.setFontSize(14)
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
-  doc.setFont("helvetica", "bold")
-  doc.text("CLINICAL FINDINGS", 20, yPosition)
-  
-  yPosition += 10
-  
-  drawRoundedRect(doc, 20, yPosition, pageWidth - 40, 60, 5)
-  doc.setFillColor(248, 250, 252)
-  doc.rect(20, yPosition, pageWidth - 40, 60, 'F')
-  
-  doc.setFontSize(10)
-  doc.setTextColor(0, 0, 0)
-  doc.setFont("helvetica", "normal")
-  
-  const findingsLines = doc.splitTextToSize(report.findings || "No significant findings recorded.", pageWidth - 60)
-  doc.text(findingsLines, 30, yPosition + 10)
-  yPosition += 70
+  /* -------------------- NOTES -------------------- */
+  y = checkNewPage(doc, y, pageHeight)
+  y = drawSectionTitle(doc, "DOCTOR'S NOTES", y, blue)
+  y = drawParagraphCard(doc, report.notes || "No additional notes.", y, pageWidth)
 
-  // Check for new page
-  if (yPosition > pageHeight - 100) {
-    doc.addPage()
-    yPosition = 20
-  }
-
-  // Notes Section
-  doc.setFontSize(14)
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
-  doc.setFont("helvetica", "bold")
-  doc.text("DOCTOR'S NOTES", 20, yPosition)
-  
-  yPosition += 10
-  
-  drawRoundedRect(doc, 20, yPosition, pageWidth - 40, 50, 5)
-  doc.setFillColor(255, 255, 255)
-  doc.rect(20, yPosition, pageWidth - 40, 50, 'F')
-  
-  doc.setFontSize(10)
-  doc.setTextColor(0, 0, 0)
-  doc.setFont("helvetica", "normal")
-  
-  const notesLines = doc.splitTextToSize(report.notes || "No additional notes.", pageWidth - 60)
-  doc.text(notesLines, 30, yPosition + 10)
-  yPosition += 60
-
-  // Next Visit Section
+  /* -------------------- NEXT VISIT -------------------- */
   if (report.nextVisit) {
-    if (yPosition > pageHeight - 80) {
-      doc.addPage()
-      yPosition = 20
-    }
-
-    doc.setFontSize(14)
-    doc.setTextColor(accentColor[0], accentColor[1], accentColor[2])
-    doc.setFont("helvetica", "bold")
-    doc.text("NEXT APPOINTMENT", 20, yPosition)
-    
-    yPosition += 10
-    
-    drawRoundedRect(doc, 20, yPosition, pageWidth - 40, 25, 5)
-    doc.setFillColor(240, 253, 244)
-    doc.rect(20, yPosition, pageWidth - 40, 25, 'F')
-    
-    doc.setFontSize(10)
-    doc.setTextColor(0, 0, 0)
-    doc.setFont("helvetica", "normal")
-    
-    const nextVisitDate = format(new Date(report.nextVisit), "EEEE, MMMM dd, yyyy 'at' hh:mm a")
-    doc.text(`Scheduled for: ${nextVisitDate}`, 30, yPosition + 8)
-    yPosition += 35
+    y = checkNewPage(doc, y, pageHeight)
+    y = drawSectionTitle(doc, "NEXT APPOINTMENT", y, green)
+    const nextVisit = format(new Date(report.nextVisit), "EEEE, MMMM dd, yyyy 'at' hh:mm a")
+    y = drawParagraphCard(doc, `Scheduled for: ${nextVisit}`, y, pageWidth)
   }
 
-  // Follow-up Details Section
+  /* -------------------- FOLLOW-UP -------------------- */
   if (report.followUpDetails) {
-    if (yPosition > pageHeight - 100) {
-      doc.addPage()
-      yPosition = 20
-    }
-
-    doc.setFontSize(14)
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
-    doc.setFont("helvetica", "bold")
-    doc.text("FOLLOW-UP INSTRUCTIONS", 20, yPosition)
-    
-    yPosition += 10
-    
-    drawRoundedRect(doc, 20, yPosition, pageWidth - 40, 50, 5)
-    doc.setFillColor(248, 250, 252)
-    doc.rect(20, yPosition, pageWidth - 40, 50, 'F')
-    
-    doc.setFontSize(10)
-    doc.setTextColor(0, 0, 0)
-    doc.setFont("helvetica", "normal")
-    
-    const followUpLines = doc.splitTextToSize(report.followUpDetails, pageWidth - 60)
-    doc.text(followUpLines, 30, yPosition + 10)
-    yPosition += 60
+    y = checkNewPage(doc, y, pageHeight)
+    y = drawSectionTitle(doc, "FOLLOW-UP INSTRUCTIONS", y, blue)
+    y = drawParagraphCard(doc, report.followUpDetails, y, pageWidth)
   }
 
-  // Footer with professional styling
-  const totalPages = doc.getNumberOfPages()
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i)
-    
-    // Footer background
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2])
-    doc.rect(0, pageHeight - 20, pageWidth, 20, 'F')
-    
-    // Footer text
-    doc.setFontSize(8)
-    doc.setTextColor(255, 255, 255)
-    doc.setFont("helvetica", "normal")
-    
-    doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 12, { align: "center" })
-    doc.text("DentalCare Pro - Professional Dental Management System", 20, pageHeight - 12)
-    doc.text("Confidential Medical Document - For Authorized Use Only", pageWidth - 20, pageHeight - 12, { align: "right" })
-    
-    // Watermark on all pages except first
-    if (i > 1) {
-      doc.setFontSize(40)
-      doc.setTextColor(240, 240, 240)
-      doc.setFont("helvetica", "bold")
-      doc.text("DENTAL CARE", pageWidth / 2, pageHeight / 2, { align: "center", angle: 45 })
-    }
+  /* -------------------- DYNAMIC SIGNATURE -------------------- */
+  if (y > pageHeight - 70) {
+    doc.addPage()
+    y = 40
   }
+  const signatureY = y + 10
 
-  // Add signature line on last page
-  doc.setPage(totalPages)
+  doc.setFillColor(softGray[0], softGray[1], softGray[2])
+  doc.roundedRect(90, signatureY, 100, 38, 3, 3, "F")
+
+  doc.setDrawColor(120, 120, 120)
+  doc.line(110, signatureY + 22, 180, signatureY + 22)
+
+  doc.setFont("helvetica", "bold")
   doc.setFontSize(10)
-  doc.setTextColor(0, 0, 0)
+  doc.setTextColor(30, 30, 30)
+  doc.text(`Dr. ${report.doctorId?.name || "Attending Dentist"}`, 145, signatureY + 30, { align: "center" })
   doc.setFont("helvetica", "normal")
-  
-  const signatureY = yPosition + 30
-  doc.line(100, signatureY, 180, signatureY)
-  doc.text("Dr. " + (report.doctorId?.name || "Attending Physician"), 140, signatureY + 10, { align: "center" })
-  doc.text("Signature", 140, signatureY + 15, { align: "center" })
-  doc.text("License Number: " + (report.doctorId?.licenseNumber || "PROFESSIONAL"), 140, signatureY + 20, { align: "center" })
+  doc.setFontSize(9)
+  doc.setTextColor(90, 90, 90)
+  doc.text(`License: ${report.doctorId?.licenseNumber || "Not Provided"}`, 145, signatureY + 35, { align: "center" })
 
-  // Save the PDF with professional filename
-  const patientName = report.patientId?.name?.replace(/\s+/g, '_') || 'Unknown'
-  const dateStr = format(new Date(report.createdAt), 'yyyy-MM-dd')
-  doc.save(`Medical_Report_${patientName}_${dateStr}.pdf`)
+
+
+  /* -------------------- FOOTER -------------------- */
+  doc.setFillColor(blue[0], blue[1], blue[2])
+  doc.rect(0, pageHeight - 14, pageWidth, 14, "F")
+  doc.setFontSize(8)
+  doc.setTextColor(255, 255, 255)
+  doc.text("Dr. Mohammad Alsheikh Dental Center — Compassion. Precision. Care.", 10, pageHeight - 6)
+  doc.text("www.dralsheikhdental.com", pageWidth - 10, pageHeight - 6, { align: "right" })
+
+  const patientName = report.patientId?.name?.replace(/\s+/g, "_") || "Patient"
+  const dateStr = format(new Date(report.createdAt), "yyyy-MM-dd")
+  doc.save(`Dental_Report_${patientName}_${dateStr}.pdf`)
 }
 
-// Helper function to draw rounded rectangles
-function drawRoundedRect(doc: jsPDF, x: number, y: number, width: number, height: number, radius: number) {
-  doc.setDrawColor(200, 200, 200)
-  doc.setLineWidth(0.5)
-  
-  // Draw rounded rectangle
-  doc.line(x + radius, y, x + width - radius, y)
-  doc.line(x + width, y + radius, x + width, y + height - radius)
-  doc.line(x + width - radius, y + height, x + radius, y + height)
-  doc.line(x, y + height - radius, x, y + radius)
-  
-  // Draw corners
-  doc.line(x + radius, y, x, y + radius)
-  doc.line(x + width - radius, y, x + width, y + radius)
-  doc.line(x + width, y + height - radius, x + width - radius, y + height)
-  doc.line(x, y + height - radius, x + radius, y + height)
+/* -------------------- HELPERS -------------------- */
+function drawSectionTitle(doc, title, y, color) {
+  y += 8
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(11)
+  doc.setTextColor(color[0], color[1], color[2])
+  doc.text(title, 20, y)
+  doc.setDrawColor(220, 220, 220)
+  doc.line(20, y + 1.5, doc.internal.pageSize.getWidth() - 20, y + 1.5)
+  return y + 4
+}
+
+function drawInfoCard(doc, lines, y, bgColor) {
+  const height = lines.length * 5.5 + 8
+  doc.setFillColor(bgColor[0], bgColor[1], bgColor[2])
+  doc.roundedRect(20, y + 2, doc.internal.pageSize.getWidth() - 40, height, 3, 3, "F")
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(9)
+  lines.forEach((line, i) => doc.text(line, 28, y + 8 + i * 5.5))
+  return y + height + 6
+}
+
+function drawParagraphCard(doc, text, y, width) {
+  const lines = doc.splitTextToSize(text, width - 50)
+  const height = lines.length * 4.8 + 10
+  doc.setFillColor(255, 255, 255)
+  doc.roundedRect(20, y + 2, width - 40, height, 3, 3, "F")
+  doc.setFontSize(9)
+  doc.text(lines, 28, y + 9)
+  return y + height + 6
+}
+
+function checkNewPage(doc, y, pageHeight) {
+  if (y > pageHeight - 70) {
+    doc.addPage()
+    return 35
+  }
+  return y
 }

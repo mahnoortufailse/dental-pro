@@ -73,14 +73,17 @@ const patientSchema = new mongoose.Schema({
 })
 
 // Create partial unique index for email - only enforce uniqueness for non-null emails
-patientSchema.index({ 
-  email: 1 
-}, { 
-  unique: true, 
-  partialFilterExpression: { 
-    email: { $type: "string", $ne: "" } 
-  } 
-})
+patientSchema.index(
+  {
+    email: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      email: { $type: "string", $ne: "" },
+    },
+  },
+)
 
 const appointmentSchema = new mongoose.Schema({
   patientId: { type: String, required: true },
@@ -146,7 +149,9 @@ const medicalHistorySchema = new mongoose.Schema({
       treatment: String,
       medications: [String],
       doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-      doctorName: { type: String, required: true }, // Add doctor name
+      doctorName: { type: String, required: true },
+      createdById: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+      createdByName: { type: String, required: true },
     },
   ],
   createdAt: { type: Date, default: Date.now },

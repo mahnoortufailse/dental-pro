@@ -67,6 +67,9 @@ export default function PatientsPage() {
     updateMedicalInfo: false,
   })
 
+  const [medicalHistoryEntries, setMedicalHistoryEntries] = useState<any[]>([])
+  const [loadingMedicalHistory, setLoadingMedicalHistory] = useState(false)
+
   useEffect(() => {
     if (token) {
       fetchPatients()
@@ -127,7 +130,7 @@ export default function PatientsPage() {
   // Filter patients based on search term
   const filteredPatients = patients.filter((patient) => {
     if (!searchTerm) return true
-    
+
     const searchLower = searchTerm.toLowerCase()
     return (
       patient.name?.toLowerCase().includes(searchLower) ||
@@ -458,6 +461,33 @@ export default function PatientsPage() {
     }
   }
 
+  const fetchMedicalHistory = async (patientId: string) => {
+    setLoadingMedicalHistory(true)
+    console.log("[v0] Fetching medical history for patient:", patientId)
+    try {
+      const res = await fetch(`/api/medical-history?patientId=${patientId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        console.log("[v0] Medical history response:", data)
+        const entries = data.history?.entries || []
+        console.log("[v0] Extracted entries:", entries)
+        setMedicalHistoryEntries(entries)
+      } else {
+        console.error("[v0] Failed to fetch medical history, status:", res.status)
+        const errorData = await res.json().catch(() => ({}))
+        console.error("[v0] Error response:", errorData)
+        setMedicalHistoryEntries([])
+      }
+    } catch (error) {
+      console.error("[v0] Error fetching medical history:", error)
+      setMedicalHistoryEntries([])
+    } finally {
+      setLoadingMedicalHistory(false)
+    }
+  }
+
   const incompleteCredentials = patients.filter((p) => p.credentialStatus === "incomplete")
 
   return (
@@ -573,7 +603,7 @@ export default function PatientsPage() {
                     <input
                       type="email"
                       placeholder="Email"
-                      value={formData.email}
+                      value={formData.email || ""}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
                       disabled={loading.addPatient || loading.updatePatient}
@@ -725,13 +755,13 @@ export default function PatientsPage() {
                       <option value="50">50</option>
                     </select>
                   </div>
-                  
+
                   <button
                     onClick={fetchPatients}
                     disabled={loading.patients}
                     className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 cursor-pointer"
                   >
-                    <Loader2 className={`w-4 h-4 ${loading.patients ? 'animate-spin' : ''}`} />
+                    <Loader2 className={`w-4 h-4 ${loading.patients ? "animate-spin" : ""}`} />
                     {loading.patients ? "Loading..." : "Refresh"}
                   </button>
                 </div>
@@ -819,6 +849,7 @@ export default function PatientsPage() {
                                     allergies: patient.allergies?.join(", ") || "",
                                     medicalConditions: patient.medicalConditions?.join(", ") || "",
                                   })
+                                  fetchMedicalHistory(patient._id)
                                 }}
                                 disabled={loading.deletePatient || loading.addPatient || loading.updatePatient}
                                 className="text-primary hover:text-primary/80 disabled:text-primary/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
@@ -872,25 +903,21 @@ export default function PatientsPage() {
                     <span className="font-medium">{Math.min(endIndex, filteredPatients.length)}</span> of{" "}
                     <span className="font-medium">{filteredPatients.length}</span> results
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
                       className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    
+
                     <div className="flex items-center gap-1">
                       {Array.from({ length: totalPages }, (_, i) => i + 1)
-                        .filter(page => 
-                          page === 1 || 
-                          page === totalPages ||
-                          Math.abs(page - currentPage) <= 1
-                        )
+                        .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                         .map((page, index, array) => {
-                          const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+                          const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1
                           return (
                             <div key={page} className="flex items-center">
                               <button
@@ -903,16 +930,14 @@ export default function PatientsPage() {
                               >
                                 {page}
                               </button>
-                              {showEllipsis && (
-                                <span className="px-1 text-muted-foreground">...</span>
-                              )}
+                              {showEllipsis && <span className="px-1 text-muted-foreground">...</span>}
                             </div>
-                          );
+                          )
                         })}
                     </div>
-                    
+
                     <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages || totalPages === 0}
                       className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
@@ -972,11 +997,14 @@ export default function PatientsPage() {
 
             {selectedPatient && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl sm:text-2xl font-bold text-foreground">{selectedPatient.name}</h2>
                     <button
-                      onClick={() => setSelectedPatient(null)}
+                      onClick={() => {
+                        setSelectedPatient(null)
+                        setMedicalHistoryEntries([])
+                      }}
                       disabled={loading.updateMedicalInfo}
                       className="text-muted-foreground hover:text-foreground disabled:text-muted-foreground/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
@@ -1027,85 +1055,79 @@ export default function PatientsPage() {
                       <p className="text-xs font-semibold text-muted-foreground uppercase">Medical Conditions</p>
                       <p className="text-foreground">{selectedPatient.medicalConditions?.join(", ") || "None"}</p>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase">Medical History</p>
-                      <p className="text-foreground">{selectedPatient.medicalHistory || "No history recorded"}</p>
-                    </div>
                   </div>
 
-                  {user?.role === "doctor" && !editingMedicalInfo && (
-                    <button
-                      onClick={() => setEditingMedicalInfo(true)}
-                      disabled={loading.updateMedicalInfo}
-                      className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium mb-4 cursor-pointer disabled:cursor-not-allowed"
-                    >
-                      {loading.updateMedicalInfo && <Loader2 className="w-4 h-4 animate-spin" />}
-                      Edit Medical Info
-                    </button>
-                  )}
-
-                  {editingMedicalInfo && user?.role === "doctor" && (
-                    <form onSubmit={handleUpdateMedicalInfo} className="space-y-4 mb-4">
-                      <textarea
-                        placeholder="Medical History"
-                        value={medicalFormData.medicalHistory}
-                        onChange={(e) =>
-                          setMedicalFormData({
-                            ...medicalFormData,
-                            medicalHistory: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
-                        rows={3}
-                        disabled={loading.updateMedicalInfo}
-                      />
-                      <textarea
-                        placeholder="Allergies (comma-separated)"
-                        value={medicalFormData.allergies}
-                        onChange={(e) =>
-                          setMedicalFormData({
-                            ...medicalFormData,
-                            allergies: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
-                        disabled={loading.updateMedicalInfo}
-                      />
-                      <textarea
-                        placeholder="Medical Conditions (comma-separated)"
-                        value={medicalFormData.medicalConditions}
-                        onChange={(e) =>
-                          setMedicalFormData({
-                            ...medicalFormData,
-                            medicalConditions: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
-                        disabled={loading.updateMedicalInfo}
-                      />
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          type="submit"
-                          disabled={loading.updateMedicalInfo}
-                          className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
-                        >
-                          {loading.updateMedicalInfo && <Loader2 className="w-4 h-4 animate-spin" />}
-                          Save Changes
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditingMedicalInfo(false)}
-                          disabled={loading.updateMedicalInfo}
-                          className="bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
-                        >
-                          Cancel
-                        </button>
+                  <div className="mb-6 border-t border-border pt-6">
+                    <h3 className="text-lg font-semibold text-foreground mb-4">Medical History Entries</h3>
+                    {loadingMedicalHistory ? (
+                      <div className="flex justify-center items-center gap-2 py-4">
+                        <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
+                        <div
+                          className="w-3 h-3 bg-primary rounded-full animate-bounce"
+                          style={{ animationDelay: "0.1s" }}
+                        ></div>
+                        <div
+                          className="w-3 h-3 bg-primary rounded-full animate-bounce"
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
                       </div>
-                    </form>
-                  )}
+                    ) : medicalHistoryEntries.length > 0 ? (
+                      <div className="space-y-4">
+                        {medicalHistoryEntries.map((entry: any, index: number) => (
+                          <div key={index} className="bg-muted/50 border border-border rounded-lg p-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                              <div>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase">Date</p>
+                                <p className="text-foreground text-sm">
+                                  {entry.date ? new Date(entry.date).toLocaleDateString() : "N/A"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase">Created By</p>
+                                <p className="text-foreground text-sm">{entry.createdByName || "Unknown"}</p>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              {entry.findings && (
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase">Findings</p>
+                                  <p className="text-foreground text-sm">{entry.findings}</p>
+                                </div>
+                              )}
+                              {entry.treatment && (
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase">Treatment</p>
+                                  <p className="text-foreground text-sm">{entry.treatment}</p>
+                                </div>
+                              )}
+                              {entry.medications && entry.medications.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase">Medications</p>
+                                  <p className="text-foreground text-sm">{entry.medications.join(", ")}</p>
+                                </div>
+                              )}
+                              {entry.notes && (
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase">Notes</p>
+                                  <p className="text-foreground text-sm">{entry.notes}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-muted/50 border border-border rounded-lg p-4 text-center">
+                        <p className="text-muted-foreground text-sm">No medical history entries found</p>
+                      </div>
+                    )}
+                  </div>
 
                   <button
-                    onClick={() => setSelectedPatient(null)}
+                    onClick={() => {
+                      setSelectedPatient(null)
+                      setMedicalHistoryEntries([])
+                    }}
                     disabled={loading.updateMedicalInfo}
                     className="w-full bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
                   >
