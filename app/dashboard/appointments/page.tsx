@@ -416,7 +416,7 @@ export default function AppointmentsPage() {
         const newEndTime = `${String(newEndHours).padStart(2, "0")}:${String(newEndMins).padStart(2, "0")}`
 
         toast.error(
-          `Doctor ${formData.doctorName} has a conflicting appointment from ${conflictingApt.time} to ${aptEndTime} on ${formData.date}. Your appointment would be from ${formData.time} to ${newEndTime}.`,
+          `Doctor ${formData.doctorName} has another appointment from ${conflictingApt.time} to ${aptEndTime} on ${formData.date}. Please choose a different time.`,
         )
       }
       return
