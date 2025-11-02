@@ -185,7 +185,7 @@ export default function InventoryPage() {
                   setShowForm(!showForm)
                   if (!showForm) setFormData({ name: "", quantity: "", minStock: "", unit: "", supplier: "" })
                 }}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 {showForm ? "Cancel" : "Add Item"}
@@ -256,7 +256,7 @@ export default function InventoryPage() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 text-sm font-medium"
+                      className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 text-sm font-medium cursor-pointer"
                     >
                       {loading ? "Saving..." : editingId ? "Update Item" : "Add Item"}
                     </button>
@@ -267,7 +267,7 @@ export default function InventoryPage() {
                           setEditingId(null)
                           setShowForm(false)
                         }}
-                        className="flex items-center gap-2 bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition-colors text-sm font-medium"
+                        className="flex items-center gap-2 bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition-colors text-sm font-medium cursor-pointer"
                       >
                         Cancel Edit
                       </button>

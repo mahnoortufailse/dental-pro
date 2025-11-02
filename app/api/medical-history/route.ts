@@ -1,9 +1,8 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { MedicalHistory, connectDB, Patient, User } from "@/lib/db"
+import { MedicalHistory, connectDB, Patient, User, Appointment } from "@/lib/db"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
 
-// Modified GET endpoint - allow patients to view their own history
 export async function GET(request: NextRequest) {
   try {
     await connectDB()
@@ -39,30 +38,110 @@ export async function GET(request: NextRequest) {
     }
 
     // ALLOW PATIENTS TO VIEW THEIR OWN MEDICAL HISTORY
-    if (userRole === "patient" && userId !== patientId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 })
-    }
-
-    // Rest of your existing doctor access logic...
-    const patient = await Patient.findById(patientId)
-    if (!patient) {
-      return NextResponse.json({ error: "Patient not found" }, { status: 404 })
-    }
+    // if (userRole === "patient" && userId !== patientId) {
+    //   return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    // }
 
     if (userRole === "doctor") {
-      const isAssignedDoctor = patient.assignedDoctorId?.toString() === userId
-      const wasPreviouslyAssigned = patient.doctorHistory?.some((dh: any) => dh.doctorId?.toString() === userId)
+      const patient = await Patient.findById(patientId)
+      if (!patient) {
+        return NextResponse.json({ error: "Patient not found" }, { status: 404 })
+      }
 
-      if (!isAssignedDoctor && !wasPreviouslyAssigned) {
+      const currentDoctorIdStr = String(userId)
+      const assignedDoctorIdStr = patient.assignedDoctorId ? String(patient.assignedDoctorId) : null
+
+      const isCurrentAssignedDoctor = assignedDoctorIdStr === currentDoctorIdStr
+      const wasPreviouslyAssigned = patient.doctorHistory?.some((dh: any) => String(dh.doctorId) === currentDoctorIdStr)
+
+      const hasAppointment = await Appointment.findOne({
+        patientId: String(patientId),
+        doctorId: currentDoctorIdStr,
+        status: { $nin: ["cancelled", "no-show", "closed"] },
+      })
+
+      console.log("[v0] Appointment query for doctor:", {
+        patientId: String(patientId),
+        doctorId: currentDoctorIdStr,
+        statuses: ["active", "scheduled", "completed"],
+        foundAppointment: !!hasAppointment,
+        appointmentDetails: hasAppointment
+          ? { _id: hasAppointment._id, status: hasAppointment.status, doctorId: hasAppointment.doctorId }
+          : null,
+      })
+
+      console.log("[v0] Access check for doctor", currentDoctorIdStr, {
+        isCurrentAssignedDoctor,
+        wasPreviouslyAssigned,
+        hasAppointment: !!hasAppointment,
+      })
+
+      if (!isCurrentAssignedDoctor && !wasPreviouslyAssigned && !hasAppointment) {
+        console.error("[v0] Access denied - doctor not assigned to patient and no appointment")
         return NextResponse.json({ error: "Access denied" }, { status: 403 })
       }
     }
 
-    const history = await MedicalHistory.findOne({ patientId })
-      .populate("entries.doctorId", "name specialty") // Populate doctor info in entries
+    const history = await MedicalHistory.findOne({ patientId }).populate("doctorId", "name specialty").lean()
 
-    return NextResponse.json({ success: true, history })
-   
+    console.log("[v0] Fetched medical history:", {
+      hasHistory: !!history,
+      entriesCount: history?.entries?.length || 0,
+    })
+
+    if (history && history.entries?.length > 0) {
+      const processedEntries = await Promise.all(
+        history.entries.map(async (entry: any) => {
+          let doctorName = entry.doctorName || "Unknown"
+          let createdByName = entry.createdByName || "Unknown"
+          const createdById = entry.createdById
+            ? String(entry.createdById)
+            : entry.doctorId
+              ? String(entry.doctorId)
+              : null
+
+          if (entry.doctorId && !entry.doctorName) {
+            const doctor = await User.findById(entry.doctorId).select("name specialty")
+            doctorName = doctor?.name || "Unknown"
+          }
+
+          if (createdById && !entry.createdByName) {
+            const creator = await User.findById(createdById).select("name specialty")
+            createdByName = creator?.name || "Unknown"
+          }
+
+          return {
+            ...entry,
+            createdById, // Explicitly include createdById as string
+            doctorName,
+            createdByName,
+          }
+        }),
+      )
+
+      return NextResponse.json({
+        success: true,
+        history: {
+          ...history,
+          entries: processedEntries,
+        },
+      })
+    }
+
+    const patient = await Patient.findById(patientId)
+
+    return NextResponse.json({
+      success: true,
+      history: {
+        _id: null,
+        patientId,
+        doctorId: null,
+        entries: [],
+        patientDoctorHistory: patient.doctorHistory || [],
+        createdAt: null,
+        updatedAt: null,
+      },
+    })
   } catch (error) {
     console.error("[v0] GET medical history error:", error)
     return NextResponse.json({ error: "Failed to fetch medical history" }, { status: 500 })
@@ -70,38 +149,37 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-	try {
-		await connectDB();
-		const token = request.headers.get("authorization")?.split(" ")[1];
-		if (!token)
-			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    await connectDB()
+    const token = request.headers.get("authorization")?.split(" ")[1]
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-		const payload = verifyToken(token);
-		if (!payload)
-			return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    const payload = verifyToken(token)
+    if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
 
-		// Only doctors can create/edit medical history
-		if (payload.role !== "doctor") {
-			return NextResponse.json(
-				{ error: "Only doctors can manage medical history" },
-				{ status: 403 }
-			);
-		}
-
-		const { patientId, entry } = await request.json();
-
-    if (!patientId || !entry) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    // Only doctors can create/edit medical history
+    if (payload.role !== "doctor") {
+      return NextResponse.json({ error: "Only doctors can manage medical history" }, { status: 403 })
     }
 
-    // Get doctor details to store the name
-   
+    const { patientId, entry, diagnosis, dateOfVisit } = await request.json()
+
+    if (!patientId || !entry) {
+      return NextResponse.json({ error: "Missing required fields: patientId and entry" }, { status: 400 })
+    }
+
+    if (!entry.findings || !entry.treatment) {
+      return NextResponse.json({ error: "Missing required fields: symptoms/findings and treatment" }, { status: 400 })
+    }
+
     const doctor = await User.findById(payload.userId)
     if (!doctor) {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 })
     }
 
-		let history = await MedicalHistory.findOne({ patientId });
+    let history = await MedicalHistory.findOne({ patientId })
+
+    const visitDate = dateOfVisit ? new Date(dateOfVisit) : new Date()
 
     if (!history) {
       history = await MedicalHistory.create({
@@ -111,8 +189,10 @@ export async function POST(request: NextRequest) {
           {
             ...entry,
             doctorId: payload.userId,
-            doctorName: doctor.name, // Store doctor name
-            date: new Date(),
+            doctorName: doctor.name,
+            createdById: payload.userId,
+            createdByName: doctor.name,
+            date: visitDate,
           },
         ],
       })
@@ -120,20 +200,26 @@ export async function POST(request: NextRequest) {
       history.entries.push({
         ...entry,
         doctorId: payload.userId,
-        doctorName: doctor.name, // Store doctor name
-        date: new Date(),
+        doctorName: doctor.name,
+        createdById: payload.userId,
+        createdByName: doctor.name,
+        date: visitDate,
       })
       history.updatedAt = new Date()
       await history.save()
     }
 
-		await history.populate("doctorId", "name specialty");
-		return NextResponse.json({ success: true, history });
-	} catch (error) {
-		console.error("  POST medical history error:", error);
-		return NextResponse.json(
-			{ error: "Failed to save medical history" },
-			{ status: 500 }
-		);
-	}
+    const mainDoctor = await User.findById(history.doctorId).select("name specialty")
+
+    return NextResponse.json({
+      success: true,
+      history: {
+        ...history.toObject(),
+        doctorId: mainDoctor,
+      },
+    })
+  } catch (error) {
+    console.error("[v0] POST medical history error:", error)
+    return NextResponse.json({ error: "Failed to save medical history: " + error.message }, { status: 500 })
+  }
 }

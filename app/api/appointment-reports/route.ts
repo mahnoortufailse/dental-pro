@@ -26,9 +26,6 @@ export async function GET(request: NextRequest) {
     const query: any = {}
 
     if (payload?.role === "doctor") {
-      // Doctors see all patients with all statuses (created and pending reports)
-      // This is handled by fetching all appointments and comparing with reports
-      // For now, doctors see all their created reports
       query.doctorId = payload.userId
     } else if (payload?.role === "admin" || payload?.role === "receptionist") {
       // Admin and receptionist only see created reports (reports that exist)

@@ -69,8 +69,33 @@ export default function ClinicalToolsPage() {
   const PATIENTS_PER_PAGE = 10
 
   useEffect(() => {
-    if (token) fetchPatients()
-  }, [token])
+    if (token) {
+      if (user?.role === "doctor") {
+        fetchPatientsWithAppointments()
+      } else {
+        fetchPatients()
+      }
+    }
+  }, [token, user])
+
+  const fetchPatientsWithAppointments = async () => {
+    setLoading((prev) => ({ ...prev, patients: true }))
+    try {
+      const patientsRes = await fetch("/api/patients", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (patientsRes.ok) {
+        const patientsData = await patientsRes.json()
+        const allPatientsList = patientsData.patients || []
+        setPatients(allPatientsList)
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to fetch patients")
+    } finally {
+      setLoading((prev) => ({ ...prev, patients: false }))
+    }
+  }
 
   const fetchPatients = async () => {
     setLoading((prev) => ({ ...prev, patients: true }))
@@ -403,6 +428,21 @@ export default function ClinicalToolsPage() {
     })
   }
 
+  const refreshMedicalHistory = async () => {
+    if (!selectedPatient) return
+    try {
+      const res = await fetch(`/api/medical-history?patientId=${selectedPatient._id || selectedPatient.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setMedicalHistory(data.history || null)
+      }
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
   const handleSaveEditedEntry = async () => {
     if (editingEntryId === null || !medicalHistory) return
 
@@ -414,6 +454,9 @@ export default function ClinicalToolsPage() {
     setLoading((prev) => ({ ...prev, addMedical: true }))
     try {
       const entryIndex = Number.parseInt(editingEntryId)
+
+      console.log("[v0] Updating entry at index:", entryIndex, "Medical history ID:", medicalHistory._id)
+
       const res = await fetch(`/api/medical-history/${medicalHistory._id}`, {
         method: "PUT",
         headers: {
@@ -435,8 +478,7 @@ export default function ClinicalToolsPage() {
       })
 
       if (res.ok) {
-        const data = await res.json()
-        setMedicalHistory(data.history)
+        await refreshMedicalHistory()
         setEditingEntryId(null)
         setEditingEntry({
           notes: "",
@@ -447,10 +489,11 @@ export default function ClinicalToolsPage() {
         toast.success("Medical entry updated successfully")
       } else {
         const errorData = await res.json()
+        console.error("[v0] Update failed:", errorData)
         toast.error(errorData.error || "Failed to update medical entry")
       }
     } catch (error) {
-      console.error(error)
+      console.error("[v0] Error updating entry:", error)
       toast.error("Error updating medical entry")
     } finally {
       setLoading((prev) => ({ ...prev, addMedical: false }))
@@ -472,8 +515,7 @@ export default function ClinicalToolsPage() {
       })
 
       if (res.ok) {
-        const data = await res.json()
-        setMedicalHistory(data.history)
+        await refreshMedicalHistory()
         toast.success("Medical entry deleted successfully")
         setShowMedicalDeleteModal(false)
         setMedicalEntryToDelete(null)
@@ -639,67 +681,68 @@ export default function ClinicalToolsPage() {
                     </div>
 
                     {/* Tooth Chart Tab */}
-{activeTab === "tooth-chart" && (
-  <>
-    {loading.toothChart ? (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    ) : !toothChart ? (
-      <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-        <p className="text-muted-foreground mb-4">No tooth chart created yet</p>
-        <button
-          onClick={handleCreateToothChart}
-          disabled={loading.createChart}
-          className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          {loading.createChart && <Loader2 className="w-4 h-4 animate-spin" />}
-          {loading.createChart ? "Creating..." : "Create Tooth Chart"}
-        </button>
-      </div>
-    ) : (
-      <>
-        {/* Save Button and Note on Top */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-          <p className="text-sm text-muted-foreground mb-2 sm:mb-0">
-            ⚠️ Please make sure to <span className="font-semibold text-foreground">save the chart</span> after updating any tooth status.
-          </p>
-          <button
-            onClick={handleSaveToothChart}
-            disabled={loading.saveChart}
-            className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {loading.saveChart && <Loader2 className="w-4 h-4 animate-spin" />}
-            {loading.saveChart ? "Saving..." : "Save Chart"}
-          </button>
-        </div>
+                    {activeTab === "tooth-chart" && (
+                      <>
+                        {loading.toothChart ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : !toothChart ? (
+                          <div className="text-center py-12">
+                            <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                            <p className="text-muted-foreground mb-4">No tooth chart created yet</p>
+                            <button
+                              onClick={handleCreateToothChart}
+                              disabled={loading.createChart}
+                              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              {loading.createChart && <Loader2 className="w-4 h-4 animate-spin" />}
+                              {loading.createChart ? "Creating..." : "Create Tooth Chart"}
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Save Button and Note on Top */}
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                              <p className="text-sm text-muted-foreground mb-2 sm:mb-0">
+                                ⚠️ Please make sure to{" "}
+                                <span className="font-semibold text-foreground">save the chart</span> after updating any
+                                tooth status.
+                              </p>
+                              <button
+                                onClick={handleSaveToothChart}
+                                disabled={loading.saveChart}
+                                className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                              >
+                                {loading.saveChart && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {loading.saveChart ? "Saving..." : "Save Chart"}
+                              </button>
+                            </div>
 
-        {/* Tooth Chart Visual */}
-        <ToothChartVisual teeth={toothChart.teeth || {}} onToothClick={handleToothClick} />
+                            {/* Tooth Chart Visual */}
+                            <ToothChartVisual teeth={toothChart.teeth || {}} onToothClick={handleToothClick} />
 
-        {/* Overall Notes */}
-        <div className="mt-6">
-          <label className="block text-sm font-semibold text-foreground mb-2">Overall Notes</label>
-          <textarea
-            value={toothChart.overallNotes || ""}
-            onChange={(e) =>
-              setToothChart({
-                ...toothChart,
-                overallNotes: e.target.value,
-              })
-            }
-            disabled={loading.saveChart}
-            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            rows={4}
-            placeholder="Add clinical notes about the patient's dental condition..."
-          />
-        </div>
-      </>
-    )}
-  </>
-)}
-
+                            {/* Overall Notes */}
+                            <div className="mt-6">
+                              <label className="block text-sm font-semibold text-foreground mb-2">Overall Notes</label>
+                              <textarea
+                                value={toothChart.overallNotes || ""}
+                                onChange={(e) =>
+                                  setToothChart({
+                                    ...toothChart,
+                                    overallNotes: e.target.value,
+                                  })
+                                }
+                                disabled={loading.saveChart}
+                                className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                rows={4}
+                                placeholder="Add clinical notes about the patient's dental condition..."
+                              />
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
 
                     {/* Medical History Tab */}
                     {activeTab === "medical-history" && (
@@ -711,123 +754,135 @@ export default function ClinicalToolsPage() {
                         ) : medicalHistory && medicalHistory.entries && medicalHistory.entries.length > 0 ? (
                           <div className="space-y-3">
                             <h3 className="font-semibold text-foreground">Medical History Entries</h3>
-                            {medicalHistory.entries.map((entry, idx) => (
-                              <div key={idx} className="p-4 bg-muted rounded-lg border border-border">
-                                {editingEntryId === idx.toString() ? (
-                                  <div className="space-y-4">
-                                    <div>
-                                      <label className="block text-xs font-semibold text-foreground mb-2">
-                                        Notes *
-                                      </label>
-                                      <textarea
-                                        value={editingEntry.notes}
-                                        onChange={(e) =>
-                                          setEditingEntry({
-                                            ...editingEntry,
-                                            notes: e.target.value,
-                                          })
-                                        }
-                                        disabled={loading.addMedical}
-                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                                        rows={2}
-                                        placeholder="Enter clinical notes..."
-                                      />
+                            {medicalHistory.entries.map((entry, idx) => {
+                              const canEdit =
+                                user?.role === "doctor" &&
+                                entry.createdById &&
+                                String(entry.createdById) === String(user.id)
+                              console.log(`[v0] Entry ${idx}:`, {
+                                entryCreatedById: entry.createdById,
+                                userId: user?.id,
+                                userRole: user?.role,
+                                canEdit,
+                                entryCreatedByIdType: typeof entry.createdById,
+                                userIdType: typeof user?.id,
+                              })
+
+                              return (
+                                <div key={idx} className="p-4 bg-muted rounded-lg border border-border">
+                                  {editingEntryId === idx.toString() ? (
+                                    <div className="space-y-4">
+                                      <div>
+                                        <label className="block text-xs font-semibold text-foreground mb-2">
+                                          Notes *
+                                        </label>
+                                        <textarea
+                                          value={editingEntry.notes}
+                                          onChange={(e) =>
+                                            setEditingEntry({
+                                              ...editingEntry,
+                                              notes: e.target.value,
+                                            })
+                                          }
+                                          disabled={loading.addMedical}
+                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                          rows={2}
+                                          placeholder="Enter clinical notes..."
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-semibold text-foreground mb-2">
+                                          Findings *
+                                        </label>
+                                        <textarea
+                                          value={editingEntry.findings}
+                                          onChange={(e) =>
+                                            setEditingEntry({
+                                              ...editingEntry,
+                                              findings: e.target.value,
+                                            })
+                                          }
+                                          disabled={loading.addMedical}
+                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                          rows={2}
+                                          placeholder="Enter findings..."
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-semibold text-foreground mb-2">
+                                          Treatment *
+                                        </label>
+                                        <textarea
+                                          value={editingEntry.treatment}
+                                          onChange={(e) =>
+                                            setEditingEntry({
+                                              ...editingEntry,
+                                              treatment: e.target.value,
+                                            })
+                                          }
+                                          disabled={loading.addMedical}
+                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                          rows={2}
+                                          placeholder="Enter treatment..."
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-semibold text-foreground mb-2">
+                                          Medications
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={editingEntry.medications}
+                                          onChange={(e) =>
+                                            setEditingEntry({
+                                              ...editingEntry,
+                                              medications: e.target.value,
+                                            })
+                                          }
+                                          disabled={loading.addMedical}
+                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                          placeholder="Comma-separated medications"
+                                        />
+                                      </div>
+                                      <div className="flex gap-3 pt-2">
+                                        <Button
+                                          onClick={handleSaveEditedEntry}
+                                          disabled={loading.addMedical}
+                                          variant="default"
+                                          size="sm"
+                                          className="flex-1 cursor-pointer"
+                                        >
+                                          {loading.addMedical ? (
+                                            <>
+                                              <Loader2 className="w-4 h-4 animate-spin" />
+                                              Saving...
+                                            </>
+                                          ) : (
+                                            "Save Changes"
+                                          )}
+                                        </Button>
+                                        <Button
+                                          onClick={() => setEditingEntryId(null)}
+                                          disabled={loading.addMedical}
+                                          variant="outline"
+                                          size="sm"
+                                          className="flex-1 cursor-pointer"
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <label className="block text-xs font-semibold text-foreground mb-2">
-                                        Findings *
-                                      </label>
-                                      <textarea
-                                        value={editingEntry.findings}
-                                        onChange={(e) =>
-                                          setEditingEntry({
-                                            ...editingEntry,
-                                            findings: e.target.value,
-                                          })
-                                        }
-                                        disabled={loading.addMedical}
-                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                                        rows={2}
-                                        placeholder="Enter findings..."
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-xs font-semibold text-foreground mb-2">
-                                        Treatment *
-                                      </label>
-                                      <textarea
-                                        value={editingEntry.treatment}
-                                        onChange={(e) =>
-                                          setEditingEntry({
-                                            ...editingEntry,
-                                            treatment: e.target.value,
-                                          })
-                                        }
-                                        disabled={loading.addMedical}
-                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                                        rows={2}
-                                        placeholder="Enter treatment..."
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-xs font-semibold text-foreground mb-2">
-                                        Medications
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={editingEntry.medications}
-                                        onChange={(e) =>
-                                          setEditingEntry({
-                                            ...editingEntry,
-                                            medications: e.target.value,
-                                          })
-                                        }
-                                        disabled={loading.addMedical}
-                                        className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                                        placeholder="Comma-separated medications"
-                                      />
-                                    </div>
-                                    <div className="flex gap-3 pt-2">
-                                      <Button
-                                        onClick={handleSaveEditedEntry}
-                                        disabled={loading.addMedical}
-                                        variant="default"
-                                        size="sm"
-                                        className="flex-1 cursor-pointer"
-                                      >
-                                        {loading.addMedical ? (
-                                          <>
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                            Saving...
-                                          </>
-                                        ) : (
-                                          "Save Changes"
-                                        )}
-                                      </Button>
-                                      <Button
-                                        onClick={() => setEditingEntryId(null)}
-                                        disabled={loading.addMedical}
-                                        variant="outline"
-                                        size="sm"
-                                        className="flex-1 cursor-pointer"
-                                      >
-                                        Cancel
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="flex justify-between items-start mb-3">
-                                      <p className="text-xs text-muted-foreground font-medium">
-                                        {new Date(entry.date).toLocaleDateString("en-US", {
-                                          year: "numeric",
-                                          month: "short",
-                                          day: "numeric",
-                                        })}
-                                      </p>
-                                      {user?.role === "doctor" &&
-                                        entry.doctorId &&
-                                        entry.doctorId.toString() === user.id && (
+                                  ) : (
+                                    <>
+                                      <div className="flex justify-between items-start mb-3">
+                                        <p className="text-xs text-muted-foreground font-medium">
+                                          {new Date(entry.date).toLocaleDateString("en-US", {
+                                            year: "numeric",
+                                            month: "short",
+                                            day: "numeric",
+                                          })}
+                                        </p>
+                                        {canEdit && (
                                           <div className="flex gap-2">
                                             <Button
                                               onClick={() => handleEditMedicalEntry(idx, entry)}
@@ -852,35 +907,41 @@ export default function ClinicalToolsPage() {
                                             </Button>
                                           </div>
                                         )}
-                                    </div>
-                                    {entry.notes && (
-                                      <div className="mb-2">
-                                        <p className="text-xs font-semibold text-foreground mb-1">Notes:</p>
-                                        <p className="text-sm text-foreground">{entry.notes}</p>
                                       </div>
-                                    )}
-                                    {entry.findings && (
-                                      <div className="mb-2">
-                                        <p className="text-xs font-semibold text-foreground mb-1">Findings:</p>
-                                        <p className="text-sm text-foreground">{entry.findings}</p>
-                                      </div>
-                                    )}
-                                    {entry.treatment && (
-                                      <div className="mb-2">
-                                        <p className="text-xs font-semibold text-foreground mb-1">Treatment:</p>
-                                        <p className="text-sm text-foreground">{entry.treatment}</p>
-                                      </div>
-                                    )}
-                                    {entry.medications && entry.medications.length > 0 && (
-                                      <div>
-                                        <p className="text-xs font-semibold text-foreground mb-1">Medications:</p>
-                                        <p className="text-sm text-foreground">{entry.medications.join(", ")}</p>
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            ))}
+                                      {entry.notes && (
+                                        <div className="mb-2">
+                                          <p className="text-xs font-semibold text-foreground mb-1">Notes:</p>
+                                          <p className="text-sm text-foreground">{entry.notes}</p>
+                                        </div>
+                                      )}
+                                      {entry.findings && (
+                                        <div className="mb-2">
+                                          <p className="text-xs font-semibold text-foreground mb-1">Findings:</p>
+                                          <p className="text-sm text-foreground">{entry.findings}</p>
+                                        </div>
+                                      )}
+                                      {entry.treatment && (
+                                        <div className="mb-2">
+                                          <p className="text-xs font-semibold text-foreground mb-1">Treatment:</p>
+                                          <p className="text-sm text-foreground">{entry.treatment}</p>
+                                        </div>
+                                      )}
+                                      {entry.medications && entry.medications.length > 0 && (
+                                        <div>
+                                          <p className="text-xs font-semibold text-foreground mb-1">Medications:</p>
+                                          <p className="text-sm text-foreground">{entry.medications.join(", ")}</p>
+                                        </div>
+                                      )}
+                                      {entry.createdByName && (
+                                        <div className="mt-2 pt-2 border-t border-border">
+                                          <p className="text-xs text-muted-foreground">by Dr. {entry.createdByName}</p>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         ) : (
                           <p className="text-muted-foreground text-sm">No medical history entries yet</p>
@@ -1005,6 +1066,14 @@ export default function ClinicalToolsPage() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {patientImages.map((image) => {
                               const isPdf = image.imageUrl?.toLowerCase().includes(".pdf")
+                              const canDeleteImage = () => {
+                                if (user?.role !== "doctor") return false
+                                if (!image.uploadedBy) return false
+                                const uploadedById = String(image.uploadedBy._id || image.uploadedBy)
+                                const currentUserId = String(user.id)
+                                return uploadedById === currentUserId
+                              }
+
                               return (
                                 <div
                                   key={image._id}
@@ -1028,18 +1097,20 @@ export default function ClinicalToolsPage() {
                                     {new Date(image.uploadedAt).toLocaleDateString()}
                                   </p>
                                   {image.notes && <p className="text-xs text-foreground mt-2">{image.notes}</p>}
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setImageToDelete(image)
-                                      setShowDeleteModal(true)
-                                    }}
-                                    disabled={loading.deleteImage}
-                                    className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                    Delete
-                                  </button>
+                                  {canDeleteImage() && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setImageToDelete(image)
+                                        setShowDeleteModal(true)
+                                      }}
+                                      disabled={loading.deleteImage}
+                                      className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      Delete
+                                    </button>
+                                  )}
                                 </div>
                               )
                             })}

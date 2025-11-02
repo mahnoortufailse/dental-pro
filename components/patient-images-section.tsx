@@ -15,7 +15,7 @@ interface PatientImage {
   title: string
   description: string
   imageUrl: string
-  uploadedBy: { name: string }
+  uploadedBy: { name: string; _id?: string }
   uploadedAt: string
   notes: string
 }
@@ -24,9 +24,10 @@ interface PatientImagesSectionProps {
   patientId: string
   token: string
   isDoctor: boolean
+  currentDoctorId?: string
 }
 
-export function PatientImagesSection({ patientId, token, isDoctor }: PatientImagesSectionProps) {
+export function PatientImagesSection({ patientId, token, isDoctor, currentDoctorId }: PatientImagesSectionProps) {
   const [images, setImages] = useState<PatientImage[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -71,7 +72,6 @@ export function PatientImagesSection({ patientId, token, isDoctor }: PatientImag
       title: formData.title || fileName.split(".")[0],
     })
     setShowFileUpload(false)
-    
   }
 
   const handleImageUpload = async (e: React.FormEvent) => {
@@ -152,6 +152,21 @@ export function PatientImagesSection({ patientId, token, isDoctor }: PatientImag
       scan: "Scan",
     }
     return labels[type] || type
+  }
+
+  const canDeleteImage = (image: PatientImage) => {
+    if (!isDoctor) return false
+    if (!currentDoctorId) return false
+    if (!image.uploadedBy) return false
+
+    console.log("[v0] Delete check - uploadedBy:", image.uploadedBy, "currentDoctorId:", currentDoctorId)
+
+    const uploadedId = String(image.uploadedBy._id || image.uploadedBy)
+    const currentId = String(currentDoctorId)
+
+    console.log("[v0] Comparing - uploadedId:", uploadedId, "currentId:", currentId, "Match:", uploadedId === currentId)
+
+    return uploadedId === currentId
   }
 
   if (loading) {
@@ -310,7 +325,7 @@ export function PatientImagesSection({ patientId, token, isDoctor }: PatientImag
                         <Eye className="w-3 h-3" />
                         View
                       </button>
-                      {isDoctor && (
+                      {canDeleteImage(image) && (
                         <button
                           onClick={() => {
                             setImageToDelete(image)

@@ -168,7 +168,7 @@ export async function validateAppointmentScheduling(
         console.log("[v0] Existing appointment end time:", existingEndFormatted)
         console.log("[v0] New appointment end time:", newEndFormatted)
 
-        const errorMsg = `Doctor has a conflicting appointment from ${existing.time} to ${existingEndFormatted.time} on ${existing.date}. Your appointment would be from ${time} to ${newEndFormatted.time} on ${date}.`
+        const errorMsg = `Doctor has a another appointment from ${existing.time} to ${existingEndFormatted.time} on ${existing.date}. Please choose another time.`
         console.log("[v0] Error message:", errorMsg)
         console.log("[v0] ===== VALIDATION END (CONFLICT) =====")
 
