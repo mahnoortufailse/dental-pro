@@ -1,218 +1,299 @@
 //@ts-nocheck
-"use client"
-import { ProtectedRoute } from "@/components/protected-route"
-import { Sidebar } from "@/components/sidebar"
-import { useAuth } from "@/components/auth-context"
-import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
-import { generateReportPDF } from "@/lib/pdf-generator"
-import { useState, useEffect } from "react"
-import { toast } from "react-hot-toast"
-import { FileText, Eye, Trash2, Download, X, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
+"use client";
+import { ProtectedRoute } from "@/components/protected-route";
+import { Sidebar } from "@/components/sidebar";
+import { useAuth } from "@/components/auth-context";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { generateReportPDF } from "@/lib/pdf-generator";
+import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
+import {
+  FileText,
+  Eye,
+  Trash2,
+  Download,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+} from "lucide-react";
 
 export default function MedicalReportsPage() {
-  const { user, token } = useAuth()
-  const [reports, setReports] = useState([])
-  const [allPatients, setAllPatients] = useState([])
-  const [appointmentPatients, setAppointmentPatients] = useState([])
-  const [patientReportStatus, setPatientReportStatus] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [selectedReport, setSelectedReport] = useState(null)
-  const [showReportModal, setShowReportModal] = useState(false)
-  const [filterPatient, setFilterPatient] = useState("")
-  const [patients, setPatients] = useState([])
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [reportToDelete, setReportToDelete] = useState<any>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [patientSearch, setPatientSearch] = useState("")
-  const [showPatientDropdown, setShowPatientDropdown] = useState(false)
+  const { user, token } = useAuth();
+  const [reports, setReports] = useState([]);
+  const [allPatients, setAllPatients] = useState([]);
+  const [appointmentPatients, setAppointmentPatients] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [patientReportStatus, setPatientReportStatus] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [filterPatient, setFilterPatient] = useState("");
+  const [patients, setPatients] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [patientSearch, setPatientSearch] = useState("");
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
 
   // Search and pagination state
-  const [searchTerm, setSearchTerm] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     if (token) {
-      fetchReports()
-      if (user?.role !== "doctor") {
-        fetchPatients()
+      fetchReports();
+      if (user?.role === "doctor") {
+        fetchReportsAndPatients();
       } else {
-        fetchReportsAndPatients()
+        // For admin and receptionist, fetch all reports with patient/doctor details
+        fetchReportsAndPatients();
       }
     }
-  }, [token, user])
+  }, [token, user]);
 
   const fetchReportsAndPatients = async () => {
     try {
-      // First fetch appointments for this doctor
       const appointmentsRes = await fetch("/api/appointments", {
         headers: { Authorization: `Bearer ${token}` },
-      })
+      });
       if (appointmentsRes.ok) {
-        const appointmentsData = await appointmentsRes.json()
-        const appointments = appointmentsData.appointments || []
+        const appointmentsData = await appointmentsRes.json();
+        const appointmentsList = appointmentsData.appointments || [];
+        setAppointments(appointmentsList);
 
         // Get unique patient IDs from appointments
-        const patientIds = [...new Set(appointments.map((apt: any) => apt.patientId))]
+        const patientIds = [
+          ...new Set(appointmentsList.map((apt: any) => apt.patientId)),
+        ];
 
         // Fetch all patients to get their full details
         const patientsRes = await fetch("/api/patients", {
           headers: { Authorization: `Bearer ${token}` },
-        })
+        });
         if (patientsRes.ok) {
-          const patientsData = await patientsRes.json()
-          const allPatientsList = patientsData.patients || []
+          const patientsData = await patientsRes.json();
+          const allPatientsList = patientsData.patients || [];
 
-          // Filter to only patients with appointments to this doctor
-          const patientsWithAppointments = allPatientsList.filter((p: any) => patientIds.includes(p._id))
-
-          setAppointmentPatients(patientsWithAppointments)
+          if (user?.role === "doctor") {
+            const patientsWithAppointments = allPatientsList.filter((p: any) =>
+              patientIds.includes(p._id)
+            );
+            setAppointmentPatients(patientsWithAppointments);
+          } else {
+            setAppointmentPatients(allPatientsList);
+          }
         }
       }
     } catch (error) {
-      console.error("Failed to fetch reports and patients:", error)
+      console.error("Failed to fetch reports and patients:", error);
     }
-  }
+  };
 
   const fetchReports = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const res = await fetch("/api/appointment-reports", {
         headers: { Authorization: `Bearer ${token}` },
-      })
+      });
       if (res.ok) {
-        const data = await res.json()
-        setReports(data.reports || [])
+        const data = await res.json();
+        setReports(data.reports || []);
 
         if (user?.role === "doctor") {
-          const statusMap: any = {}
-          appointmentPatients.forEach((patient: any) => {
-            statusMap[patient._id] = "pending"
-          })
-          data.reports.forEach((report: any) => {
-            statusMap[report.patientId?._id] = "created"
-          })
-          setPatientReportStatus(statusMap)
+          const statusMap: any = {};
+
+          // First, fetch all appointments for this doctor
+          const appointmentsRes = await fetch("/api/appointments", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (appointmentsRes.ok) {
+            const appointmentsData = await appointmentsRes.json();
+            const appointmentsList = appointmentsData.appointments || [];
+            setAppointments(appointmentsList);
+
+            const relevantAppointments = appointmentsList.filter((apt: any) => {
+              return apt.status !== "cancelled" && apt.status !== "no-show";
+            });
+
+            // Mark all relevant appointments as pending initially
+            relevantAppointments.forEach((apt: any) => {
+              statusMap[apt.id || apt._id] = "pending";
+            });
+
+            // Mark appointments with reports as created
+            data.reports.forEach((report: any) => {
+              if (report.appointmentId?._id) {
+                statusMap[report.appointmentId._id] = "created";
+              }
+            });
+          }
+
+          setPatientReportStatus(statusMap);
         }
       } else {
-        toast.error("Failed to fetch reports")
+        toast.error("Failed to fetch reports");
       }
     } catch (error) {
-      console.error("Failed to fetch reports:", error)
-      toast.error("Error fetching reports")
+      console.error("Failed to fetch reports:", error);
+      toast.error("Error fetching reports");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchPatients = async () => {
     try {
       const res = await fetch("/api/patients", {
         headers: { Authorization: `Bearer ${token}` },
-      })
+      });
       if (res.ok) {
-        const data = await res.json()
-        setPatients(data.patients || [])
+        const data = await res.json();
+        setPatients(data.patients || []);
       }
     } catch (error) {
-      console.error("Failed to fetch patients:", error)
+      console.error("Failed to fetch patients:", error);
     }
-  }
+  };
 
   const handleViewReport = (report: any) => {
-    setSelectedReport(report)
-    setShowReportModal(true)
-  }
+    setSelectedReport(report);
+    setShowReportModal(true);
+  };
 
   const handleDeleteReport = async () => {
-    if (!reportToDelete) return
+    if (!reportToDelete) return;
 
-    setIsDeleting(true)
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/appointment-reports/${reportToDelete._id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(
+        `/api/appointment-reports/${reportToDelete._id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (res.ok) {
-        setReports(reports.filter((r) => r._id !== reportToDelete._id))
-        toast.success("Report deleted successfully")
-        setShowDeleteModal(false)
-        setReportToDelete(null)
+        setReports(reports.filter((r) => r._id !== reportToDelete._id));
+        toast.success("Report deleted successfully");
+        setShowDeleteModal(false);
+        setReportToDelete(null);
       } else {
-        toast.error("Failed to delete report")
+        toast.error("Failed to delete report");
       }
     } catch (error) {
-      console.error("Failed to delete report:", error)
-      toast.error("Error deleting report")
+      console.error("Failed to delete report:", error);
+      toast.error("Error deleting report");
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   const handleDownloadReport = (report: any) => {
     try {
-      generateReportPDF(report)
-      toast.success("Report downloaded successfully")
+      generateReportPDF(report);
+      toast.success("Report downloaded successfully");
     } catch (error) {
-      console.error("Failed to generate PDF:", error)
-      toast.error("Failed to download report")
+      console.error("Failed to generate PDF:", error);
+      toast.error("Failed to download report");
     }
-  }
+  };
 
-  const patientsForDropdown = user?.role === "doctor" ? appointmentPatients : patients
-  const filteredPatients = patientsForDropdown.filter((p) => p.name.toLowerCase().includes(patientSearch.toLowerCase()))
+  const patientsForDropdown =
+    user?.role === "doctor" ? appointmentPatients : patients;
+  const filteredPatients = patientsForDropdown.filter((p) =>
+    p.name.toLowerCase().includes(patientSearch.toLowerCase())
+  );
 
-  const displayData =
-    user?.role === "doctor"
-      ? appointmentPatients.map((patient: any) => ({
-          ...patient,
-          reportStatus: patientReportStatus[patient._id] || "pending",
-          report: reports.find((r) => r.patientId?._id === patient._id),
-        }))
-      : reports
+  const getDisplayData = () => {
+    if (user?.role === "doctor") {
+      const patientMap: any = {};
+      appointmentPatients.forEach((p: any) => {
+        patientMap[p._id] = p;
+      });
+
+      return Object.entries(patientReportStatus).map(
+        ([appointmentId, status]: [string, any]) => {
+          const report = reports.find(
+            (r) => r.appointmentId?._id === appointmentId
+          );
+
+          const appointment = appointments.find((a: any) => {
+            const aId = a._id || a.id;
+            return aId === appointmentId || aId?.toString() === appointmentId;
+          });
+
+          let patientInfo = null;
+          if (report?.patientId) {
+            patientInfo = report.patientId;
+          } else if (
+            appointment?.patientId &&
+            patientMap[appointment.patientId]
+          ) {
+            patientInfo = patientMap[appointment.patientId];
+          }
+
+          return {
+            appointmentId,
+            reportStatus: status,
+            report: report,
+            patientInfo: patientInfo,
+          };
+        }
+      );
+    }
+    return reports;
+  };
+
+  const displayData = getDisplayData();
 
   // Filter reports/patients based on search term and patient filter
   const filteredReports = displayData.filter((item: any) => {
     // Apply patient filter
     if (filterPatient) {
-      const itemId = item._id || item.patientId?._id
+      const itemId = item._id || item.patientInfo?._id || item.appointmentId;
       if (itemId !== filterPatient) {
-        return false
+        return false;
       }
     }
 
     // Apply search term filter
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
+      const searchLower = searchTerm.toLowerCase();
       if (user?.role === "doctor") {
-        // For doctors, search in patient name
-        return item.name?.toLowerCase().includes(searchLower)
+        return (
+          item.patientInfo?.name?.toLowerCase().includes(searchLower) ||
+          item.report?.appointmentId?.type?.toLowerCase().includes(searchLower)
+        );
       } else {
         // For others, search in report details
         return (
           item.patientId?.name?.toLowerCase().includes(searchLower) ||
           item.doctorId?.name?.toLowerCase().includes(searchLower) ||
-          item.procedures?.some((p: any) => p.name.toLowerCase().includes(searchLower)) ||
+          item.procedures?.some((p: any) =>
+            p.name.toLowerCase().includes(searchLower)
+          ) ||
           item.findings?.toLowerCase().includes(searchLower) ||
           item.notes?.toLowerCase().includes(searchLower)
-        )
+        );
       }
     }
 
-    return true
-  })
+    return true;
+  });
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredReports.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentReports = filteredReports.slice(startIndex, endIndex)
+  const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentReports = filteredReports.slice(startIndex, endIndex);
 
   // Reset to first page when search term or items per page changes
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm, itemsPerPage, filterPatient])
+    setCurrentPage(1);
+  }, [searchTerm, itemsPerPage, filterPatient]);
 
   return (
     <ProtectedRoute>
@@ -222,7 +303,9 @@ export default function MedicalReportsPage() {
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="mb-8">
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                {user?.role === "doctor" ? "Patient Medical Reports Status" : "Medical Reports"}
+                {user?.role === "doctor"
+                  ? "Patient Medical Reports Status"
+                  : "Medical Reports"}
               </h1>
               <p className="text-muted-foreground text-sm mt-1">
                 {user?.role === "doctor"
@@ -242,8 +325,8 @@ export default function MedicalReportsPage() {
                       placeholder="Search patient..."
                       value={patientSearch}
                       onChange={(e) => {
-                        setPatientSearch(e.target.value)
-                        setShowPatientDropdown(true)
+                        setPatientSearch(e.target.value);
+                        setShowPatientDropdown(true);
                       }}
                       onFocus={() => setShowPatientDropdown(true)}
                       className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
@@ -253,9 +336,9 @@ export default function MedicalReportsPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setFilterPatient("")
-                            setPatientSearch("")
-                            setShowPatientDropdown(false)
+                            setFilterPatient("");
+                            setPatientSearch("");
+                            setShowPatientDropdown(false);
                           }}
                           className="w-full text-left px-4 py-2 hover:bg-muted transition-colors text-sm text-foreground border-b border-border"
                         >
@@ -266,9 +349,9 @@ export default function MedicalReportsPage() {
                             key={p._id}
                             type="button"
                             onClick={() => {
-                              setFilterPatient(p._id)
-                              setPatientSearch(p.name)
-                              setShowPatientDropdown(false)
+                              setFilterPatient(p._id);
+                              setPatientSearch(p.name);
+                              setShowPatientDropdown(false);
                             }}
                             className="w-full text-left px-4 py-2 hover:bg-muted transition-colors text-sm text-foreground"
                           >
@@ -278,24 +361,15 @@ export default function MedicalReportsPage() {
                       </div>
                     )}
                   </div>
-
-                  {/* General Search */}
-                  {/* <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder={user?.role === "doctor" ? "Search patients..." : "Search reports..."}
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
-                    />
-                  </div> */}
                 </div>
 
                 {/* Controls */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex items-center gap-2">
-                    <label htmlFor="itemsPerPage" className="text-sm text-muted-foreground whitespace-nowrap">
+                    <label
+                      htmlFor="itemsPerPage"
+                      className="text-sm text-muted-foreground whitespace-nowrap"
+                    >
                       Rows:
                     </label>
                     <select
@@ -316,7 +390,9 @@ export default function MedicalReportsPage() {
                     disabled={loading}
                     className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 cursor-pointer"
                   >
-                    <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                    <RefreshCw
+                      className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+                    />
                     {loading ? "Loading..." : "Refresh"}
                   </button>
                 </div>
@@ -340,7 +416,9 @@ export default function MedicalReportsPage() {
                         style={{ animationDelay: "0.2s" }}
                       ></div>
                     </div>
-                    <span className="text-muted-foreground text-sm">Loading...</span>
+                    <span className="text-muted-foreground text-sm">
+                      Loading...
+                    </span>
                   </div>
                 </div>
               )}
@@ -353,50 +431,76 @@ export default function MedicalReportsPage() {
                       <div className="bg-muted/40 rounded-lg p-8 text-center">
                         <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
                         <p className="text-muted-foreground">
-                          {searchTerm || filterPatient ? "No results found matching your criteria" : "No data found"}
+                          {searchTerm || filterPatient
+                            ? "No results found matching your criteria"
+                            : "No data found"}
                         </p>
                       </div>
                     ) : user?.role === "doctor" ? (
-                      currentReports.map((patient: any) => (
+                      currentReports.map((appointment: any) => (
                         <div
-                          key={patient._id}
+                          key={appointment.appointmentId}
                           className="bg-background rounded-lg border border-border p-4 sm:p-6 hover:shadow-lg transition-shadow"
                         >
                           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-lg font-semibold text-foreground truncate">{patient.name}</h3>
+                              <h3 className="text-lg font-semibold text-foreground truncate">
+                                {appointment.patientInfo?.name ||
+                                  "Unknown Patient"}
+                              </h3>
                               <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                                <span>Email: {patient.email || "N/A"}</span>
-                                <span>Phone: {patient.phone || "N/A"}</span>
+                                <span>
+                                  Email:{" "}
+                                  {appointment.patientInfo?.email || "N/A"}
+                                </span>
+                                <span>
+                                  Phone:{" "}
+                                  {appointment.patientInfo?.phone || "N/A"}
+                                </span>
+                                {appointment.report?.doctorId?.name && (
+                                  <span>
+                                    Doctor: {appointment.report.doctorId.name}
+                                  </span>
+                                )}
                               </div>
                               <div className="mt-3">
                                 <span
                                   className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                                    patient.reportStatus === "created"
+                                    appointment.reportStatus === "created"
                                       ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                                       : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                                   }`}
                                 >
-                                  {patient.reportStatus === "created" ? "✓ Report Created" : "⏳ Pending Report"}
+                                  {appointment.reportStatus === "created"
+                                    ? "✓ Report Created"
+                                    : "⏳ Pending Report"}
                                 </span>
                               </div>
                             </div>
                             <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-                              {patient.report && (
+                              {appointment.report && (
                                 <>
                                   <button
-                                    onClick={() => handleViewReport(patient.report)}
+                                    onClick={() =>
+                                      handleViewReport(appointment.report)
+                                    }
                                     className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
                                   >
                                     <Eye className="w-4 h-4" />
-                                    <span className="hidden sm:inline">View</span>
+                                    <span className="hidden sm:inline">
+                                      View
+                                    </span>
                                   </button>
                                   <button
-                                    onClick={() => handleDownloadReport(patient.report)}
+                                    onClick={() =>
+                                      handleDownloadReport(appointment.report)
+                                    }
                                     className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
                                   >
                                     <Download className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Download</span>
+                                    <span className="hidden sm:inline">
+                                      Download
+                                    </span>
                                   </button>
                                 </>
                               )}
@@ -416,12 +520,21 @@ export default function MedicalReportsPage() {
                                 {report.patientId?.name || "Unknown Patient"}
                               </h3>
                               <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                                <span>Doctor: {report.doctorId?.name || "Unknown"}</span>
-                                <span>Date: {new Date(report.createdAt).toLocaleDateString()}</span>
+                                <span>
+                                  Doctor: {report.doctorId?.name || "Unknown"}
+                                </span>
+                                <span>
+                                  Date:{" "}
+                                  {new Date(
+                                    report.createdAt
+                                  ).toLocaleDateString()}
+                                </span>
                               </div>
                               <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                                 <span className="font-medium">Procedures:</span>{" "}
-                                {report.procedures?.map((p: any) => p.name).join(", ") || "N/A"}
+                                {report.procedures
+                                  ?.map((p: any) => p.name)
+                                  .join(", ") || "N/A"}
                               </p>
                             </div>
                             <div className="flex gap-2 flex-wrap sm:flex-nowrap">
@@ -437,18 +550,24 @@ export default function MedicalReportsPage() {
                                 className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
                               >
                                 <Download className="w-4 h-4" />
-                                <span className="hidden sm:inline">Download</span>
+                                <span className="hidden sm:inline">
+                                  Download
+                                </span>
                               </button>
-                              <button
-                                onClick={() => {
-                                  setReportToDelete(report)
-                                  setShowDeleteModal(true)
-                                }}
-                                className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer text-white"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                <span className="hidden sm:inline">Delete</span>
-                              </button>
+                              {user?.role !== "doctor" && (
+                                <button
+                                  onClick={() => {
+                                    setReportToDelete(report);
+                                    setShowDeleteModal(true);
+                                  }}
+                                  className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer text-white"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span className="hidden sm:inline">
+                                    Delete
+                                  </span>
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -460,14 +579,26 @@ export default function MedicalReportsPage() {
                   {filteredReports.length > 0 && (
                     <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div className="text-sm text-muted-foreground">
-                        Showing <span className="font-medium">{filteredReports.length === 0 ? 0 : startIndex + 1}</span>{" "}
-                        to <span className="font-medium">{Math.min(endIndex, filteredReports.length)}</span> of{" "}
-                        <span className="font-medium">{filteredReports.length}</span> results
+                        Showing{" "}
+                        <span className="font-medium">
+                          {filteredReports.length === 0 ? 0 : startIndex + 1}
+                        </span>{" "}
+                        to{" "}
+                        <span className="font-medium">
+                          {Math.min(endIndex, filteredReports.length)}
+                        </span>{" "}
+                        of{" "}
+                        <span className="font-medium">
+                          {filteredReports.length}
+                        </span>{" "}
+                        results
                       </div>
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                          onClick={() =>
+                            setCurrentPage((prev) => Math.max(prev - 1, 1))
+                          }
                           disabled={currentPage === 1}
                           className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
@@ -476,9 +607,16 @@ export default function MedicalReportsPage() {
 
                         <div className="flex items-center gap-1">
                           {Array.from({ length: totalPages }, (_, i) => i + 1)
-                            .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                            .filter(
+                              (page) =>
+                                page === 1 ||
+                                page === totalPages ||
+                                Math.abs(page - currentPage) <= 1
+                            )
                             .map((page, index, array) => {
-                              const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1
+                              const showEllipsis =
+                                index < array.length - 1 &&
+                                array[index + 1] - page > 1;
                               return (
                                 <div key={page} className="flex items-center">
                                   <button
@@ -491,15 +629,25 @@ export default function MedicalReportsPage() {
                                   >
                                     {page}
                                   </button>
-                                  {showEllipsis && <span className="px-1 text-muted-foreground">...</span>}
+                                  {showEllipsis && (
+                                    <span className="px-1 text-muted-foreground">
+                                      ...
+                                    </span>
+                                  )}
                                 </div>
-                              )
+                              );
                             })}
                         </div>
 
                         <button
-                          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages || totalPages === 0}
+                          onClick={() =>
+                            setCurrentPage((prev) =>
+                              Math.min(prev + 1, totalPages)
+                            )
+                          }
+                          disabled={
+                            currentPage === totalPages || totalPages === 0
+                          }
                           className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <ChevronRight className="w-4 h-4" />
@@ -511,22 +659,26 @@ export default function MedicalReportsPage() {
               )}
             </div>
 
-            {/* Report Detail Modal */}
             {showReportModal && selectedReport && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200">
                 <div className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-3xl max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-200">
                   {/* Modal Header */}
                   <div className="flex justify-between items-start p-6 sm:p-8 border-b border-border sticky top-0 bg-gradient-to-r from-card to-muted/30">
                     <div className="min-w-0 pr-4">
-                      <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Medical Report</h2>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+                        Medical Report
+                      </h2>
                       <p className="text-sm text-muted-foreground mt-2">
                         Generated on{" "}
-                        {new Date(selectedReport.createdAt).toLocaleDateString("en-US", {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        {new Date(selectedReport.createdAt).toLocaleDateString(
+                          "en-US",
+                          {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )}
                       </p>
                     </div>
                     <button
@@ -554,13 +706,17 @@ export default function MedicalReportsPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">Email</p>
+                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                            Email
+                          </p>
                           <p className="text-foreground font-semibold mt-2 text-sm sm:text-base truncate">
                             {selectedReport.patientId?.email || "Not provided"}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">Phone</p>
+                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                            Phone
+                          </p>
                           <p className="text-foreground font-semibold mt-2 text-sm sm:text-base truncate">
                             {selectedReport.patientId?.phone || "N/A"}
                           </p>
@@ -576,9 +732,11 @@ export default function MedicalReportsPage() {
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <div>
-                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">Name</p>
+                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                            Name
+                          </p>
                           <p className="text-foreground font-semibold mt-2 text-sm sm:text-base truncate">
-                            Dr. {selectedReport.doctorId?.name || "N/A"}
+                            {selectedReport.doctorId?.name || "N/A"}
                           </p>
                         </div>
                         <div>
@@ -586,7 +744,8 @@ export default function MedicalReportsPage() {
                             Specialty
                           </p>
                           <p className="text-foreground font-semibold mt-2 text-sm sm:text-base truncate">
-                            {selectedReport.doctorId?.specialty || "General Dentistry"}
+                            {selectedReport.doctorId?.specialty ||
+                              "General Dentistry"}
                           </p>
                         </div>
                       </div>
@@ -599,21 +758,31 @@ export default function MedicalReportsPage() {
                         Clinical Findings
                       </h3>
 
-                      {selectedReport.procedures && selectedReport.procedures.length > 0 && (
-                        <div className="bg-muted/40 rounded-xl p-5 sm:p-6 border border-border">
-                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-3">
-                            Procedures Performed
-                          </p>
-                          <ul className="text-foreground space-y-2">
-                            {selectedReport.procedures.map((p: any, idx: number) => (
-                              <li key={idx} className="flex items-start gap-3 text-sm sm:text-base">
-                                <span className="text-primary font-bold flex-shrink-0 mt-0.5">✓</span>
-                                <span className="break-words font-medium">{p.name}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      {selectedReport.procedures &&
+                        selectedReport.procedures.length > 0 && (
+                          <div className="bg-muted/40 rounded-xl p-5 sm:p-6 border border-border">
+                            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-3">
+                              Procedures Performed
+                            </p>
+                            <ul className="text-foreground space-y-2">
+                              {selectedReport.procedures.map(
+                                (p: any, idx: number) => (
+                                  <li
+                                    key={idx}
+                                    className="flex items-start gap-3 text-sm sm:text-base"
+                                  >
+                                    <span className="text-primary font-bold flex-shrink-0 mt-0.5">
+                                      ✓
+                                    </span>
+                                    <span className="break-words font-medium">
+                                      {p.name}
+                                    </span>
+                                  </li>
+                                )
+                              )}
+                            </ul>
+                          </div>
+                        )}
 
                       {selectedReport.findings && (
                         <div className="bg-muted/40 rounded-xl p-5 sm:p-6 border border-border">
@@ -643,7 +812,9 @@ export default function MedicalReportsPage() {
                             Recommended Next Visit
                           </p>
                           <p className="text-foreground font-semibold text-sm sm:text-base">
-                            {new Date(selectedReport.nextVisit).toLocaleDateString("en-US", {
+                            {new Date(
+                              selectedReport.nextVisit
+                            ).toLocaleDateString("en-US", {
                               weekday: "long",
                               year: "numeric",
                               month: "long",
@@ -691,11 +862,15 @@ export default function MedicalReportsPage() {
               isOpen={showDeleteModal}
               title="Delete Medical Report"
               description="Are you sure you want to delete this medical report? This action cannot be undone."
-              itemName={reportToDelete ? `Report for ${reportToDelete.patientId?.name}` : undefined}
+              itemName={
+                reportToDelete
+                  ? `Report for ${reportToDelete.patientId?.name}`
+                  : undefined
+              }
               onConfirm={handleDeleteReport}
               onCancel={() => {
-                setShowDeleteModal(false)
-                setReportToDelete(null)
+                setShowDeleteModal(false);
+                setReportToDelete(null);
               }}
               isLoading={isDeleting}
             />
@@ -703,5 +878,5 @@ export default function MedicalReportsPage() {
         </main>
       </div>
     </ProtectedRoute>
-  )
+  );
 }
