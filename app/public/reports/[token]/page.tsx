@@ -131,7 +131,7 @@ export default function PublicReportPage({ params }: { params: { token: string }
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900">Medical Report</h1>
               <p className="text-slate-500 text-sm sm:text-base mt-1">{report.patientId?.name}</p>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-end gap-2 sm:gap-3">
               <button
                 onClick={handleDownloadPDF}
                 className="flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-colors font-semibold text-xs sm:text-sm shadow-md hover:shadow-lg active:scale-95"
