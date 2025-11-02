@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, X, Loader } from "lucide-react"
+import { Download, Loader, CheckCircle, AlertCircle, Printer } from "lucide-react"
 import { generateReportPDF } from "@/lib/pdf-generator"
 import { use } from "react"
 
@@ -80,12 +80,13 @@ export default function PublicReportPage({ params }: { params: { token: string }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-3 sm:p-4">
-        <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-sm w-full text-center">
-          <div className="flex justify-center mb-3">
-            <Loader className="w-7 h-7 animate-spin text-primary" />
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 max-w-md w-full text-center">
+          <div className="flex justify-center mb-4">
+            <Loader className="w-10 h-10 animate-spin text-teal-600" />
           </div>
-          <p className="text-foreground font-medium text-sm">Loading your medical report...</p>
+          <p className="text-slate-700 font-semibold text-lg">Loading your medical report...</p>
+          <p className="text-slate-500 text-sm mt-2">Please wait while we retrieve your information</p>
         </div>
       </div>
     )
@@ -93,17 +94,17 @@ export default function PublicReportPage({ params }: { params: { token: string }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-3 sm:p-4">
-        <div className="bg-card rounded-lg shadow-lg border border-border p-5 max-w-sm w-full">
-          <div className="flex gap-2 mb-3">
-            <X className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl border border-red-200 p-8 max-w-md w-full">
+          <div className="flex gap-3 mb-4">
+            <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
             <div>
-              <h2 className="font-semibold text-foreground text-sm">Error</h2>
-              <p className="text-muted-foreground text-xs mt-1">{error}</p>
+              <h2 className="font-bold text-slate-900 text-lg">Unable to Load Report</h2>
+              <p className="text-slate-600 text-sm mt-1">{error}</p>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            If you believe this is an error, please contact your doctor or clinic.
+          <p className="text-slate-500 text-xs">
+            If you believe this is an error, please contact your clinic for assistance.
           </p>
         </div>
       </div>
@@ -112,146 +113,268 @@ export default function PublicReportPage({ params }: { params: { token: string }
 
   if (!report) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-3 sm:p-4">
-        <div className="bg-card rounded-lg shadow-lg border border-border p-5 max-w-sm w-full text-center">
-          <p className="text-foreground font-medium text-sm">Report not found</p>
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 max-w-md w-full text-center">
+          <AlertCircle className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+          <p className="text-slate-700 font-semibold text-lg">Report Not Found</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background py-4 px-3 sm:py-6 sm:px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Medical Report</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              {new Date(report.appointmentId?.date).toLocaleDateString()}
-            </p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
+            <div>
+              <h1 className="text-4xl font-bold text-slate-900 mb-1">Medical Report</h1>
+              <p className="text-slate-500 text-lg">{report.patientId?.name}</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-3 rounded-lg transition-colors font-semibold text-sm"
+              >
+                <Printer className="w-5 h-5" />
+                Print
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-lg transition-colors font-semibold text-sm shadow-md hover:shadow-lg"
+              >
+                <Download className="w-5 h-5" />
+                Download PDF
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleDownloadPDF}
-            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm whitespace-nowrap"
-          >
-            <Download className="w-4 h-4" />
-            PDF
-          </button>
+          <p className="text-slate-600 text-sm">
+            Generated on{" "}
+            {new Date(report.createdAt).toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
         </div>
 
-        {/* Report Content */}
-        <div className="bg-card rounded-lg shadow-lg border border-border p-4 sm:p-5 space-y-4">
-          {/* Patient & Doctor Info */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="bg-muted/50 rounded p-3 border border-border">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Patient</p>
-              <p className="font-semibold text-foreground text-sm mt-1">{report.patientId?.name}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{report.patientId?.email}</p>
-              <p className="text-xs text-muted-foreground">{report.patientId?.phone}</p>
-            </div>
-
-            <div className="bg-muted/50 rounded p-3 border border-border">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Doctor</p>
-              <p className="font-semibold text-foreground text-sm mt-1">Dr. {report.doctorId?.name}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{report.doctorId?.specialty}</p>
-            </div>
-          </div>
-
-          {/* Appointment Details */}
-          <div className="bg-muted/50 rounded p-3 border border-border">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Appointment</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+          {/* Header bar */}
+          <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 sm:px-8 py-6 text-white">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground">Date</p>
-                <p className="font-medium text-foreground">
-                  {new Date(report.appointmentId?.date).toLocaleDateString()}
+                <h2 className="text-sm font-semibold opacity-90">APPOINTMENT DETAILS</h2>
+                <p className="text-2xl font-bold mt-1">
+                  {new Date(report.appointmentId?.date).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
                 </p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Time</p>
-                <p className="font-medium text-foreground">{report.appointmentId?.time}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Type</p>
-                <p className="font-medium text-foreground">{report.appointmentId?.type}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Report Date</p>
-                <p className="font-medium text-foreground">{new Date(report.createdAt).toLocaleDateString()}</p>
+              <div className="text-right">
+                <p className="text-sm opacity-90">Report ID</p>
+                <p className="text-lg font-mono font-bold">DC-{report._id.slice(-6).toUpperCase()}</p>
               </div>
             </div>
           </div>
 
-          {/* Procedures */}
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-2">Procedures</h3>
-            <div className="space-y-2">
-              {report.procedures && report.procedures.length > 0 ? (
-                report.procedures.map((proc, idx) => (
-                  <div key={idx} className="bg-muted/50 rounded p-3 border border-border">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground text-sm">{proc.name}</p>
-                        {proc.description && <p className="text-xs text-muted-foreground mt-0.5">{proc.description}</p>}
-                      </div>
-                      {proc.tooth && (
-                        <span className="bg-primary/20 text-primary px-2 py-1 rounded text-xs font-medium whitespace-nowrap flex-shrink-0">
-                          Tooth {proc.tooth}
-                        </span>
-                      )}
+          <div className="p-6 sm:p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="border-l-4 border-teal-600 pl-4">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Patient Information</p>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-slate-500 text-xs">Full Name</p>
+                    <p className="text-slate-900 font-semibold text-lg">{report.patientId?.name}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-slate-500 text-xs">Email</p>
+                      <p className="text-slate-700 text-sm break-all">{report.patientId?.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 text-xs">Phone</p>
+                      <p className="text-slate-700 text-sm">{report.patientId?.phone}</p>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-muted-foreground text-xs">No procedures recorded</p>
-              )}
-            </div>
-          </div>
+                  {report.patientId?.dateOfBirth && (
+                    <div>
+                      <p className="text-slate-500 text-xs">Date of Birth</p>
+                      <p className="text-slate-700 text-sm">
+                        {new Date(report.patientId.dateOfBirth).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                  {report.patientId?.address && (
+                    <div>
+                      <p className="text-slate-500 text-xs">Address</p>
+                      <p className="text-slate-700 text-sm">{report.patientId.address}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-          {/* Findings */}
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-2">Findings</h3>
-            <div className="bg-muted/50 rounded p-3 border border-border">
-              <p className="text-foreground text-sm whitespace-pre-wrap leading-relaxed">{report.findings}</p>
+              <div className="border-l-4 border-blue-600 pl-4">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Doctor Information</p>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-slate-500 text-xs">Doctor</p>
+                    <p className="text-slate-900 font-semibold text-lg">Dr. {report.doctorId?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Specialty</p>
+                    <p className="text-slate-700 text-sm">{report.doctorId?.specialty || "General Dentistry"}</p>
+                  </div>
+                  {report.doctorId?.email && (
+                    <div>
+                      <p className="text-slate-500 text-xs">Email</p>
+                      <p className="text-slate-700 text-sm break-all">{report.doctorId.email}</p>
+                    </div>
+                  )}
+                  {report.doctorId?.licenseNumber && (
+                    <div>
+                      <p className="text-slate-500 text-xs">License Number</p>
+                      <p className="text-slate-700 text-sm font-mono">{report.doctorId.licenseNumber}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Doctor's Notes */}
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-2">Notes</h3>
-            <div className="bg-muted/50 rounded p-3 border border-border">
-              <p className="text-foreground text-sm whitespace-pre-wrap leading-relaxed">{report.notes}</p>
-            </div>
-          </div>
-
-          {/* Follow-up Information */}
-          {(report.nextVisit || report.followUpDetails) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {report.nextVisit && (
-                <div className="bg-blue-50 dark:bg-blue-950/30 rounded p-3 border border-blue-200 dark:border-blue-800">
-                  <p className="text-xs font-semibold text-blue-900 dark:text-blue-300 uppercase tracking-wide">
-                    Next Appointment
-                  </p>
-                  <p className="text-foreground font-medium text-sm mt-1">
-                    {new Date(report.nextVisit).toLocaleDateString()}
+            <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-5 border border-slate-200">
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-4">Visit Summary</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-slate-500 text-xs font-medium">Time</p>
+                  <p className="text-slate-900 font-semibold text-sm mt-1">{report.appointmentId?.time || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs font-medium">Appointment Type</p>
+                  <p className="text-slate-900 font-semibold text-sm mt-1">{report.appointmentId?.type}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs font-medium">Status</p>
+                  <p className="text-slate-900 font-semibold text-sm mt-1 capitalize">{report.appointmentId?.status}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs font-medium">Report Date</p>
+                  <p className="text-slate-900 font-semibold text-sm mt-1">
+                    {new Date(report.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-              )}
-              {report.followUpDetails && (
-                <div className="bg-amber-50 dark:bg-amber-950/30 rounded p-3 border border-amber-200 dark:border-amber-800">
-                  <p className="text-xs font-semibold text-amber-900 dark:text-amber-300 uppercase tracking-wide">
-                    Follow-up
-                  </p>
-                  <p className="text-foreground text-xs mt-1 leading-relaxed">{report.followUpDetails}</p>
-                </div>
-              )}
+              </div>
             </div>
-          )}
 
-          {/* Footer */}
-          <div className="border-t border-border pt-3 mt-4 text-center">
-            <p className="text-xs text-muted-foreground">Generated on {new Date(report.createdAt).toLocaleString()}</p>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-teal-600 rounded"></span>
+                Procedures Performed
+              </h3>
+              <div className="space-y-3">
+                {report.procedures && report.procedures.length > 0 ? (
+                  report.procedures.map((proc, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-slate-50 border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="flex-shrink-0 w-6 h-6 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center text-xs font-bold">
+                              {idx + 1}
+                            </span>
+                            <p className="font-semibold text-slate-900">{proc.name}</p>
+                          </div>
+                          {proc.description && <p className="text-slate-600 text-sm mt-2 ml-8">{proc.description}</p>}
+                        </div>
+                        <div className="flex-shrink-0 flex flex-col gap-2 items-end">
+                          {proc.tooth && (
+                            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
+                              Tooth {proc.tooth}
+                            </span>
+                          )}
+                          {proc.status && (
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
+                                proc.status.toLowerCase() === "completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              {proc.status}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center text-slate-500">
+                    No procedures recorded
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-blue-600 rounded"></span>
+                Clinical Findings
+              </h3>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
+                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm">
+                  {report.findings || "No findings recorded."}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-purple-600 rounded"></span>
+                Doctor's Notes
+              </h3>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
+                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm">
+                  {report.notes || "No additional notes."}
+                </p>
+              </div>
+            </div>
+
+            {(report.nextVisit || report.followUpDetails) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {report.nextVisit && (
+                  <div className="bg-gradient-to-br from-teal-50 to-teal-100 border border-teal-300 rounded-lg p-5">
+                    <p className="text-xs font-bold text-teal-900 uppercase tracking-widest mb-2">Next Appointment</p>
+                    <p className="text-teal-900 font-semibold text-lg">
+                      {new Date(report.nextVisit).toLocaleDateString("en-US", {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                )}
+                {report.followUpDetails && (
+                  <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-300 rounded-lg p-5">
+                    <p className="text-xs font-bold text-amber-900 uppercase tracking-widest mb-2">
+                      Follow-up Instructions
+                    </p>
+                    <p className="text-amber-900 text-sm leading-relaxed">{report.followUpDetails}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="border-t border-slate-200 pt-6 mt-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+                <p>This is a confidential medical document. Please keep it secure.</p>
+                <p>Generated {new Date(report.createdAt).toLocaleString()}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
