@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { Appointment, connectDB, User } from "@/lib/db"
+import { Appointment, connectDB, AppointmentReport } from "@/lib/db"
 import { verifyToken } from "@/lib/auth"
 import { sendAppointmentReschedule, sendAppointmentCancellation } from "@/lib/whatsapp-service"
 import { validateAppointmentScheduling } from "@/lib/appointment-validation"
@@ -242,80 +242,44 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    console.log("🟢 [DELETE] Appointment deletion called")
+    console.log("🟢 [DELETE] Deleting report")
     await connectDB()
-    console.log("🟢 [DELETE] Database connected successfully")
 
     const token = request.headers.get("authorization")?.split(" ")[1]
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!token) {
+      console.warn("🔴 [DELETE] No token found")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
     const payload = verifyToken(token)
-    if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    if (!payload) {
+      console.warn("🔴 [DELETE] Invalid token")
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
 
-    if (payload.role === "doctor") {
-      console.warn("🔴 [DELETE] Doctor not allowed to delete appointment")
+    if (payload.role !== "admin" && payload.role !== "receptionist") {
+      console.warn("🔴 [DELETE] Unauthorized role tried to delete report:", payload.role)
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
-    const { id } = params
-    console.log("🟠 [DELETE] Deleting appointment with ID:", id)
+    const { id } = await params
+    console.log("🟠 [DELETE] Report ID:", id)
 
-    const deletedAppointment = await Appointment.findByIdAndDelete(id)
-    if (!deletedAppointment) {
-      console.warn("🔴 [DELETE] Appointment not found:", id)
-      return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+    const deletedReport = await AppointmentReport.findByIdAndDelete(id)
+
+    if (!deletedReport) {
+      console.warn("🔴 [DELETE] Report not found:", id)
+      return NextResponse.json({ error: "Report not found" }, { status: 404 })
     }
 
-    console.log("🟢 [DELETE] Appointment deleted successfully:", deletedAppointment._id)
-
-    const patient = await User.findById(deletedAppointment.patientId)
-    console.log("🟠 [DELETE] Patient found for notification:", patient ? patient.name : "❌ None")
-
-    if (patient && patient.phone) {
-      console.log("🟢 [DELETE] Sending WhatsApp cancellation notification to:", patient.phone)
-
-      const whatsappResult = await sendAppointmentCancellation(
-        patient.phone,
-        deletedAppointment.patientName,
-        deletedAppointment.doctorName,
-        deletedAppointment.date,
-      )
-
-      console.log("🟣 [DELETE] WhatsApp cancellation result:", whatsappResult)
-
-      if (!whatsappResult.success) {
-        console.warn("⚠️ [DELETE] WhatsApp cancellation failed:", whatsappResult.error)
-      } else {
-        console.log("✅ [DELETE] WhatsApp cancellation sent successfully:", whatsappResult.messageId)
-      }
-    } else {
-      console.warn("❌ [DELETE] Patient phone not found — WhatsApp skipped")
-    }
-
-    if (patient && patient.email) {
-      console.log("  Sending email cancellation to patient:", patient.email)
-      const { sendAppointmentCancellationEmail } = await import("@/lib/nodemailer-service")
-      const emailResult = await sendAppointmentCancellationEmail(
-        patient.email,
-        deletedAppointment.patientName,
-        deletedAppointment.doctorName,
-        deletedAppointment.date,
-        deletedAppointment.time,
-      )
-
-      if (!emailResult.success) {
-        console.warn("  Email cancellation failed:", emailResult.error)
-      } else {
-        console.log("  Email cancellation sent successfully:", emailResult.messageId)
-      }
-    }
-
+    console.log("🟢 [DELETE] Report deleted successfully:", id)
     return NextResponse.json({
       success: true,
-      message: "Appointment deleted successfully",
+      message: "Report deleted successfully",
+      report: deletedReport,
     })
   } catch (error) {
-    console.error("🔴 [DELETE] Unexpected error deleting appointment:", error)
-    return NextResponse.json({ error: "Failed to delete appointment" }, { status: 500 })
+    console.error("🔴 [DELETE] Error deleting report:", error)
+    return NextResponse.json({ error: "Failed to delete report" }, { status: 500 })
   }
 }
