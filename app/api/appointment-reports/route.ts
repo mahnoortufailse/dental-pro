@@ -184,6 +184,33 @@ export async function POST(request: NextRequest) {
       console.warn("  Patient email not found — Treatment report email skipped")
     }
 
+    if (patientData?.phone) {
+      console.log("  Scheduling WhatsApp notification for 1 minute after report creation")
+
+      setTimeout(async () => {
+        try {
+          console.log("  Sending WhatsApp medical report link to patient:", patientData.phone)
+          const { sendMedicalReportLink } = await import("@/lib/whatsapp-service")
+          const { encryptData } = await import("@/lib/encryption")
+
+          // Generate secure token for the report
+          const token = encryptData(JSON.stringify({ appointmentId, patientId }))
+          const encodedToken = encodeURIComponent(token)
+          const reportLink = `${process.env.NEXT_PUBLIC_APP_URL}/public/reports/${encodedToken}`
+
+          const whatsappResult = await sendMedicalReportLink(patientData.phone, patientData.name, reportLink)
+
+          if (whatsappResult.success) {
+            console.log("  WhatsApp medical report link sent successfully:", whatsappResult.messageId)
+          } else {
+            console.warn("  WhatsApp medical report link failed:", whatsappResult.error)
+          }
+        } catch (err) {
+          console.error("  Error sending WhatsApp notification:", err)
+        }
+      }, 60000) // 60000 milliseconds = 1 minute
+    }
+
     return NextResponse.json({ success: true, report: populatedReport })
   } catch (error) {
     console.error("  POST appointment report error:", error)
