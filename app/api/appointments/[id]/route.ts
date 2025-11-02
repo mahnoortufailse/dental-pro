@@ -138,6 +138,46 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (patient && patient.phone) {
       console.log("🟢 [PUT] Patient phone detected:", patient.phone)
 
+      if (updateData.status === "closed" && originalAppointment.status !== "closed") {
+        console.log("🟠 [PUT] Appointment marked as closed — checking for medical report...")
+
+        const { AppointmentReport } = await import("@/lib/db")
+        const report = await AppointmentReport.findOne({
+          appointmentId: id,
+          patientId: originalAppointment.patientId,
+        })
+
+        if (report) {
+          console.log("🟠 [PUT] Medical report found — generating secure link...")
+          const { encryptData } = await import("@/lib/encryption")
+
+          // Generate encrypted token with appointment and patient IDs
+          const reportToken = encryptData(
+            JSON.stringify({
+              appointmentId: id,
+              patientId: originalAppointment.patientId,
+            }),
+          )
+
+          const reportLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/public/reports/${reportToken}`
+
+          console.log("🟠 [PUT] Sending WhatsApp report link to patient...")
+
+          const { sendMedicalReportLink } = await import("@/lib/whatsapp-service")
+          const whatsappResult = await sendMedicalReportLink(patient.phone, patient.name, reportLink)
+
+          console.log("🟣 [PUT] WhatsApp report link result:", whatsappResult)
+
+          if (!whatsappResult.success) {
+            console.warn("⚠️ [PUT] WhatsApp report link failed:", whatsappResult.error)
+          } else {
+            console.log("✅ [PUT] WhatsApp report link sent successfully:", whatsappResult.messageId)
+          }
+        } else {
+          console.warn("⚠️ [PUT] No medical report found for appointment")
+        }
+      }
+
       // Appointment cancellation notification
       if (updateData.status === "cancelled" && originalAppointment.status !== "cancelled") {
         console.log("🟠 [PUT] Appointment marked as cancelled — sending WhatsApp cancellation...")
@@ -165,7 +205,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             originalAppointment.patientName,
             originalAppointment.doctorName,
             originalAppointment.date,
-            originalAppointment.time,
           )
 
           if (!emailResult.success) {
@@ -174,8 +213,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             console.log("  Email cancellation sent successfully:", emailResult.messageId)
           }
         }
-
-        // Appointment reschedule notification
       } else if (
         (updateData.date && updateData.date !== originalAppointment.date) ||
         (updateData.time && updateData.time !== originalAppointment.time)
