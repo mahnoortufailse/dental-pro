@@ -80,8 +80,8 @@ export default function PublicReportPage({ params }: { params: { token: string }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-3 sm:p-4">
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-6 sm:p-8 max-w-md w-full text-center">
+      <div className="min-h-screen flex items-center justify-center p-3 sm:p-4">
+        <div className="  p-6 sm:p-8 max-w-md w-full text-center">
           <div className="flex justify-center mb-4">
             <Loader className="w-8 sm:w-10 h-8 sm:h-10 animate-spin text-teal-600" />
           </div>
@@ -131,17 +131,7 @@ export default function PublicReportPage({ params }: { params: { token: string }
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900">Medical Report</h1>
               <p className="text-slate-500 text-sm sm:text-base mt-1">{report.patientId?.name}</p>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-end justify-end gap-2 sm:gap-3">
-              <button
-                onClick={handleDownloadPDF}
-                className="flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-colors font-semibold text-xs sm:text-sm shadow-md hover:shadow-lg active:scale-95"
-              >
-                <Download className="w-4 sm:w-5 h-4 sm:h-5" />
-                <span>Download PDF</span>
-              </button>
-            </div>
-          </div>
-          <p className="text-slate-600 text-xs sm:text-sm">
+            <p className="text-slate-600 text-xs sm:text-sm">
             Generated on{" "}
             {new Date(report.createdAt).toLocaleDateString("en-US", {
               weekday: "short",
@@ -150,6 +140,17 @@ export default function PublicReportPage({ params }: { params: { token: string }
               day: "numeric",
             })}
           </p>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-end gap-2 sm:gap-3">
+              <button
+                onClick={handleDownloadPDF}
+                className="flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-colors font-semibold text-xs sm:text-sm shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
+              >
+                <Download className="w-4 sm:w-5 h-4 sm:h-5" />
+                <span>Download PDF</span>
+              </button>
+            </div>
+          </div>
+          
         </div>
 
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
