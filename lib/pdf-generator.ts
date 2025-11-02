@@ -178,11 +178,11 @@ export function generateReportPDF(report: ReportData) {
   doc.setFont("helvetica", "bold")
   doc.setFontSize(10)
   doc.setTextColor(30, 30, 30)
-  doc.text(`Dr. ${report.doctorId?.name || "Attending Dentist"}`, 145, signatureY + 30, { align: "center" })
+  doc.text(`${report.doctorId?.name || "Attending Dentist"}`, 145, signatureY + 30, { align: "center" })
   doc.setFont("helvetica", "normal")
   doc.setFontSize(9)
   doc.setTextColor(90, 90, 90)
-  doc.text(`License: ${report.doctorId?.licenseNumber || "Not Provided"}`, 145, signatureY + 35, { align: "center" })
+  
 
 
 
@@ -192,7 +192,7 @@ export function generateReportPDF(report: ReportData) {
   doc.setFontSize(8)
   doc.setTextColor(255, 255, 255)
   doc.text("Dr. Mohammad Alsheikh Dental Center — Compassion. Precision. Care.", 10, pageHeight - 6)
-  doc.text("www.dralsheikhdental.com", pageWidth - 10, pageHeight - 6, { align: "right" })
+  
 
   const patientName = report.patientId?.name?.replace(/\s+/g, "_") || "Patient"
   const dateStr = format(new Date(report.createdAt), "yyyy-MM-dd")
