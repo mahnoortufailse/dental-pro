@@ -44,10 +44,10 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
       return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
     }
 
-    if (!["completed", "closed"].includes(appointment.status)) {
-      console.warn("[PUBLIC] Appointment not completed:", appointmentId, appointment.status)
-      return NextResponse.json({ error: "Report not available for this appointment" }, { status: 403 })
-    }
+    // if (!["completed", "closed"].includes(appointment.status)) {
+    //   console.warn("[PUBLIC] Appointment not completed:", appointmentId, appointment.status)
+    //   return NextResponse.json({ error: "Report not available for this appointment" }, { status: 403 })
+    // }
 
     console.log("[PUBLIC] Report fetched successfully for patient:", patientId)
     return NextResponse.json({ success: true, report })
