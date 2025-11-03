@@ -145,7 +145,7 @@ function buildTemplateComponents(templateName: string, parameters: string[]): an
         },
       ]
 
-    case "medical_report":
+    case "report_message":
       // medical_report: patient name, date, time, doctor name + report link button
       return [
         {
@@ -265,7 +265,7 @@ export async function sendMedicalReportLink(
 ): Promise<WhatsAppResponse> {
   return sendWhatsAppTemplate({
     to: phoneNumber,
-    templateName: "medical_report",
+    templateName: "report_message",
     parameters: [patientName, appointmentDate, appointmentTime, doctorName, reportLink],
   })
 }
