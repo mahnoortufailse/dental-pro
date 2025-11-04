@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { Appointment, connectDB, User } from "@/lib/db"
+import { Appointment, connectDB, User, Patient } from "@/lib/db"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
 import { sendAppointmentConfirmation } from "@/lib/whatsapp-service"
 import { validateAppointmentScheduling } from "@/lib/appointment-validation"
+import { sendAppointmentConfirmationEmail } from "@/lib/nodemailer-service"
 
 export async function GET(request: NextRequest) {
   try {
@@ -125,7 +126,6 @@ export async function POST(request: NextRequest) {
     console.log("[DEBUG] Looking up patient with ID:", patientId)
 
     // Fetch patient phone number from Patient collection
-    const { Patient } = await import("@/lib/db")
     const patient = await Patient.findById(patientId)
 
     console.log("[DEBUG] Patient found:", patient ? patient.name : "No patient found")
@@ -166,7 +166,6 @@ export async function POST(request: NextRequest) {
 
     if (patient && patient.email) {
       console.log("  Sending email confirmation to patient:", patient.email)
-      const { sendAppointmentConfirmationEmail } = await import("@/lib/nodemailer-service")
       const emailResult = await sendAppointmentConfirmationEmail(
         patient.email,
         patientName,

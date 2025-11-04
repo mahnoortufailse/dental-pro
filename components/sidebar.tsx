@@ -82,6 +82,15 @@ export function Sidebar() {
       ]
     }
 
+    if (user?.role === "hr") {
+      return [
+        ...baseItems,
+        { label: "Patients", href: "/dashboard/patients", icon: Users },
+        { label: "Inventory", href: "/dashboard/inventory", icon: Package },
+        { label: "Staff", href: "/dashboard/staff", icon: Users2 },
+      ]
+    }
+
     return baseItems
   }
 

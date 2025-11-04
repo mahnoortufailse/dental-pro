@@ -1,5 +1,6 @@
 //@ts-nocheck
 import { Appointment } from "./db"
+import mongoose from "mongoose"
 
 /**
  * Converts time string (HH:MM) to minutes since midnight
@@ -101,6 +102,22 @@ export async function validateAppointmentScheduling(
     console.log("[v0] ===== VALIDATION START =====")
     console.log("[v0] Input parameters:", { doctorId, date, time, duration, excludeAppointmentId })
 
+    if (!doctorId || doctorId.trim() === "") {
+      console.log("[v0] ❌ Invalid doctorId: empty or undefined")
+      return {
+        isValid: false,
+        error: "Doctor ID is required",
+      }
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+      console.log("[v0] ❌ Invalid doctorId format:", doctorId)
+      return {
+        isValid: false,
+        error: "Invalid doctor ID format",
+      }
+    }
+
     const query: any = {
       doctorId: doctorId.toString(),
     }
@@ -184,9 +201,13 @@ export async function validateAppointmentScheduling(
     return { isValid: true }
   } catch (error) {
     console.error("[v0] ❌ Appointment validation error:", error)
+    console.error("[v0] Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    })
     return {
       isValid: false,
-      error: "Error validating appointment scheduling",
+      error: `Error validating appointment: ${error instanceof Error ? error.message : "Unknown error"}`,
     }
   }
 }

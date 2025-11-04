@@ -71,7 +71,7 @@ export default function StaffPage() {
   // Filter staff based on search term
   const filteredStaff = staff.filter((member) => {
     if (!searchTerm) return true
-    
+
     const searchLower = searchTerm.toLowerCase()
     return (
       member.name?.toLowerCase().includes(searchLower) ||
@@ -98,7 +98,7 @@ export default function StaffPage() {
   const receptionistsCount = staff.filter((s) => s.role === "receptionist").length
 
   return (
-    <ProtectedRoute allowedRoles={["admin"]}>
+    <ProtectedRoute allowedRoles={["admin", "hr"]}>
       <div className="flex h-screen bg-gray-50">
         <Sidebar />
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
@@ -149,7 +149,7 @@ export default function StaffPage() {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
                 </div>
-                
+
                 <div className="flex items-center gap-4 w-full sm:w-auto">
                   <div className="flex items-center gap-2">
                     <label htmlFor="itemsPerPage" className="text-sm text-gray-600 whitespace-nowrap">
@@ -178,9 +178,13 @@ export default function StaffPage() {
                   <thead className="bg-gray-100 border-b">
                     <tr>
                       <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700">Name</th>
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden sm:table-cell">Email</th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden sm:table-cell">
+                        Email
+                      </th>
                       <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700">Role</th>
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden lg:table-cell">Specialty</th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden lg:table-cell">
+                        Specialty
+                      </th>
                       <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700">Actions</th>
                     </tr>
                   </thead>
@@ -267,25 +271,21 @@ export default function StaffPage() {
                     <span className="font-medium">{Math.min(endIndex, filteredStaff.length)}</span> of{" "}
                     <span className="font-medium">{filteredStaff.length}</span> results
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
                       className="p-2 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    
+
                     <div className="flex items-center gap-1">
                       {Array.from({ length: totalPages }, (_, i) => i + 1)
-                        .filter(page => 
-                          page === 1 || 
-                          page === totalPages ||
-                          Math.abs(page - currentPage) <= 1
-                        )
+                        .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                         .map((page, index, array) => {
-                          const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+                          const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1
                           return (
                             <div key={page} className="flex items-center">
                               <button
@@ -298,16 +298,14 @@ export default function StaffPage() {
                               >
                                 {page}
                               </button>
-                              {showEllipsis && (
-                                <span className="px-1 text-gray-400">...</span>
-                              )}
+                              {showEllipsis && <span className="px-1 text-gray-400">...</span>}
                             </div>
-                          );
+                          )
                         })}
                     </div>
-                    
+
                     <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages || totalPages === 0}
                       className="p-2 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >

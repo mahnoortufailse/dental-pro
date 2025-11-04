@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, sparse: true },
   password: { type: String, required: true }, // Will be hashed
   name: { type: String, required: true },
-  role: { type: String, enum: ["admin", "doctor", "receptionist"], required: true },
+  role: { type: String, enum: ["admin", "doctor", "receptionist", "hr"], required: true },
   phone: String,
   specialty: String,
   active: { type: Boolean, default: true },
@@ -273,6 +273,14 @@ export async function initializeDB() {
           name: "Jane Doe",
           role: "receptionist",
           phone: "1234567892",
+          active: true,
+        },
+        {
+          email: "hr@dentalcare.com",
+          password: "HR@123456", // Will be hashed by pre-save hook
+          name: "HR Manager",
+          role: "hr",
+          phone: "1234567893",
           active: true,
         },
       ])

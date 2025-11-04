@@ -3,10 +3,7 @@ import { Inventory, connectDB } from "@/lib/db"
 import { verifyToken } from "@/lib/auth"
 import { Types } from "mongoose"
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectDB()
     const token = request.headers.get("authorization")?.split(" ")[1]
@@ -32,17 +29,14 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectDB()
     const token = request.headers.get("authorization")?.split(" ")[1]
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const payload = verifyToken(token)
-    if (!payload || payload.role !== "admin") {
+    if (!payload || (payload.role !== "admin" && payload.role !== "hr")) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
@@ -55,51 +49,48 @@ export async function PUT(
 
     // Validate required fields
     if (!name || quantity === undefined || minStock === undefined) {
-      return NextResponse.json(
-        { error: "Name, quantity, and minStock are required" },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "Name, quantity, and minStock are required" }, { status: 400 })
     }
 
     const updatedItem = await Inventory.findByIdAndUpdate(
       id,
-      { 
-        name, 
-        quantity: parseInt(quantity), 
-        minStock: parseInt(minStock), 
-        unit, 
-        supplier 
+      {
+        name,
+        quantity: Number.parseInt(quantity),
+        minStock: Number.parseInt(minStock),
+        unit,
+        supplier,
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     )
 
     if (!updatedItem) {
       return NextResponse.json({ error: "Item not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      item: updatedItem 
+    return NextResponse.json({
+      success: true,
+      item: updatedItem,
     })
   } catch (error) {
     console.error("Update inventory error:", error)
-    return NextResponse.json({ 
-      error: "Failed to update item: " + (error instanceof Error ? error.message : "Unknown error")
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Failed to update item: " + (error instanceof Error ? error.message : "Unknown error"),
+      },
+      { status: 500 },
+    )
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectDB()
     const token = request.headers.get("authorization")?.split(" ")[1]
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const payload = verifyToken(token)
-    if (!payload || payload.role !== "admin") {
+    if (!payload || (payload.role !== "admin" && payload.role !== "hr")) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
@@ -113,14 +104,17 @@ export async function DELETE(
       return NextResponse.json({ error: "Item not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: "Item deleted successfully" 
+      message: "Item deleted successfully",
     })
   } catch (error) {
     console.error("Delete inventory error:", error)
-    return NextResponse.json({ 
-      error: "Failed to delete item: " + (error instanceof Error ? error.message : "Unknown error")
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Failed to delete item: " + (error instanceof Error ? error.message : "Unknown error"),
+      },
+      { status: 500 },
+    )
   }
 }

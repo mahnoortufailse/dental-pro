@@ -95,7 +95,7 @@ export default function InventoryPage() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    
+
     try {
       const method = editingId ? "PUT" : "POST"
       const url = editingId ? `/api/inventory/${editingId}` : "/api/inventory"
@@ -145,7 +145,7 @@ export default function InventoryPage() {
   // Filter inventory based on search term
   const filteredInventory = inventory.filter((item) => {
     if (!searchTerm) return true
-    
+
     const searchLower = searchTerm.toLowerCase()
     return (
       item.name?.toLowerCase().includes(searchLower) ||
@@ -168,7 +168,7 @@ export default function InventoryPage() {
   const lowStockItems = inventory.filter((item) => item.quantity < item.minStock)
 
   return (
-    <ProtectedRoute allowedRoles={["admin"]}>
+    <ProtectedRoute allowedRoles={["admin", "hr"]}>
       <div className="flex h-screen bg-gray-50">
         <Sidebar />
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
@@ -290,7 +290,7 @@ export default function InventoryPage() {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
                 </div>
-                
+
                 <div className="flex items-center gap-4 w-full sm:w-auto">
                   <div className="flex items-center gap-2">
                     <label htmlFor="itemsPerPage" className="text-sm text-gray-600 whitespace-nowrap">
@@ -319,10 +319,18 @@ export default function InventoryPage() {
                   <thead className="bg-gray-100 border-b">
                     <tr>
                       <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700">Item Name</th>
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden sm:table-cell">Quantity</th>
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden md:table-cell">Min Stock</th>
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden lg:table-cell">Unit</th>
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden lg:table-cell">Supplier</th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden sm:table-cell">
+                        Quantity
+                      </th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden md:table-cell">
+                        Min Stock
+                      </th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden lg:table-cell">
+                        Unit
+                      </th>
+                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700 hidden lg:table-cell">
+                        Supplier
+                      </th>
                       <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700">Status</th>
                       <th className="text-left px-4 sm:px-6 py-3 font-semibold text-gray-700">Actions</th>
                     </tr>
@@ -358,9 +366,7 @@ export default function InventoryPage() {
                               {item.minStock}
                             </div>
                           </td>
-                          <td className="px-4 sm:px-6 py-3 text-gray-700 hidden lg:table-cell">
-                            {item.unit || "-"}
-                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-gray-700 hidden lg:table-cell">{item.unit || "-"}</td>
                           <td className="px-4 sm:px-6 py-3 text-gray-700 hidden lg:table-cell">
                             {item.supplier || "-"}
                           </td>
@@ -368,16 +374,20 @@ export default function InventoryPage() {
                             <div>
                               <div className="sm:hidden text-xs text-gray-500 mb-1">Status</div>
                               {item.quantity < item.minStock ? (
-                                <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">Low Stock</span>
+                                <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
+                                  Low Stock
+                                </span>
                               ) : (
-                                <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">In Stock</span>
+                                <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                                  In Stock
+                                </span>
                               )}
                             </div>
                           </td>
                           <td className="px-4 sm:px-6 py-3">
                             <div className="flex gap-2">
-                              <button 
-                                onClick={() => handleEditItem(item)} 
+                              <button
+                                onClick={() => handleEditItem(item)}
                                 className="text-blue-600 hover:text-blue-800 transition-colors"
                                 title="Edit"
                               >
@@ -412,29 +422,25 @@ export default function InventoryPage() {
               {filteredInventory.length > 0 && (
                 <div className="px-4 sm:px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-sm text-gray-600">
-                    Showing <span className="font-medium">{filteredInventory.length === 0 ? 0 : startIndex + 1}</span> to{" "}
-                    <span className="font-medium">{Math.min(endIndex, filteredInventory.length)}</span> of{" "}
+                    Showing <span className="font-medium">{filteredInventory.length === 0 ? 0 : startIndex + 1}</span>{" "}
+                    to <span className="font-medium">{Math.min(endIndex, filteredInventory.length)}</span> of{" "}
                     <span className="font-medium">{filteredInventory.length}</span> results
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
                       className="p-2 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    
+
                     <div className="flex items-center gap-1">
                       {Array.from({ length: totalPages }, (_, i) => i + 1)
-                        .filter(page => 
-                          page === 1 || 
-                          page === totalPages ||
-                          Math.abs(page - currentPage) <= 1
-                        )
+                        .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                         .map((page, index, array) => {
-                          const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+                          const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1
                           return (
                             <div key={page} className="flex items-center">
                               <button
@@ -447,16 +453,14 @@ export default function InventoryPage() {
                               >
                                 {page}
                               </button>
-                              {showEllipsis && (
-                                <span className="px-1 text-gray-400">...</span>
-                              )}
+                              {showEllipsis && <span className="px-1 text-gray-400">...</span>}
                             </div>
-                          );
+                          )
                         })}
                     </div>
-                    
+
                     <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages || totalPages === 0}
                       className="p-2 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >

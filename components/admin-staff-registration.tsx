@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/components/auth-context"
 import { Mail, Phone, AlertCircle } from "lucide-react"
 import { toast } from "react-hot-toast"
@@ -17,7 +17,31 @@ export function AdminStaffRegistration() {
     specialty: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const { token } = useAuth()
+  const { token, user } = useAuth()
+  const [hrExists, setHrExists] = useState(false)
+  const [checkingHR, setCheckingHR] = useState(true)
+
+  useEffect(() => {
+    const checkHRExists = async () => {
+      try {
+        const res = await fetch("/api/users?role=hr", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setHrExists(data.users && data.users.length > 0)
+        }
+      } catch (error) {
+        console.error("Failed to check HR existence:", error)
+      } finally {
+        setCheckingHR(false)
+      }
+    }
+
+    if (token) {
+      checkHRExists()
+    }
+  }, [token])
 
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
@@ -92,6 +116,9 @@ export function AdminStaffRegistration() {
       }
 
       toast.success("Staff member registered successfully! Credentials have been sent to their email.")
+      if (formData.role === "hr") {
+        setHrExists(true)
+      }
       setFormData({
         name: "",
         email: "",
@@ -111,6 +138,26 @@ export function AdminStaffRegistration() {
   const roleDescriptions = {
     doctor: "Can view assigned patients and clinical tools",
     receptionist: "Can manage patients, appointments, and billing",
+    hr: "Can manage patients, inventory, and staff members",
+  }
+
+  const availableRoles =
+    user?.role === "admin"
+      ? hrExists
+        ? ["doctor", "receptionist"]
+        : ["doctor", "receptionist", "hr"]
+      : ["doctor", "receptionist"]
+
+  if (checkingHR) {
+    return (
+      <div className="w-full">
+        <div className="bg-card rounded-2xl shadow-lg border border-border p-6 sm:p-8">
+          <div className="text-center">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -119,7 +166,7 @@ export function AdminStaffRegistration() {
         {/* Header */}
         <div className="text-center mb-8">
           <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1">Register Staff Member</h2>
-          <p className="text-muted-foreground text-xs sm:text-sm">Add a new doctor or receptionist to your clinic</p>
+          <p className="text-muted-foreground text-xs sm:text-sm">Add a new staff member to your clinic</p>
         </div>
 
         <div className="mb-6 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
@@ -135,8 +182,8 @@ export function AdminStaffRegistration() {
         {/* Role Selection Tabs */}
         <div className="mb-8">
           <label className="block text-xs sm:text-sm font-semibold text-foreground mb-3">Select Role</label>
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            {["doctor", "receptionist"].map((role) => (
+          <div className={`grid gap-2 sm:gap-3 ${availableRoles.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+            {availableRoles.map((role) => (
               <button
                 key={role}
                 type="button"
@@ -239,7 +286,9 @@ export function AdminStaffRegistration() {
       </div>
 
       {/* Footer */}
-      <p className="text-center text-xs text-muted-foreground mt-6">© 2025 Dr.Mohammad Alsheikh Dental Center. All rights reserved.</p>
+      <p className="text-center text-xs text-muted-foreground mt-6">
+        © 2025 Dr.Mohammad Alsheikh Dental Center. All rights reserved.
+      </p>
     </div>
   )
 }
