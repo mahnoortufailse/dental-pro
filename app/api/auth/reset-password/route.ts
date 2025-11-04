@@ -1,86 +1,58 @@
-//@ts-nocheck
-import { type NextRequest, NextResponse } from "next/server"
-import { User, Patient, connectDB } from "@/lib/db"
-import { hashPassword } from "@/lib/encryption"
-import crypto from "crypto"
+import { NextResponse } from "next/server"
+import { User, connectDB } from "@/lib/db"
+import { verifyToken } from "@/lib/auth"
+import bcrypt from "bcryptjs"
+import { sendStaffCredentials } from "@/lib/email"
 
-export async function POST(request: NextRequest) {
-	try {
-		await connectDB();
-		const { token, password, userType } = await request.json();
+export async function POST(request: Request, { params }: { params: { id: string } }) {
+  try {
+    await connectDB()
 
-		if (!token || !password || !userType) {
-			return NextResponse.json(
-				{ error: "Missing required field" },
-				{ status: 400 }
-			);
-		}
-
-		const resetTokenHash = crypto
-			.createHash("sha256")
-			.update(token)
-			.digest("hex");
-
-    let user
-    if (userType === "patient") {
-      user = await Patient.findOne({
-        resetToken: resetTokenHash,
-        resetTokenExpiry: { $gt: new Date() },
-      })
-    } else {
-      user = await User.findOne({
-        resetToken: resetTokenHash,
-        resetTokenExpiry: { $gt: new Date() },
-      })
+    const token = request.headers.get("authorization")?.split(" ")[1]
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-		if (!user) {
-			return NextResponse.json(
-				{ error: "Invalid or expired reset token" },
-				{ status: 400 }
-			);
-		}
-
-		const passwordRegex =
-			/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-		if (!passwordRegex.test(password)) {
-			return NextResponse.json(
-				{
-					error:
-						"Password must be at least 8 characters with uppercase, number, and special character",
-				},
-				{ status: 400 }
-			);
-		}
-
-		const hashedPassword = await hashPassword(password);
-
-    if (userType === "patient") {
-      await Patient.findByIdAndUpdate(user._id, {
-        password: hashedPassword,
-        resetToken: null,
-        resetTokenExpiry: null,
-      })
-    } else {
-      await User.findByIdAndUpdate(user._id, {
-        password: hashedPassword,
-        resetToken: null,
-        resetTokenExpiry: null,
-      })
+    const payload = verifyToken(token)
+    if (!payload || (payload.role !== "admin" && payload.role !== "hr")) {
+      return NextResponse.json({ error: "Unauthorized - Admin or HR access required" }, { status: 403 })
     }
 
-    console.log("[v0] Password reset successfully for", userType + ":", user.email)
+    const { id } = params
 
-		return NextResponse.json({
-			success: true,
-			message:
-				"Password has been reset successfully. You can now login with your new password.",
-		});
-	} catch (error) {
-		console.error("  Reset password error:", error);
-		return NextResponse.json(
-			{ error: "Failed to reset password" },
-			{ status: 500 }
-		);
-	}
+    // Find the staff member
+    const staffMember = await User.findById(id)
+    if (!staffMember) {
+      return NextResponse.json({ error: "Staff member not found" }, { status: 404 })
+    }
+
+    // Generate a new random password
+    const newPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10).toUpperCase()
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+    // Update the password
+    staffMember.password = hashedPassword
+    await staffMember.save()
+
+    // Send the new credentials via email
+    try {
+      await sendStaffCredentials(staffMember.email, staffMember.name, staffMember.role, newPassword)
+    } catch (emailError) {
+      console.error("Failed to send password reset email:", emailError)
+      return NextResponse.json(
+        {
+          error: "Password reset but failed to send email. Please check email configuration.",
+        },
+        { status: 500 },
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Password reset successfully. New credentials sent to staff member's email.",
+    })
+  } catch (error) {
+    console.error("Reset password error:", error)
+    return NextResponse.json({ error: "Failed to reset password" }, { status: 500 })
+  }
 }

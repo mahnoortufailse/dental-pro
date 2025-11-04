@@ -7,10 +7,10 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { ChevronLeft, ChevronRight, Plus, FileText, X, CheckCircle, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, FileText, X, CheckCircle, Loader2, AlertCircle } from "lucide-react"
 import { AppointmentActionModal } from "@/components/appointment-action-modal"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
-import { SearchableDropdown } from "@/components/searchable-dropdown" // Import the component
+import { SearchableDropdown } from "@/components/searchable-dropdown"
 import { useRouter } from "next/navigation"
 import { StatCard } from "@/components/appointment-stats-card"
 import { Calendar, Clock, CheckCircle2, XCircle } from "lucide-react"
@@ -24,6 +24,7 @@ export default function AppointmentsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [showReportForm, setShowReportForm] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [appointmentReports, setAppointmentReports] = useState<Record<string, boolean>>({})
   const [appointmentActionModal, setAppointmentActionModal] = useState<{
     isOpen: boolean
     action: "close" | "cancel" | null
@@ -36,8 +37,8 @@ export default function AppointmentsPage() {
   const [formData, setFormData] = useState({
     patientId: "",
     patientName: "",
-    doctorId: "",
-    doctorName: "",
+    doctorId: user?.role === "doctor" ? user.userId : "",
+    doctorName: user?.role === "doctor" ? user.name : "",
     date: "",
     time: "",
     type: "Consultation",
@@ -65,6 +66,7 @@ export default function AppointmentsPage() {
     cancelAppointment: false,
     completeAppointment: false,
     createReport: false,
+    checkingReports: false,
   })
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null)
@@ -73,12 +75,42 @@ export default function AppointmentsPage() {
   useEffect(() => {
     if (token) {
       fetchAppointments()
+      fetchPatients()
       if (user?.role !== "doctor") {
-        fetchPatients()
         fetchDoctors()
       }
     }
   }, [token, user])
+
+  useEffect(() => {
+    if (appointments.length > 0 && user?.role === "doctor") {
+      checkAppointmentReports()
+    }
+  }, [appointments, user])
+
+  const checkAppointmentReports = async () => {
+    setLoading((prev) => ({ ...prev, checkingReports: true }))
+    try {
+      const reportChecks: Record<string, boolean> = {}
+
+      // Check each appointment for a report
+      for (const apt of appointments) {
+        const res = await fetch(`/api/appointment-reports?appointmentId=${apt._id || apt.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          reportChecks[apt._id || apt.id] = data.reports && data.reports.length > 0
+        }
+      }
+
+      setAppointmentReports(reportChecks)
+    } catch (error) {
+      console.error("Failed to check appointment reports:", error)
+    } finally {
+      setLoading((prev) => ({ ...prev, checkingReports: false }))
+    }
+  }
 
   const fetchAppointments = async () => {
     setLoading((prev) => ({ ...prev, appointments: true }))
@@ -219,7 +251,8 @@ export default function AppointmentsPage() {
         setAppointments(appointments.filter((a) => a._id !== appointmentId && a.id !== appointmentId))
         toast.success("Appointment deleted successfully")
       } else {
-        toast.error("Failed to delete appointment")
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to delete appointment")
       }
     } catch (error) {
       console.error("Failed to delete appointment:", error)
@@ -269,7 +302,7 @@ export default function AppointmentsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: "completed" }),
+        body: JSON.stringify({ status: "closed" }),
       })
 
       if (res.ok) {
@@ -277,15 +310,16 @@ export default function AppointmentsPage() {
         setAppointments(
           appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
         )
-        toast.success("Appointment marked as completed")
+        toast.success("Appointment closed successfully")
         setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
+        checkAppointmentReports()
       } else {
         const errorData = await res.json()
-        toast.error(errorData.error || "Failed to complete appointment")
+        toast.error(errorData.error || "Failed to close appointment")
       }
     } catch (error) {
-      console.error("Failed to complete appointment:", error)
-      toast.error("Error completing appointment")
+      console.error("Failed to close appointment:", error)
+      toast.error("Error closing appointment")
     } finally {
       setLoading((prev) => ({ ...prev, completeAppointment: false }))
     }
@@ -293,11 +327,14 @@ export default function AppointmentsPage() {
 
   const handleEditAppointment = (appointment: any) => {
     setEditingId(appointment._id || appointment.id)
+    const doctorId = user?.role === "doctor" ? user.userId : appointment.doctorId
+    const doctorName = user?.role === "doctor" ? user.name : appointment.doctorName
+
     setFormData({
       patientId: appointment.patientId,
       patientName: appointment.patientName,
-      doctorId: appointment.doctorId,
-      doctorName: appointment.doctorName,
+      doctorId: doctorId,
+      doctorName: doctorName,
       date: appointment.date,
       time: appointment.time,
       type: appointment.type,
@@ -313,10 +350,12 @@ export default function AppointmentsPage() {
     if (!formData.patientId.trim()) {
       errors.patientId = "Patient is required"
     }
-    if (!formData.doctorId.trim()) {
-      errors.doctorId = "Doctor is required"
+    if (user?.role !== "doctor") {
+      if (!formData.doctorId || !formData.doctorId.trim()) {
+        errors.doctorId = "Doctor is required"
+      }
     }
-    if (!formData.date.trim()) {
+    if (!formData.date || !formData.date.trim()) {
       errors.date = "Date is required"
     } else {
       const selectedDate = new Date(formData.date)
@@ -326,10 +365,10 @@ export default function AppointmentsPage() {
         errors.date = "Cannot schedule appointments in the past"
       }
     }
-    if (!formData.time.trim()) {
+    if (!formData.time || !formData.time.trim()) {
       errors.time = "Time is required"
     }
-    if (!formData.roomNumber.trim()) {
+    if (!formData.roomNumber || !formData.roomNumber.trim()) {
       errors.roomNumber = "Room Number is required"
     }
     if (formData.duration <= 0) {
@@ -348,30 +387,32 @@ export default function AppointmentsPage() {
       return
     }
 
+    const submissionData = {
+      ...formData,
+      doctorId: user?.role === "doctor" ? user.userId : formData.doctorId,
+      doctorName: user?.role === "doctor" ? user.name : formData.doctorName,
+    }
+
     const timeConflict = appointments.some((apt) => {
       if (editingId && (apt._id === editingId || apt.id === editingId)) {
-        return false // Skip current appointment if editing
+        return false
       }
       if (apt.status === "cancelled" || apt.status === "closed" || apt.status === "completed") {
         return false
       }
 
-      // Only check appointments for the same doctor and date
-      if (apt.doctorId !== formData.doctorId || apt.date !== formData.date) {
+      if (apt.doctorId !== submissionData.doctorId || apt.date !== submissionData.date) {
         return false
       }
 
-      // Convert times to minutes for accurate overlap calculation
       const aptStartMin = timeToMinutes(apt.time)
       const aptDuration = apt.duration || 30
       const aptEndMin = aptStartMin + aptDuration
 
-      const newStartMin = timeToMinutes(formData.time)
-      const newDuration = formData.duration || 30
+      const newStartMin = timeToMinutes(submissionData.time)
+      const newDuration = submissionData.duration || 30
       const newEndMin = newStartMin + newDuration
 
-      // Check if time ranges overlap
-      // Ranges overlap if: start1 < end2 AND start2 < end1
       return newStartMin < aptEndMin && aptStartMin < newEndMin
     })
 
@@ -383,7 +424,7 @@ export default function AppointmentsPage() {
         if (apt.status === "cancelled" || apt.status === "closed" || apt.status === "completed") {
           return false
         }
-        if (apt.doctorId !== formData.doctorId || apt.date !== formData.date) {
+        if (apt.doctorId !== submissionData.doctorId || apt.date !== submissionData.date) {
           return false
         }
 
@@ -391,8 +432,8 @@ export default function AppointmentsPage() {
         const aptDuration = apt.duration || 30
         const aptEndMin = aptStartMin + aptDuration
 
-        const newStartMin = timeToMinutes(formData.time)
-        const newDuration = formData.duration || 30
+        const newStartMin = timeToMinutes(submissionData.time)
+        const newDuration = submissionData.duration || 30
         const newEndMin = newStartMin + newDuration
 
         return newStartMin < aptEndMin && aptStartMin < newEndMin
@@ -407,8 +448,8 @@ export default function AppointmentsPage() {
         const aptEndMins = aptEndMin % 60
         const aptEndTime = `${String(aptEndHours).padStart(2, "0")}:${String(aptEndMins).padStart(2, "0")}`
 
-        const newStartMin = timeToMinutes(formData.time)
-        const newDuration = formData.duration || 30
+        const newStartMin = timeToMinutes(submissionData.time)
+        const newDuration = submissionData.duration || 30
         const newEndMin = newStartMin + newDuration
 
         const newEndHours = Math.floor(newEndMin / 60)
@@ -416,7 +457,7 @@ export default function AppointmentsPage() {
         const newEndTime = `${String(newEndHours).padStart(2, "0")}:${String(newEndMins).padStart(2, "0")}`
 
         toast.error(
-          `Doctor ${formData.doctorName} has another appointment from ${conflictingApt.time} to ${aptEndTime} on ${formData.date}. Please choose a different time.`,
+          `Doctor ${submissionData.doctorName} has another appointment from ${conflictingApt.time} to ${aptEndTime} on ${submissionData.date}. Please choose a different time.`,
         )
       }
       return
@@ -435,7 +476,7 @@ export default function AppointmentsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       })
 
       if (res.ok) {
@@ -453,8 +494,8 @@ export default function AppointmentsPage() {
         setFormData({
           patientId: "",
           patientName: "",
-          doctorId: "",
-          doctorName: "",
+          doctorId: user?.role === "doctor" ? user.userId : "",
+          doctorName: user?.role === "doctor" ? user.name : "",
           date: "",
           time: "",
           type: "Consultation",
@@ -543,6 +584,7 @@ export default function AppointmentsPage() {
           followUpDetails: "",
         })
         setSelectedAppointment(null)
+        checkAppointmentReports()
       } else {
         console.error("[v0] Report creation error:", responseData)
         toast.error(responseData.error || "Failed to create report")
@@ -577,6 +619,8 @@ export default function AppointmentsPage() {
         return "bg-red-100 text-red-800"
       case "confirmed":
         return "bg-blue-100 text-blue-800"
+      case "closed":
+        return "bg-gray-100 text-gray-800"
       default:
         return "bg-yellow-100 text-yellow-800"
     }
@@ -695,29 +739,34 @@ export default function AppointmentsPage() {
               </div>
 
               <div className="space-y-6">
-                {user?.role !== "doctor" && (
-                  <button
-                    onClick={() => {
-                      setEditingId(null)
-                      setShowForm(!showForm)
-                      setFormErrors({})
-                    }}
-                    disabled={loading.appointments || loading.patients || loading.doctors}
-                    className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {loading.appointments || loading.patients || loading.doctors ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Plus className="w-4 h-4" />
-                    )}
-                    New Appointment
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    setEditingId(null)
+                    setShowForm(!showForm)
+                    setFormErrors({})
+                    if (user?.role === "doctor") {
+                      setFormData({
+                        ...formData,
+                        doctorId: user.userId,
+                        doctorName: user.name,
+                      })
+                    }
+                  }}
+                  disabled={loading.appointments || loading.patients || loading.doctors}
+                  className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {loading.appointments || loading.patients || loading.doctors ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  New Appointment
+                </button>
 
                 {selectedDate && (
                   <div className="bg-card rounded-lg shadow-md border border-border p-6">
                     <h3 className="font-bold text-foreground mb-4">
-                      Appointments for {new Date(selectedDate).toLocaleDateString()}
+                      Appointments for {formatDateDisplay(selectedDate)}
                     </h3>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {loading.appointments ? (
@@ -727,32 +776,50 @@ export default function AppointmentsPage() {
                       ) : selectedDateAppointments.length === 0 ? (
                         <p className="text-muted-foreground text-sm">No appointments on this date</p>
                       ) : (
-                        selectedDateAppointments.map((apt) => (
-                          <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
-                            <div className="flex justify-between items-start gap-2 mb-2">
-                              <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
-                              <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
-                                {apt.status}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {apt.time} - {apt.type}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Room: {apt.roomNumber}</p>
-                            <div className="flex gap-2 mt-2 flex-wrap">
-                              {user?.role !== "doctor" && (
-                                <>
-                                  {apt.status !== "completed" && apt.status !== "closed" && (
-                                    <button
-                                      onClick={() => handleEditAppointment(apt)}
-                                      disabled={
-                                        loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
-                                      }
-                                      className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                                    >
-                                      Edit
-                                    </button>
+                        selectedDateAppointments.map((apt) => {
+                          const hasReport = appointmentReports[apt._id || apt.id]
+                          const canClose = hasReport || apt.status === "closed"
+
+                          return (
+                            <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
+                              <div className="flex justify-between items-start gap-2 mb-2">
+                                <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
+                                <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
+                                  {apt.status}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {apt.time} - {apt.type}
+                              </p>
+                              <p className="text-xs text-muted-foreground">Room: {apt.roomNumber}</p>
+                              {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  {hasReport ? (
+                                    <span className="text-xs text-green-600 flex items-center gap-1">
+                                      <CheckCircle className="w-3 h-3" />
+                                      Report created
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-amber-600 flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3" />
+                                      No report yet
+                                    </span>
                                   )}
+                                </div>
+                              )}
+                              <div className="flex gap-2 mt-2 flex-wrap">
+                                {apt.status !== "completed" && apt.status !== "closed" && (
+                                  <button
+                                    onClick={() => handleEditAppointment(apt)}
+                                    disabled={
+                                      loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                    }
+                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                                {user?.role !== "doctor" && (
                                   <button
                                     onClick={() => {
                                       setAppointmentToDelete(apt)
@@ -763,62 +830,78 @@ export default function AppointmentsPage() {
                                   >
                                     Delete
                                   </button>
-                                  <button
-                                    onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
-                                    disabled={loading.appointments}
-                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                                  >
-                                    View Details
-                                  </button>
-                                </>
-                              )}
-                              {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "completed" && (
-                                <>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedAppointment(apt)
-                                      setShowReportForm(true)
-                                      setReportErrors({})
-                                    }}
-                                    disabled={loading.createReport}
-                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                  >
-                                    <FileText className="w-3 h-3" />
-                                    Report
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      setAppointmentActionModal({
-                                        isOpen: true,
-                                        action: "close",
-                                        appointmentId: apt._id || apt.id,
-                                      })
-                                    }
-                                    disabled={loading.completeAppointment}
-                                    className="text-xs text-green-600 hover:underline disabled:text-green-600/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                  >
-                                    <CheckCircle className="w-3 h-3" />
-                                    Close
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      setAppointmentActionModal({
-                                        isOpen: true,
-                                        action: "cancel",
-                                        appointmentId: apt._id || apt.id,
-                                      })
-                                    }
-                                    disabled={loading.cancelAppointment}
-                                    className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                  >
-                                    <X className="w-3 h-3" />
-                                    Cancel
-                                  </button>
-                                </>
-                              )}
+                                )}
+                                <button
+                                  onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
+                                  disabled={loading.appointments}
+                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  View Details
+                                </button>
+                                {user?.role === "doctor" &&
+                                  apt.status !== "cancelled" &&
+                                  apt.status !== "completed" &&
+                                  apt.status !== "closed" && (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedAppointment(apt)
+                                          setShowReportForm(true)
+                                          setReportErrors({})
+                                        }}
+                                        disabled={loading.createReport}
+                                        className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                      >
+                                        <FileText className="w-3 h-3" />
+                                        {hasReport ? "View Report" : "Create Report"}
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (!canClose) {
+                                            toast.error(
+                                              "You cannot close this appointment. Please create a medical report first.",
+                                            )
+                                            return
+                                          }
+                                          setAppointmentActionModal({
+                                            isOpen: true,
+                                            action: "close",
+                                            appointmentId: apt._id || apt.id,
+                                          })
+                                        }}
+                                        disabled={loading.completeAppointment || !canClose}
+                                        className={`text-xs hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 ${
+                                          canClose
+                                            ? "text-green-600 disabled:text-green-600/50"
+                                            : "text-muted-foreground"
+                                        }`}
+                                        title={
+                                          !canClose ? "Create a medical report before closing" : "Close appointment"
+                                        }
+                                      >
+                                        <CheckCircle className="w-3 h-3" />
+                                        Close
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          setAppointmentActionModal({
+                                            isOpen: true,
+                                            action: "cancel",
+                                            appointmentId: apt._id || apt.id,
+                                          })
+                                        }
+                                        disabled={loading.cancelAppointment}
+                                        className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                      >
+                                        <X className="w-3 h-3" />
+                                        Cancel
+                                      </button>
+                                    </>
+                                  )}
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          )
+                        })
                       )}
                     </div>
                   </div>
@@ -834,32 +917,50 @@ export default function AppointmentsPage() {
                     ) : appointments.length === 0 ? (
                       <p className="text-muted-foreground text-sm">No appointments scheduled</p>
                     ) : (
-                      appointments.slice(0, 5).map((apt) => (
-                        <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
-                          <div className="flex justify-between items-start gap-2 mb-1">
-                            <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
-                            <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
-                              {apt.status}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {apt.date} at {apt.time}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{apt.type}</p>
-                          <div className="flex gap-2 mt-2 flex-wrap">
-                            {user?.role !== "doctor" && (
-                              <>
-                                {apt.status !== "completed" && apt.status !== "closed" && (
-                                  <button
-                                    onClick={() => handleEditAppointment(apt)}
-                                    disabled={
-                                      loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
-                                    }
-                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                                  >
-                                    Edit
-                                  </button>
+                      appointments.slice(0, 5).map((apt) => {
+                        const hasReport = appointmentReports[apt._id || apt.id]
+                        const canClose = hasReport || apt.status === "closed"
+
+                        return (
+                          <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
+                            <div className="flex justify-between items-start gap-2 mb-1">
+                              <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
+                              <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
+                                {apt.status}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {apt.date} at {apt.time}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{apt.type}</p>
+                            {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
+                              <div className="flex items-center gap-1 mt-1">
+                                {hasReport ? (
+                                  <span className="text-xs text-green-600 flex items-center gap-1">
+                                    <CheckCircle className="w-3 h-3" />
+                                    Report created
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-amber-600 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    No report yet
+                                  </span>
                                 )}
+                              </div>
+                            )}
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                              {apt.status !== "completed" && apt.status !== "closed" && (
+                                <button
+                                  onClick={() => handleEditAppointment(apt)}
+                                  disabled={
+                                    loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                  }
+                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              {user?.role !== "doctor" && (
                                 <button
                                   onClick={() => {
                                     setAppointmentToDelete(apt)
@@ -870,69 +971,81 @@ export default function AppointmentsPage() {
                                 >
                                   Delete
                                 </button>
-                                <button
-                                  onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
-                                  disabled={loading.appointments}
-                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                  View Details
-                                </button>
-                              </>
-                            )}
-                            {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "completed" && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    setSelectedAppointment(apt)
-                                    setShowReportForm(true)
-                                    setReportErrors({})
-                                  }}
-                                  disabled={loading.createReport}
-                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                >
-                                  <FileText className="w-3 h-3" />
-                                  Report
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    setAppointmentActionModal({
-                                      isOpen: true,
-                                      action: "close",
-                                      appointmentId: apt._id || apt.id,
-                                    })
-                                  }
-                                  disabled={loading.completeAppointment}
-                                  className="text-xs text-green-600 hover:underline disabled:text-green-600/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                >
-                                  <CheckCircle className="w-3 h-3" />
-                                  Close
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    setAppointmentActionModal({
-                                      isOpen: true,
-                                      action: "cancel",
-                                      appointmentId: apt._id || apt.id,
-                                    })
-                                  }
-                                  disabled={loading.cancelAppointment}
-                                  className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                >
-                                  <X className="w-3 h-3" />
-                                  Cancel
-                                </button>
-                              </>
-                            )}
+                              )}
+                              <button
+                                onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
+                                disabled={loading.appointments}
+                                className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
+                              >
+                                View Details
+                              </button>
+                              {user?.role === "doctor" &&
+                                apt.status !== "cancelled" &&
+                                apt.status !== "completed" &&
+                                apt.status !== "closed" && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedAppointment(apt)
+                                        setShowReportForm(true)
+                                        setReportErrors({})
+                                      }}
+                                      disabled={loading.createReport}
+                                      className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      {hasReport ? "View Report" : "Create Report"}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (!canClose) {
+                                          toast.error(
+                                            "You cannot close this appointment. Please create a medical report first.",
+                                          )
+                                          return
+                                        }
+                                        setAppointmentActionModal({
+                                          isOpen: true,
+                                          action: "close",
+                                          appointmentId: apt._id || apt.id,
+                                        })
+                                      }}
+                                      disabled={loading.completeAppointment || !canClose}
+                                      className={`text-xs hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 ${
+                                        canClose ? "text-green-600 disabled:text-green-600/50" : "text-muted-foreground"
+                                      }`}
+                                      title={!canClose ? "Create a medical report before closing" : "Close appointment"}
+                                    >
+                                      <CheckCircle className="w-3 h-3" />
+                                      Close
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        setAppointmentActionModal({
+                                          isOpen: true,
+                                          action: "cancel",
+                                          appointmentId: apt._id || apt.id,
+                                        })
+                                      }
+                                      disabled={loading.cancelAppointment}
+                                      className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                    >
+                                      <X className="w-3 h-3" />
+                                      Cancel
+                                    </button>
+                                  </>
+                                )}
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        )
+                      })
                     )}
                   </div>
                 </div>
               </div>
             </div>
 
-            {showForm && user?.role !== "doctor" && (
+            {showForm && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                 <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
                   <h2 className="text-xl font-bold mb-4 text-foreground">
@@ -954,20 +1067,32 @@ export default function AppointmentsPage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Doctor *</label>
-                      <SearchableDropdown
-                        items={doctors}
-                        selectedItem={getSelectedDoctor()}
-                        onSelect={handleDoctorSelect}
-                        placeholder="Select Doctor..."
-                        searchPlaceholder="Search doctors..."
-                        disabled={loading.addAppointment || loading.updateAppointment}
-                        error={formErrors.doctorId}
-                        required={true}
-                        clearable={true}
-                      />
-                    </div>
+                    {user?.role === "doctor" ? (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Doctor</label>
+                        <input
+                          type="text"
+                          value={user.name}
+                          disabled
+                          className="w-full px-4 py-2 bg-muted border border-border rounded-lg text-foreground text-sm cursor-not-allowed"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Doctor *</label>
+                        <SearchableDropdown
+                          items={doctors}
+                          selectedItem={getSelectedDoctor()}
+                          onSelect={handleDoctorSelect}
+                          placeholder="Select Doctor..."
+                          searchPlaceholder="Search doctors..."
+                          disabled={loading.addAppointment || loading.updateAppointment}
+                          error={formErrors.doctorId}
+                          required={true}
+                          clearable={true}
+                        />
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">Date *</label>
@@ -1269,4 +1394,17 @@ export default function AppointmentsPage() {
 function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(":").map(Number)
   return hours * 60 + minutes
+}
+
+function formatDateDisplay(dateStr: string): string {
+  // Parse the date string as local date (YYYY-MM-DD)
+  const [year, month, day] = dateStr.split("-").map(Number)
+  const date = new Date(year, month - 1, day)
+
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
 }

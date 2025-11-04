@@ -7,7 +7,7 @@ const JWT_EXPIRY = "7d"
 export interface JWTPayload {
   userId: string
   email: string
-  role: "admin" | "doctor" | "receptionist"
+  role: "admin" | "doctor" | "receptionist" | "hr"
   name: string
 }
 

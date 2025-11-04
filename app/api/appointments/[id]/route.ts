@@ -75,18 +75,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const updateData = await request.json()
     console.log("🟠 [PUT] Update data received:", updateData)
 
-    // Doctor permissions check
     if (payload.role === "doctor") {
-      if (updateData.status && !["cancelled", "completed", "closed"].includes(updateData.status)) {
-        console.warn("🔴 [PUT] Doctor trying to set invalid status:", updateData.status)
-        return NextResponse.json({ error: "Doctors can only cancel, close, or complete appointments" }, { status: 403 })
-      }
-
       const appointment = await Appointment.findById(id)
       if (appointment && appointment.doctorId !== payload.userId) {
         console.warn("🔴 [PUT] Doctor trying to update another doctor's appointment")
         return NextResponse.json({ error: "You can only manage your own appointments" }, { status: 403 })
       }
+      // Doctors can now update all appointment fields for their own appointments
     } else if (payload.role !== "admin" && payload.role !== "receptionist") {
       console.warn("🔴 [PUT] Unauthorized role tried to update appointment:", payload.role)
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
@@ -99,6 +94,24 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     console.log("🟠 [PUT] Original appointment found:", originalAppointment.status)
+
+    if (updateData.status === "closed" && originalAppointment.status !== "closed") {
+      console.log("🟠 [PUT] Checking for medical report before closing appointment...")
+      const { AppointmentReport } = await import("@/lib/db")
+      const report = await AppointmentReport.findOne({
+        appointmentId: id,
+        patientId: originalAppointment.patientId,
+      })
+
+      if (!report) {
+        console.warn("🔴 [PUT] Cannot close appointment without medical report")
+        return NextResponse.json(
+          { error: "Cannot close appointment without a medical report. Please create a report first." },
+          { status: 400 },
+        )
+      }
+      console.log("🟢 [PUT] Medical report found, proceeding with closing appointment")
+    }
 
     if (updateData.date || updateData.time) {
       const newDate = updateData.date || originalAppointment.date
@@ -291,6 +304,14 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     if (payload.role === "doctor") {
       console.warn("🔴 [DELETE] Doctor not allowed to delete appointment")
+      return NextResponse.json(
+        { error: "Doctors cannot delete appointments. Please contact admin or receptionist." },
+        { status: 403 },
+      )
+    }
+
+    if (payload.role !== "admin" && payload.role !== "receptionist") {
+      console.warn("🔴 [DELETE] Unauthorized role tried to delete appointment:", payload.role)
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 

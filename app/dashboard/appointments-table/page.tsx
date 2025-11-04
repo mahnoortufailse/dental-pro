@@ -23,6 +23,7 @@ export default function AppointmentsTablePage() {
   const [editingId, setEditingId] = useState(null)
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [showReportForm, setShowReportForm] = useState(false)
+  const [appointmentReports, setAppointmentReports] = useState<Record<string, boolean>>({})
   const [appointmentActionModal, setAppointmentActionModal] = useState<{
     isOpen: boolean
     action: "close" | "cancel" | null
@@ -72,10 +73,11 @@ export default function AppointmentsTablePage() {
   useEffect(() => {
     if (token) {
       fetchAppointments()
+      fetchPatients()
       if (user?.role !== "doctor") {
-        fetchPatients()
         fetchDoctors()
       }
+      fetchAppointmentReports()
     }
   }, [token, user])
 
@@ -130,6 +132,24 @@ export default function AppointmentsTablePage() {
       toast.error("Failed to fetch doctors")
     } finally {
       setLoading((prev) => ({ ...prev, doctors: false }))
+    }
+  }
+
+  const fetchAppointmentReports = async () => {
+    try {
+      const res = await fetch("/api/appointment-reports", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const reportsMap: Record<string, boolean> = {}
+        data.reports?.forEach((report: any) => {
+          reportsMap[report.appointmentId] = true
+        })
+        setAppointmentReports(reportsMap)
+      }
+    } catch (error) {
+      console.error("Failed to fetch appointment reports:", error)
     }
   }
 
@@ -260,6 +280,11 @@ export default function AppointmentsTablePage() {
   }
 
   const handleEditAppointment = (appointment: any) => {
+    if (user?.role === "doctor" && appointment.doctorId !== user.userId) {
+      toast.error("You can only edit your own appointments")
+      return
+    }
+
     setEditingId(appointment._id || appointment.id)
     setFormData({
       patientId: appointment.patientId,
@@ -281,8 +306,10 @@ export default function AppointmentsTablePage() {
     if (!formData.patientId.trim()) {
       errors.patientId = "Patient is required"
     }
-    if (!formData.doctorId.trim()) {
-      errors.doctorId = "Doctor is required"
+    if (user?.role !== "doctor") {
+      if (!formData.doctorId || !formData.doctorId.trim()) {
+        errors.doctorId = "Doctor is required"
+      }
     }
     if (!formData.date.trim()) {
       errors.date = "Date is required"
@@ -385,7 +412,7 @@ export default function AppointmentsTablePage() {
       }
       return
     }
-    
+
     const loadingKey = editingId ? "updateAppointment" : "addAppointment"
     setLoading((prev) => ({ ...prev, [loadingKey]: true }))
 
@@ -393,13 +420,19 @@ export default function AppointmentsTablePage() {
       const method = editingId ? "PUT" : "POST"
       const url = editingId ? `/api/appointments/${editingId}` : "/api/appointments"
 
+      const appointmentData = {
+        ...formData,
+        doctorId: user?.role === "doctor" ? user.userId : formData.doctorId,
+        doctorName: user?.role === "doctor" ? user.name : formData.doctorName,
+      }
+
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(appointmentData),
       })
 
       if (res.ok) {
@@ -497,6 +530,10 @@ export default function AppointmentsTablePage() {
 
       if (res.ok) {
         toast.success("Report created successfully")
+        setAppointmentReports({
+          ...appointmentReports,
+          [selectedAppointment._id || selectedAppointment.id]: true,
+        })
         setShowReportForm(false)
         setReportErrors({})
         setReportData({
@@ -560,27 +597,41 @@ export default function AppointmentsTablePage() {
             </div>
 
             <div className="space-y-4">
-              {user?.role !== "doctor" && (
-                <button
-                  onClick={() => {
-                    setEditingId(null)
-                    setShowForm(!showForm)
-                    setFormErrors({})
-                  }}
-                  disabled={loading.appointments || loading.patients || loading.doctors}
-                  className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {loading.appointments || loading.patients || loading.doctors ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4" />
-                  )}
-                  New Appointment
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  setEditingId(null)
+                  setShowForm(!showForm)
+                  setFormErrors({})
+                  if (user?.role === "doctor") {
+                    setFormData({
+                      patientId: "",
+                      patientName: "",
+                      doctorId: user.userId,
+                      doctorName: user.name,
+                      date: "",
+                      time: "",
+                      type: "Consultation",
+                      roomNumber: "",
+                      duration: 30,
+                    })
+                  }
+                }}
+                disabled={loading.appointments || loading.patients || loading.doctors}
+                className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
+              >
+                {loading.appointments || loading.patients || loading.doctors ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                New Appointment
+              </button>
+
               <AppointmentsTableView
                 appointments={appointments}
                 userRole={user?.role || ""}
+                userId={user?.userId || ""}
+                appointmentReports={appointmentReports}
                 loading={loading}
                 onEdit={handleEditAppointment}
                 onDelete={(apt) => {
@@ -609,7 +660,7 @@ export default function AppointmentsTablePage() {
               />
             </div>
 
-            {showForm && user?.role !== "doctor" && (
+            {showForm && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                 <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
                   <h2 className="text-xl font-bold mb-4 text-foreground">
@@ -631,20 +682,34 @@ export default function AppointmentsTablePage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Doctor *</label>
-                      <SearchableDropdown
-                        items={doctors}
-                        selectedItem={getSelectedDoctor()}
-                        onSelect={handleDoctorSelect}
-                        placeholder="Select Doctor..."
-                        searchPlaceholder="Search doctors..."
-                        disabled={loading.addAppointment || loading.updateAppointment}
-                        error={formErrors.doctorId}
-                        required={true}
-                        clearable={true}
-                      />
-                    </div>
+                    {user?.role !== "doctor" && (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Doctor *</label>
+                        <SearchableDropdown
+                          items={doctors}
+                          selectedItem={getSelectedDoctor()}
+                          onSelect={handleDoctorSelect}
+                          placeholder="Select Doctor..."
+                          searchPlaceholder="Search doctors..."
+                          disabled={loading.addAppointment || loading.updateAppointment}
+                          error={formErrors.doctorId}
+                          required={true}
+                          clearable={true}
+                        />
+                      </div>
+                    )}
+
+                    {user?.role === "doctor" && (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Doctor</label>
+                        <input
+                          type="text"
+                          value={user.name}
+                          disabled
+                          className="w-full px-4 py-2 bg-muted border border-border rounded-lg text-foreground text-sm cursor-not-allowed"
+                        />
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">Date *</label>
