@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { MedicalHistory, connectDB, Patient, User } from "@/lib/db"
+import { MedicalHistory, connectDB, Patient, User } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { AppointmentReport, connectDB, Patient, User, Appointment } from "@/lib/db"
+import { AppointmentReport, connectDB, Patient, User, Appointment } from "@/lib/db-server"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
@@ -184,49 +184,49 @@ export async function POST(request: NextRequest) {
       console.warn("  Patient email not found — Treatment report email skipped")
     }
 
-    if (patientData?.phone) {
-      console.log("  Scheduling WhatsApp notification for 1 minute after report creation")
+    // if (patientData?.phone) {
+    //   console.log("  Scheduling WhatsApp notification for 1 minute after report creation")
 
      
-        try {
-          console.log("  Sending WhatsApp medical report link to patient:", patientData.phone)
-          const { sendMedicalReportLink } = await import("@/lib/whatsapp-service")
-          const { encryptData } = await import("@/lib/encryption")
+    //     try {
+    //       console.log("  Sending WhatsApp medical report link to patient:", patientData.phone)
+    //       const { sendMedicalReportLink } = await import("@/lib/whatsapp-service")
+    //       const { encryptData } = await import("@/lib/encryption")
 
-          // Generate secure token for the report
-          const token = encryptData(JSON.stringify({ appointmentId, patientId }))
-          const encodedToken = encodeURIComponent(token)
-          const reportLink = `${process.env.NEXT_PUBLIC_APP_URL}/public/reports/${encodedToken}`
+    //       // Generate secure token for the report
+    //       const token = encryptData(JSON.stringify({ appointmentId, patientId }))
+    //       const encodedToken = encodeURIComponent(token)
+    //       const reportLink = `${process.env.NEXT_PUBLIC_APP_URL}/public/reports/${encodedToken}`
 
-          const appointmentData = await Appointment.findById(appointmentId)
-          const appointmentDate = appointmentData?.date
-            ? new Date(appointmentData.date).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
-            : "N/A"
-          const appointmentTime = appointmentData?.time || "N/A"
+    //       const appointmentData = await Appointment.findById(appointmentId)
+    //       const appointmentDate = appointmentData?.date
+    //         ? new Date(appointmentData.date).toLocaleDateString("en-US", {
+    //             year: "numeric",
+    //             month: "short",
+    //             day: "numeric",
+    //           })
+    //         : "N/A"
+    //       const appointmentTime = appointmentData?.time || "N/A"
 
-          const whatsappResult = await sendMedicalReportLink(
-            patientData.phone,
-            patientData.name,
-            appointmentDate,
-            appointmentTime,
-            doctorExists.name,
-            reportLink,
-          )
+    //       const whatsappResult = await sendMedicalReportLink(
+    //         patientData.phone,
+    //         patientData.name,
+    //         appointmentDate,
+    //         appointmentTime,
+    //         doctorExists.name,
+    //         reportLink,
+    //       )
 
-          if (whatsappResult.success) {
-            console.log("  WhatsApp medical report link sent successfully:", whatsappResult.messageId)
-          } else {
-            console.warn("  WhatsApp medical report link failed:", whatsappResult.error)
-          }
-        } catch (err) {
-          console.error("  Error sending WhatsApp notification:", err)
-        }
-     // 60000 milliseconds = 1 minute
-    }
+    //       if (whatsappResult.success) {
+    //         console.log("  WhatsApp medical report link sent successfully:", whatsappResult.messageId)
+    //       } else {
+    //         console.warn("  WhatsApp medical report link failed:", whatsappResult.error)
+    //       }
+    //     } catch (err) {
+    //       console.error("  Error sending WhatsApp notification:", err)
+    //     }
+    //  // 60000 milliseconds = 1 minute
+    // }
 
     return NextResponse.json({ success: true, report: populatedReport })
   } catch (error) {

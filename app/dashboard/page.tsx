@@ -9,8 +9,9 @@ import { Users, Calendar, TrendingUp, AlertCircle } from "lucide-react"
 
 export default function DashboardPage() {
   const { user, token } = useAuth()
-  const [stats, setStats] = useState({ appointments: 0, patients: 0, lowStock: 0, revenue: 0 })
+  const [stats, setStats] = useState({ appointments: 0, patients: 0, lowStock: 0, revenue: 0, pendingRequests: 0 })
   const [appointments, setAppointments] = useState([])
+  const [doctorRequests, setDoctorRequests] = useState([])
 
   useEffect(() => {
     if (token) {
@@ -20,17 +21,21 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const [appointmentsRes, patientsRes, inventoryRes, billingRes] = await Promise.allSettled([
+      const [appointmentsRes, patientsRes, inventoryRes, billingRes, referralsRes] = await Promise.allSettled([
         fetch("/api/appointments", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/patients", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/inventory", { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
         fetch("/api/billing", { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
+        user?.role === "doctor"
+          ? fetch("/api/patient-referrals", { headers: { Authorization: `Bearer ${token}` } })
+          : Promise.resolve(null),
       ])
 
       let appointmentCount = 0
       let patientCount = 0
       let lowStockCount = 0
       let totalRevenue = 0
+      let pendingRequestsCount = 0
 
       if (appointmentsRes.status === "fulfilled" && appointmentsRes.value.ok) {
         const data = await appointmentsRes.value.json()
@@ -53,11 +58,20 @@ export default function DashboardPage() {
         totalRevenue = data.billing?.reduce((sum: number, b: any) => sum + b.totalAmount, 0) || 0
       }
 
+      if (user?.role === "doctor" && referralsRes?.status === "fulfilled" && referralsRes.value?.ok) {
+        const data = await referralsRes.value.json()
+        setDoctorRequests(data.referrals || [])
+        pendingRequestsCount = (data.referrals || []).filter(
+          (r: any) => r.status === "pending" || r.status === "in-progress",
+        ).length
+      }
+
       setStats({
         appointments: appointmentCount,
         patients: patientCount,
         lowStock: lowStockCount,
         revenue: totalRevenue,
+        pendingRequests: pendingRequestsCount,
       })
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error)
@@ -96,6 +110,16 @@ export default function DashboardPage() {
                 <p className="stat-value">{stats.patients}</p>
               </div>
 
+              {user?.role === "doctor" && (
+                <div className="stat-card">
+                  <div className="stat-icon bg-gradient-to-br from-amber-100 to-amber-50">
+                    <AlertCircle className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <p className="stat-label">Pending Forward Requests</p>
+                  <p className="stat-value">{stats.pendingRequests}</p>
+                </div>
+              )}
+
               {user?.role !== "doctor" && (
                 <>
                   <div className="stat-card">
@@ -116,6 +140,62 @@ export default function DashboardPage() {
                 </>
               )}
             </div>
+
+            {user?.role === "doctor" && doctorRequests.length > 0 && (
+              <div className="stat-card mb-6 sm:mb-8">
+                <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-foreground">
+                  Your Forward Requests Status
+                </h2>
+                <div className="table-responsive overflow-x-auto">
+                  <table className="w-full text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Patient Name
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Status
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground hidden sm:table-cell">
+                          Submitted
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Reason
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {doctorRequests.slice(0, 5).map((req: any) => (
+                        <tr key={req._id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 font-medium">{req.patientName}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4">
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                req.status === "pending"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : req.status === "in-progress"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : req.status === "completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {req.status}
+                            </span>
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden sm:table-cell text-muted-foreground">
+                            {new Date(req.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground truncate max-w-xs">
+                            {req.referralReason}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             <div className="stat-card">
               <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-foreground">Today's Schedule</h2>

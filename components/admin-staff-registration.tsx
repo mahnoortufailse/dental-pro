@@ -141,12 +141,10 @@ export function AdminStaffRegistration() {
     hr: "Can manage patients, inventory, and staff members",
   }
 
-  const availableRoles =
-    user?.role === "admin"
-      ? hrExists
-        ? ["doctor", "receptionist"]
-        : ["doctor", "receptionist", "hr"]
-      : ["doctor", "receptionist"]
+  // Fixed logic: Always show HR tab for admin, never show it for HR
+  const availableRoles = user?.role === "admin" 
+    ? ["doctor", "receptionist", "hr"] // Admin can always see HR tab
+    : ["doctor", "receptionist"] // HR users don't see HR tab
 
   if (checkingHR) {
     return (
@@ -167,16 +165,6 @@ export function AdminStaffRegistration() {
         <div className="text-center mb-8">
           <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1">Register Staff Member</h2>
           <p className="text-muted-foreground text-xs sm:text-sm">Add a new staff member to your clinic</p>
-        </div>
-
-        <div className="mb-6 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs sm:text-sm font-semibold text-blue-900">Automatic Credentials</p>
-            <p className="text-xs text-blue-800 mt-1">
-              A secure password will be automatically generated and sent to the staff member's email.
-            </p>
-          </div>
         </div>
 
         {/* Role Selection Tabs */}

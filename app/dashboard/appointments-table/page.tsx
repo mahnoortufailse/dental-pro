@@ -1,20 +1,368 @@
 //@ts-nocheck
 "use client"
-
+import { createPortal } from "react-dom"
 import type React from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { toast } from "react-hot-toast"
-import { Plus, Loader2 } from "lucide-react"
+import { Plus, Loader2, FileText, CheckCircle, X, Edit, Trash2, Eye } from "lucide-react"
 import { AppointmentActionModal } from "@/components/appointment-action-modal"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { SearchableDropdown } from "@/components/searchable-dropdown"
-import { AppointmentsTableView } from "@/components/appointments-table-view"
 import { useRouter } from "next/navigation"
 import { StatCard } from "@/components/appointment-stats-card"
 import { Calendar, Clock, CheckCircle2, XCircle } from "lucide-react"
+import { PatientReferralModal } from "@/components/patient-referral-modal"
+
+// Separate ActionDropdown component
+function ActionDropdown({
+  appointment,
+  hasReport,
+  userRole,
+  userId,
+  loading,
+  onEdit,
+  onDelete,
+  onCreateReport,
+  onViewReport,
+  onClose,
+  onCancel,
+  canCloseAppointment,
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [position, setPosition] = useState({ top: 0, left: 0 })
+  const dropdownRef = useRef(null)
+  const buttonRef = useRef(null)
+  const appointmentId = appointment._id || appointment.id
+
+  // Calculate position and close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target)
+      ) {
+        setIsOpen(false)
+      }
+    }
+
+    const updatePosition = () => {
+      if (buttonRef.current && isOpen) {
+        const rect = buttonRef.current.getBoundingClientRect()
+        // Position ABOVE the button instead of below
+        setPosition({
+          top: rect.top + window.scrollY - 100, // 10px above the button
+          left: rect.left + window.scrollX - 200, // Adjust to left side
+        })
+      }
+    }
+
+    if (isOpen) {
+      updatePosition()
+      document.addEventListener("mousedown", handleClickOutside)
+      window.addEventListener("resize", updatePosition)
+      window.addEventListener("scroll", updatePosition)
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      window.removeEventListener("resize", updatePosition)
+      window.removeEventListener("scroll", updatePosition)
+    }
+  }, [isOpen])
+
+  const toggleDropdown = (e) => {
+    e.stopPropagation()
+
+    if (!isOpen) {
+      const rect = e.currentTarget.getBoundingClientRect()
+      // Position ABOVE the button
+      setPosition({
+        top: rect.top + window.scrollY - 10, // 10px above the button
+        left: rect.left + window.scrollX - 180, // Move to left side to avoid right edge cutoff
+      })
+    }
+
+    setIsOpen(!isOpen)
+  }
+
+  const handleAction = (action) => {
+    action()
+    setIsOpen(false)
+  }
+
+  const getActionItems = () => {
+    const items = []
+
+    // Edit action
+    if (
+      appointment.status !== "completed" &&
+      appointment.status !== "closed" &&
+      (userRole !== "doctor")
+    ) {
+      items.push({
+        label: "Edit",
+        icon: <Edit className="w-4 h-4" />,
+        onClick: () => onEdit(appointment),
+        disabled:
+          loading.addAppointment ||
+          loading.updateAppointment ||
+          loading.deleteAppointment,
+        className: "text-blue-600",
+      })
+    }
+
+    // Delete action - Only for non-doctors
+    if (userRole !== "doctor") {
+      items.push({
+        label: "Delete",
+        icon: <Trash2 className="w-4 h-4" />,
+        onClick: () => onDelete(appointment),
+        disabled: loading.deleteAppointment,
+        className: "text-red-600",
+      })
+    }
+
+    // View Details action
+    items.push({
+      label: "View Details",
+      icon: <Eye className="w-4 h-4" />,
+      onClick: () => window.open(`/dashboard/appointments/${appointmentId}`, "_blank"),
+      disabled: loading.appointments,
+      className: "text-blue-600",
+    })
+
+    // Doctor-specific actions
+    if (
+      userRole === "doctor" &&
+      appointment.status !== "cancelled" &&
+      appointment.status !== "completed" &&
+      appointment.status !== "closed"
+    ) {
+      // Report action
+      items.push({
+        label: hasReport ? "View Report" : "Create Report",
+        icon: <FileText className="w-4 h-4" />,
+        onClick: hasReport ? () => onViewReport() : () => onCreateReport(appointment),
+        disabled: loading.createReport,
+        className: "text-blue-600",
+      })
+
+      // Close action
+      items.push({
+        label: "Close Appointment",
+        icon: <CheckCircle className="w-4 h-4" />,
+        onClick: () => onClose(appointmentId),
+        disabled: loading.completeAppointment || !canCloseAppointment(appointmentId),
+        className: canCloseAppointment(appointmentId) ? "text-green-600" : "text-gray-400 cursor-not-allowed",
+      })
+
+      // Cancel action
+      items.push({
+        label: "Cancel Appointment",
+        icon: <X className="w-4 h-4" />,
+        onClick: () => onCancel(appointmentId),
+        disabled: loading.cancelAppointment,
+        className: "text-red-600",
+      })
+    }
+
+    return items
+  }
+
+  const actionItems = getActionItems()
+
+  return (
+    <>
+      <div className="relative inline-block">
+        <button
+          ref={buttonRef}
+          onClick={toggleDropdown}
+          className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors bg-white"
+          title="Actions"
+        >
+          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Portal the dropdown to body - positioned ABOVE the button */}
+      {isOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            style={{
+              position: "fixed",
+              top: `${position.top}px`,
+              left: `${position.left}px`,
+              zIndex: 9999,
+            }}
+            className="w-56 bg-white border border-gray-300 rounded-lg shadow-2xl py-2"
+          >
+            {actionItems.map((item, index) => (
+              <button
+                key={index}
+                onClick={() => !item.disabled && handleAction(item.onClick)}
+                disabled={item.disabled}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                  item.disabled ? "opacity-50 cursor-not-allowed text-gray-400" : `${item.className} hover:bg-blue-50`
+                }`}
+              >
+                {item.icon}
+                <span className="font-medium">{item.label}</span>
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
+  )
+}
+
+// Appointments Table View Component
+function AppointmentsTableView({
+  appointments,
+  userRole,
+  userId,
+  appointmentReports,
+  loading,
+  onEdit,
+  onDelete,
+  onCreateReport,
+  onViewReport,
+  onClose,
+  onCancel,
+  canCloseAppointment,
+}) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800"
+      case "cancelled":
+        return "bg-red-100 text-red-800"
+      case "confirmed":
+        return "bg-blue-100 text-blue-800"
+      case "closed":
+        return "bg-gray-100 text-gray-800"
+      default:
+        return "bg-yellow-100 text-yellow-800"
+    }
+  }
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+  }
+
+  // Filter appointments for doctors to only show their own appointments
+  const filteredAppointments =
+    userRole === "doctor"
+      ? appointments.filter((apt) => {
+          const matches = String(apt.doctorId) === String(userId)
+          return matches
+        })
+      : appointments
+
+  return (
+    <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-border bg-muted/50">
+              <th className="text-left p-4 font-medium text-foreground">Patient</th>
+              <th className="text-left p-4 font-medium text-foreground">Doctor</th>
+              <th className="text-left p-4 font-medium text-foreground">Date & Time</th>
+              <th className="text-left p-4 font-medium text-foreground">Type</th>
+              <th className="text-left p-4 font-medium text-foreground">Room</th>
+              <th className="text-left p-4 font-medium text-foreground">Status</th>
+              <th className="text-left p-4 font-medium text-foreground">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredAppointments.map((appointment) => {
+              const hasReport = appointmentReports[appointment._id || appointment.id]
+
+              return (
+                <tr key={appointment._id || appointment.id} className="border-b border-border hover:bg-muted/50">
+                  <td className="p-4 text-foreground">{appointment.patientName}</td>
+                  <td className="p-4 text-foreground">{appointment.doctorName}</td>
+                  <td className="p-4 text-foreground">
+                    <div>{formatDate(appointment.date)}</div>
+                    <div className="text-sm text-muted-foreground">{appointment.time}</div>
+                  </td>
+                  <td className="p-4 text-foreground">{appointment.type}</td>
+                  <td className="p-4 text-foreground">{appointment.roomNumber}</td>
+                  <td className="p-4">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}
+                    >
+                      {appointment.status}
+                    </span>
+                    {userRole === "doctor" && appointment.status !== "cancelled" && appointment.status !== "closed" && (
+                      <div className="mt-1">
+                        {hasReport ? (
+                          <span className="text-xs text-green-600 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Report ready
+                          </span>
+                        ) : (
+                          <span className="text-xs text-amber-600 flex items-center gap-1">
+                            <FileText className="w-3 h-3" />
+                            No report
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <ActionDropdown
+                      appointment={appointment}
+                      hasReport={hasReport}
+                      userRole={userRole}
+                      userId={userId}
+                      loading={loading}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onCreateReport={onCreateReport}
+                      onViewReport={onViewReport}
+                      onClose={onClose}
+                      onCancel={onCancel}
+                      canCloseAppointment={canCloseAppointment}
+                    />
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+
+        {filteredAppointments.length === 0 && (
+          <div className="p-8 text-center text-muted-foreground">No appointments found</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Helper function to convert time string to minutes
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number)
+  return hours * 60 + minutes
+}
 
 export default function AppointmentsTablePage() {
   const { user, token } = useAuth()
@@ -69,6 +417,8 @@ export default function AppointmentsTablePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null)
   const router = useRouter()
+
+  const [showReferralModal, setShowReferralModal] = useState(false)
 
   useEffect(() => {
     if (token) {
@@ -306,12 +656,13 @@ export default function AppointmentsTablePage() {
     if (!formData.patientId.trim()) {
       errors.patientId = "Patient is required"
     }
-    if (user?.role !== "doctor") {
-      if (!formData.doctorId || !formData.doctorId.trim()) {
-        errors.doctorId = "Doctor is required"
-      }
+
+    // Only validate doctorId if user is not a doctor
+    if (user?.role !== "doctor" && (!formData.doctorId || !String(formData.doctorId).trim())) {
+      errors.doctorId = "Doctor is required"
     }
-    if (!formData.date.trim()) {
+
+    if (!formData.date || !formData.date.trim()) {
       errors.date = "Date is required"
     } else {
       const selectedDate = new Date(formData.date)
@@ -321,10 +672,10 @@ export default function AppointmentsTablePage() {
         errors.date = "Cannot schedule appointments in the past"
       }
     }
-    if (!formData.time.trim()) {
+    if (!formData.time || !formData.time.trim()) {
       errors.time = "Time is required"
     }
-    if (!formData.roomNumber.trim()) {
+    if (!formData.roomNumber || !formData.roomNumber.trim()) {
       errors.roomNumber = "Room Number is required"
     }
     if (formData.duration <= 0) {
@@ -343,6 +694,34 @@ export default function AppointmentsTablePage() {
       return
     }
 
+    const finalDoctorId = user?.role === "doctor" ? String(user?.id) : formData.doctorId
+    const finalDoctorName = user?.role === "doctor" ? user?.name : formData.doctorName
+
+    console.log("[v0] Doctor ID Debug - role:", user?.role, "id:", user?.id, "finalDoctorId:", finalDoctorId)
+
+    if (user?.role !== "doctor" && (!finalDoctorId || !String(finalDoctorId).trim())) {
+      toast.error("Doctor is required")
+      setFormErrors({ ...formErrors, doctorId: "Doctor is required" })
+      return
+    }
+
+    if (!finalDoctorId) {
+      toast.error("Doctor information is missing. Please try logging in again.")
+      return
+    }
+
+    const submissionData = {
+      patientId: formData.patientId,
+      patientName: formData.patientName,
+      doctorId: finalDoctorId,
+      doctorName: finalDoctorName,
+      date: formData.date,
+      time: formData.time,
+      type: formData.type,
+      roomNumber: formData.roomNumber,
+      duration: formData.duration || 30,
+    }
+
     const timeConflict = appointments.some((apt) => {
       if (editingId && (apt._id === editingId || apt.id === editingId)) {
         return false
@@ -351,7 +730,7 @@ export default function AppointmentsTablePage() {
         return false
       }
 
-      if (apt.doctorId !== formData.doctorId || apt.date !== formData.date) {
+      if (apt.doctorId !== submissionData.doctorId || apt.date !== formData.date) {
         return false
       }
 
@@ -374,7 +753,7 @@ export default function AppointmentsTablePage() {
         if (apt.status === "cancelled" || apt.status === "closed" || apt.status === "completed") {
           return false
         }
-        if (apt.doctorId !== formData.doctorId || apt.date !== formData.date) {
+        if (apt.doctorId !== submissionData.doctorId || apt.date !== formData.date) {
           return false
         }
 
@@ -407,7 +786,7 @@ export default function AppointmentsTablePage() {
         const newEndTime = `${String(newEndHours).padStart(2, "0")}:${String(newEndMins).padStart(2, "0")}`
 
         toast.error(
-          `Doctor ${formData.doctorName} has another appointment from ${conflictingApt.time} to ${aptEndTime} on ${formData.date}. Please choose a different time.`,
+          `Doctor ${submissionData.doctorName} has another appointment from ${conflictingApt.time} to ${aptEndTime} on ${formData.date}. Please choose a different time.`,
         )
       }
       return
@@ -420,19 +799,13 @@ export default function AppointmentsTablePage() {
       const method = editingId ? "PUT" : "POST"
       const url = editingId ? `/api/appointments/${editingId}` : "/api/appointments"
 
-      const appointmentData = {
-        ...formData,
-        doctorId: user?.role === "doctor" ? user.userId : formData.doctorId,
-        doctorName: user?.role === "doctor" ? user.name : formData.doctorName,
-      }
-
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(appointmentData),
+        body: JSON.stringify(submissionData),
       })
 
       if (res.ok) {
@@ -556,6 +929,11 @@ export default function AppointmentsTablePage() {
     }
   }
 
+  // Function to check if appointment can be closed
+  const canCloseAppointment = (appointmentId: string) => {
+    return appointmentReports[appointmentId] === true
+  }
+
   const totalAppointments = appointments.length
   const confirmedAppointments = appointments.filter((apt) => apt.status === "confirmed").length
   const completedAppointments = appointments.filter((apt) => apt.status === "completed").length
@@ -565,7 +943,7 @@ export default function AppointmentsTablePage() {
     <ProtectedRoute>
       <div className="flex h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 overflow-auto md:pt-0 pt-16">
+        <main className="flex-1 overflow-y-auto md:pt-0 pt-16">
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
@@ -597,40 +975,53 @@ export default function AppointmentsTablePage() {
             </div>
 
             <div className="space-y-4">
-              <button
-                onClick={() => {
-                  setEditingId(null)
-                  setShowForm(!showForm)
-                  setFormErrors({})
-                  if (user?.role === "doctor") {
-                    setFormData({
-                      patientId: "",
-                      patientName: "",
-                      doctorId: user.userId,
-                      doctorName: user.name,
-                      date: "",
-                      time: "",
-                      type: "Consultation",
-                      roomNumber: "",
-                      duration: 30,
-                    })
-                  }
-                }}
-                disabled={loading.appointments || loading.patients || loading.doctors}
-                className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
-              >
-                {loading.appointments || loading.patients || loading.doctors ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Plus className="w-4 h-4" />
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    setEditingId(null)
+                    setShowForm(!showForm)
+                    setFormErrors({})
+                    if (user?.role === "doctor") {
+                      setFormData({
+                        patientId: "",
+                        patientName: "",
+                        doctorId: user.id,
+                        doctorName: user.name,
+                        date: "",
+                        time: "",
+                        type: "Consultation",
+                        roomNumber: "",
+                        duration: 30,
+                      })
+                    }
+                  }}
+                  disabled={loading.appointments || loading.patients || loading.doctors}
+                  className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {loading.appointments || loading.patients || loading.doctors ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  New Appointment
+                </button>
+
+                {user?.role === "doctor" && (
+                  <button
+                    onClick={() => setShowReferralModal(true)}
+                    disabled={loading.appointments}
+                    className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/90 disabled:bg-secondary/50 text-secondary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Refer Unassigned Patient
+                  </button>
                 )}
-                New Appointment
-              </button>
+              </div>
 
               <AppointmentsTableView
                 appointments={appointments}
                 userRole={user?.role || ""}
-                userId={user?.userId || ""}
+                userId={user?.id || ""}
                 appointmentReports={appointmentReports}
                 loading={loading}
                 onEdit={handleEditAppointment}
@@ -643,13 +1034,18 @@ export default function AppointmentsTablePage() {
                   setShowReportForm(true)
                   setReportErrors({})
                 }}
-                onClose={(appointmentId) =>
+                onViewReport={() => router.push("/dashboard/medical-reports")}
+                onClose={(appointmentId) => {
+                  if (!canCloseAppointment(appointmentId)) {
+                    toast.error("You cannot close this appointment. Please create a medical report first.")
+                    return
+                  }
                   setAppointmentActionModal({
                     isOpen: true,
                     action: "close",
                     appointmentId,
                   })
-                }
+                }}
                 onCancel={(appointmentId) =>
                   setAppointmentActionModal({
                     isOpen: true,
@@ -657,6 +1053,7 @@ export default function AppointmentsTablePage() {
                     appointmentId,
                   })
                 }
+                canCloseAppointment={canCloseAppointment}
               />
             </div>
 
@@ -959,6 +1356,18 @@ export default function AppointmentsTablePage() {
               </div>
             )}
 
+            {showReferralModal && user?.role === "doctor" && (
+              <PatientReferralModal
+                isOpen={showReferralModal}
+                onClose={() => setShowReferralModal(false)}
+                onSuccess={() => {
+                  // Optionally refresh data if needed
+                }}
+                token={token}
+                doctoName={user?.name || ""}
+              />
+            )}
+
             <AppointmentActionModal
               isOpen={appointmentActionModal.isOpen}
               action={appointmentActionModal.action}
@@ -1005,10 +1414,4 @@ export default function AppointmentsTablePage() {
       </div>
     </ProtectedRoute>
   )
-}
-
-// Helper function to convert time string to minutes
-function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(":").map(Number)
-  return hours * 60 + minutes
 }

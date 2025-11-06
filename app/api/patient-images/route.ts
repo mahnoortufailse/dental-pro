@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { PatientImage, connectDB, Patient, User, Appointment } from "@/lib/db"
+import { PatientImage, connectDB, Patient, User, Appointment } from "@/lib/db-server"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     await image.populate("uploadedBy", "name _id")
 
-    const { Patient } = await import("@/lib/db")
+    const { Patient } = await import("@/lib/db-server")
     const patientData = await Patient.findById(patientId)
     const uploadedByUser = await User.findById(payload.userId)
 

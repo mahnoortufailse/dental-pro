@@ -14,6 +14,7 @@ import { SearchableDropdown } from "@/components/searchable-dropdown"
 import { useRouter } from "next/navigation"
 import { StatCard } from "@/components/appointment-stats-card"
 import { Calendar, Clock, CheckCircle2, XCircle } from "lucide-react"
+import { PatientReferralModal } from "@/components/patient-referral-modal"
 
 export default function AppointmentsPage() {
   const { user, token } = useAuth()
@@ -37,8 +38,8 @@ export default function AppointmentsPage() {
   const [formData, setFormData] = useState({
     patientId: "",
     patientName: "",
-    doctorId: user?.role === "doctor" ? user.userId : "",
-    doctorName: user?.role === "doctor" ? user.name : "",
+    doctorId: "", // Changed from user?.role === "doctor" ? user.userId : "" to ""
+    doctorName: "", // Changed from user?.role === "doctor" ? user.name : "" to ""
     date: "",
     time: "",
     type: "Consultation",
@@ -71,6 +72,8 @@ export default function AppointmentsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [appointmentToDelete, setAppointmentToDelete] = useState<any>(null)
   const router = useRouter()
+
+  const [showReferralModal, setShowReferralModal] = useState(false)
 
   useEffect(() => {
     if (token) {
@@ -217,7 +220,7 @@ export default function AppointmentsPage() {
   }
 
   const getAppointmentsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0]
+    const dateStr = formatDateToLocalString(date)
     return appointments.filter((apt) => apt.date === dateStr)
   }
 
@@ -229,9 +232,18 @@ export default function AppointmentsPage() {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))
   }
 
+  const formatDateToLocalString = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+
+  // Then update the functions:
   const handleDateClick = (day: number) => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
-    const dateStr = date.toISOString().split("T")[0]
+    const dateStr = formatDateToLocalString(date)
+
     setSelectedDate(dateStr)
     setFormData({
       ...formData,
@@ -326,6 +338,11 @@ export default function AppointmentsPage() {
   }
 
   const handleEditAppointment = (appointment: any) => {
+    if (user?.role === "doctor" && appointment.doctorId !== user.userId) {
+      toast.error("You can only edit your own appointments")
+      return
+    }
+
     setEditingId(appointment._id || appointment.id)
     const doctorId = user?.role === "doctor" ? user.userId : appointment.doctorId
     const doctorName = user?.role === "doctor" ? user.name : appointment.doctorName
@@ -350,11 +367,12 @@ export default function AppointmentsPage() {
     if (!formData.patientId.trim()) {
       errors.patientId = "Patient is required"
     }
-    if (user?.role !== "doctor") {
-      if (!formData.doctorId || !formData.doctorId.trim()) {
-        errors.doctorId = "Doctor is required"
-      }
+
+    // Only validate doctorId if user is not a doctor
+    if (user?.role !== "doctor" && (!formData.doctorId || !String(formData.doctorId).trim())) {
+      errors.doctorId = "Doctor is required"
     }
+
     if (!formData.date || !formData.date.trim()) {
       errors.date = "Date is required"
     } else {
@@ -387,10 +405,30 @@ export default function AppointmentsPage() {
       return
     }
 
+    const finalDoctorId = user?.role === "doctor" ? String(user?.id) : String(formData.doctorId)
+    const finalDoctorName = user?.role === "doctor" ? String(user?.name) : String(formData.doctorName)
+
+    if (user?.role !== "doctor" && (!finalDoctorId || !String(finalDoctorId).trim())) {
+      toast.error("Doctor is required")
+      setFormErrors({ ...formErrors, doctorId: "Doctor is required" })
+      return
+    }
+
+    if (!finalDoctorId) {
+      toast.error("Doctor information is missing. Please try logging in again.")
+      return
+    }
+
     const submissionData = {
-      ...formData,
-      doctorId: user?.role === "doctor" ? user.userId : formData.doctorId,
-      doctorName: user?.role === "doctor" ? user.name : formData.doctorName,
+      patientId: formData.patientId,
+      patientName: formData.patientName,
+      doctorId: finalDoctorId,
+      doctorName: finalDoctorName,
+      date: formData.date,
+      time: formData.time,
+      type: formData.type,
+      roomNumber: formData.roomNumber,
+      duration: formData.duration || 30,
     }
 
     const timeConflict = appointments.some((apt) => {
@@ -494,8 +532,8 @@ export default function AppointmentsPage() {
         setFormData({
           patientId: "",
           patientName: "",
-          doctorId: user?.role === "doctor" ? user.userId : "",
-          doctorName: user?.role === "doctor" ? user.name : "",
+          doctorId: user?.role === "doctor" ? user.userId : "", // Keep original logic here as it's for form reset
+          doctorName: user?.role === "doctor" ? user.name : "", // Keep original logic here as it's for form reset
           date: "",
           time: "",
           type: "Consultation",
@@ -637,7 +675,7 @@ export default function AppointmentsPage() {
         <Sidebar />
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
           <div className="p-4 sm:p-6 lg:p-8">
-            <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="mb-8 flex flex-col sm:flex-col lg:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Appointments Calendar</h1>
                 <p className="text-muted-foreground text-sm mt-1">View and manage appointments</p>
@@ -701,7 +739,7 @@ export default function AppointmentsPage() {
                         ? getAppointmentsForDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))
                         : []
                       const dateStr = day
-                        ? new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split("T")[0]
+                        ? formatDateToLocalString(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))
                         : null
                       const isSelected = dateStr === selectedDate
 
@@ -744,13 +782,18 @@ export default function AppointmentsPage() {
                     setEditingId(null)
                     setShowForm(!showForm)
                     setFormErrors({})
-                    if (user?.role === "doctor") {
-                      setFormData({
-                        ...formData,
-                        doctorId: user.userId,
-                        doctorName: user.name,
-                      })
-                    }
+                    // Initialize formData for a new appointment, respecting user role
+                    setFormData({
+                      patientId: "",
+                      patientName: "",
+                      doctorId: user?.role === "doctor" ? user.userId : "",
+                      doctorName: user?.role === "doctor" ? user.name : "",
+                      date: "",
+                      time: "",
+                      type: "Consultation",
+                      roomNumber: "",
+                      duration: 30,
+                    })
                   }}
                   disabled={loading.appointments || loading.patients || loading.doctors}
                   className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
@@ -762,6 +805,17 @@ export default function AppointmentsPage() {
                   )}
                   New Appointment
                 </button>
+
+                {user?.role === "doctor" && (
+                  <button
+                    onClick={() => setShowReferralModal(true)}
+                    disabled={loading.appointments}
+                    className="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/90 disabled:bg-secondary/50 text-secondary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Refer Unassigned Patient
+                  </button>
+                )}
 
                 {selectedDate && (
                   <div className="bg-card rounded-lg shadow-md border border-border p-6">
@@ -808,41 +862,56 @@ export default function AppointmentsPage() {
                                 </div>
                               )}
                               <div className="flex gap-2 mt-2 flex-wrap">
-                                {apt.status !== "completed" && apt.status !== "closed" && (
-                                  <button
-                                    onClick={() => handleEditAppointment(apt)}
-                                    disabled={
-                                      loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
-                                    }
-                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                                  >
-                                    Edit
-                                  </button>
+                                {apt.status !== "completed" &&
+                                  apt.status !== "closed" &&
+                                  (user?.role !== "doctor" && apt.doctorId !== user.userId) && (
+                                    <button
+                                      onClick={() => handleEditAppointment(apt)}
+                                      disabled={
+                                        loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                      }
+                                      className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
+                                {user?.role !== "doctor" && (
+                                  <>
+                                    {" "}
+                                    <button
+                                      onClick={() => {
+                                        setAppointmentToDelete(apt)
+                                        setShowDeleteModal(true)
+                                      }}
+                                      disabled={loading.deleteAppointment}
+                                      className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer"
+                                    >
+                                      Delete
+                                    </button>
+                                  </>
                                 )}
                                 {user?.role !== "doctor" && (
                                   <button
-                                    onClick={() => {
-                                      setAppointmentToDelete(apt)
-                                      setShowDeleteModal(true)
-                                    }}
-                                    disabled={loading.deleteAppointment}
-                                    className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer"
+                                    onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
+                                    disabled={loading.appointments}
+                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
                                   >
-                                    Delete
+                                    View Details
                                   </button>
                                 )}
-                                <button
-                                  onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
-                                  disabled={loading.appointments}
-                                  className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                  View Details
-                                </button>
-                                {user?.role === "doctor" &&
-                                  apt.status !== "cancelled" &&
-                                  apt.status !== "completed" &&
-                                  apt.status !== "closed" && (
-                                    <>
+
+                                {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
+                                  <>
+                                    {hasReport ? (
+                                      <button
+                                        onClick={() => router.push("/dashboard/medical-reports")}
+                                        disabled={loading.createReport}
+                                        className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                      >
+                                        <FileText className="w-3 h-3" />
+                                        View Report
+                                      </button>
+                                    ) : (
                                       <button
                                         onClick={() => {
                                           setSelectedAppointment(apt)
@@ -853,51 +922,49 @@ export default function AppointmentsPage() {
                                         className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
                                       >
                                         <FileText className="w-3 h-3" />
-                                        {hasReport ? "View Report" : "Create Report"}
+                                        Create Report
                                       </button>
-                                      <button
-                                        onClick={() => {
-                                          if (!canClose) {
-                                            toast.error(
-                                              "You cannot close this appointment. Please create a medical report first.",
-                                            )
-                                            return
-                                          }
-                                          setAppointmentActionModal({
-                                            isOpen: true,
-                                            action: "close",
-                                            appointmentId: apt._id || apt.id,
-                                          })
-                                        }}
-                                        disabled={loading.completeAppointment || !canClose}
-                                        className={`text-xs hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 ${
-                                          canClose
-                                            ? "text-green-600 disabled:text-green-600/50"
-                                            : "text-muted-foreground"
-                                        }`}
-                                        title={
-                                          !canClose ? "Create a medical report before closing" : "Close appointment"
+                                    )}
+
+                                    <button
+                                      onClick={() => {
+                                        if (!canClose) {
+                                          toast.error(
+                                            "You cannot close this appointment. Please create a medical report first.",
+                                          )
+                                          return
                                         }
-                                      >
-                                        <CheckCircle className="w-3 h-3" />
-                                        Close
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          setAppointmentActionModal({
-                                            isOpen: true,
-                                            action: "cancel",
-                                            appointmentId: apt._id || apt.id,
-                                          })
-                                        }
-                                        disabled={loading.cancelAppointment}
-                                        className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                      >
-                                        <X className="w-3 h-3" />
-                                        Cancel
-                                      </button>
-                                    </>
-                                  )}
+                                        setAppointmentActionModal({
+                                          isOpen: true,
+                                          action: "close",
+                                          appointmentId: apt._id || apt.id,
+                                        })
+                                      }}
+                                      disabled={loading.completeAppointment || !canClose}
+                                      className={`text-xs hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 ${
+                                        canClose ? "text-green-600 disabled:text-green-600/50" : "text-muted-foreground"
+                                      }`}
+                                      title={!canClose ? "Create a medical report before closing" : "Close appointment"}
+                                    >
+                                      <CheckCircle className="w-3 h-3" />
+                                      Close
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        setAppointmentActionModal({
+                                          isOpen: true,
+                                          action: "cancel",
+                                          appointmentId: apt._id || apt.id,
+                                        })
+                                      }
+                                      disabled={loading.cancelAppointment}
+                                      className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                    >
+                                      <X className="w-3 h-3" />
+                                      Cancel
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </div>
                           )
@@ -949,11 +1016,14 @@ export default function AppointmentsPage() {
                               </div>
                             )}
                             <div className="flex gap-2 mt-2 flex-wrap">
-                              {apt.status !== "completed" && apt.status !== "closed" && (
+                              {apt.status !== "completed" && apt.status !== "closed" && (user?.role !== "doctor")&& (
                                 <button
                                   onClick={() => handleEditAppointment(apt)}
                                   disabled={
-                                    loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                    loading.addAppointment ||
+                                    loading.updateAppointment ||
+                                    loading.deleteAppointment 
+                                    
                                   }
                                   className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
                                 >
@@ -961,41 +1031,56 @@ export default function AppointmentsPage() {
                                 </button>
                               )}
                               {user?.role !== "doctor" && (
-                                <button
-                                  onClick={() => {
-                                    setAppointmentToDelete(apt)
-                                    setShowDeleteModal(true)
-                                  }}
-                                  disabled={loading.deleteAppointment}
-                                  className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                  Delete
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setAppointmentToDelete(apt)
+                                      setShowDeleteModal(true)
+                                    }}
+                                    disabled={loading.deleteAppointment}
+                                    className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
+                                    disabled={loading.appointments}
+                                    className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
+                                  >
+                                    View Details
+                                  </button>
+                                </>
                               )}
-                              <button
-                                onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
-                                disabled={loading.appointments}
-                                className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
-                              >
-                                View Details
-                              </button>
+
                               {user?.role === "doctor" &&
                                 apt.status !== "cancelled" &&
                                 apt.status !== "completed" &&
                                 apt.status !== "closed" && (
                                   <>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedAppointment(apt)
-                                        setShowReportForm(true)
-                                        setReportErrors({})
-                                      }}
-                                      disabled={loading.createReport}
-                                      className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                    >
-                                      <FileText className="w-3 h-3" />
-                                      {hasReport ? "View Report" : "Create Report"}
-                                    </button>
+                                    {hasReport ? (
+                                      <button
+                                        onClick={() => router.push("/dashboard/medical-reports")}
+                                        disabled={loading.createReport}
+                                        className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                      >
+                                        <FileText className="w-3 h-3" />
+                                        View Report
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => {
+                                          setSelectedAppointment(apt)
+                                          setShowReportForm(true)
+                                          setReportErrors({})
+                                        }}
+                                        disabled={loading.createReport}
+                                        className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                      >
+                                        <FileText className="w-3 h-3" />
+                                        Create Report
+                                      </button>
+                                    )}
+
                                     <button
                                       onClick={() => {
                                         if (!canClose) {
@@ -1210,6 +1295,19 @@ export default function AppointmentsPage() {
               </div>
             )}
 
+            {/* Referral Form Modal */}
+            {showReferralModal && user?.role === "doctor" && (
+              <PatientReferralModal
+                isOpen={showReferralModal}
+                onClose={() => setShowReferralModal(false)}
+                onSuccess={() => {
+                  // Optionally refresh data if needed
+                }}
+                token={token}
+                doctoName={user?.name || ""}
+              />
+            )}
+
             {showReportForm && user?.role === "doctor" && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                 <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -1382,6 +1480,16 @@ export default function AppointmentsPage() {
                 setAppointmentToDelete(null)
               }}
               isLoading={loading.deleteAppointment}
+            />
+
+            <PatientReferralModal
+              isOpen={showReferralModal}
+              onClose={() => setShowReferralModal(false)}
+              onSuccess={() => {
+                // Optionally refresh data if needed
+              }}
+              token={token}
+              doctoName={user?.name || ""}
             />
           </div>
         </main>

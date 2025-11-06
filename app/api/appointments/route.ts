@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { Appointment, connectDB, User, Patient } from "@/lib/db"
+import { Appointment, connectDB, User, Patient } from "@/lib/db-server"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
 import { sendAppointmentConfirmation } from "@/lib/whatsapp-service"
-import { validateAppointmentScheduling } from "@/lib/appointment-validation"
+import { validateAppointmentSchedulingServer } from "@/lib/appointment-validation-server"
 import { sendAppointmentConfirmationEmail } from "@/lib/nodemailer-service"
 
 export async function GET(request: NextRequest) {
@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
 
     if (payload?.role === "doctor") {
       // For doctors, show only their appointments
-      query.doctorId = payload.userId
-      console.log("  Doctor fetching appointments - doctorId:", payload.userId)
+      query.doctorId = String(payload.userId)
+      console.log("  Doctor fetching appointments - doctorId:", query.doctorId)
     } else if (patientId) {
       // For patients, show only their appointments
       query.patientId = patientId
@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       appointments: appointments.map((apt) => ({
+        _id: apt._id.toString(),
         id: apt._id.toString(),
         patientId: apt.patientId,
         patientName: apt.patientName,
@@ -100,19 +101,43 @@ export async function POST(request: NextRequest) {
       type,
     })
 
-    const validation = await validateAppointmentScheduling(doctorId, date, time, duration || 30)
+    const finalDoctorId = String(doctorId).trim()
+    if (!finalDoctorId) {
+      console.warn("[DEBUG] Doctor ID is missing")
+      return NextResponse.json({ error: "Doctor ID is required" }, { status: 400 })
+    }
+
+    if (!patientId || !String(patientId).trim()) {
+      console.warn("[DEBUG] Patient ID is missing")
+      return NextResponse.json({ error: "Patient ID is required" }, { status: 400 })
+    }
+
+    let doctor = null
+    try {
+      doctor = await User.findById(finalDoctorId)
+    } catch (err) {
+      console.warn("[DEBUG] Error finding doctor with ID:", finalDoctorId, err)
+      doctor = null
+    }
+
+    console.log("[DEBUG] Doctor found:", doctor ? doctor.name : "No doctor found")
+
+    if (!doctor) {
+      console.warn("[DEBUG] Doctor not found with ID:", finalDoctorId)
+      return NextResponse.json({ error: "Doctor not found" }, { status: 404 })
+    }
+
+    // Use server-side validation (no token needed)
+    const validation = await validateAppointmentSchedulingServer(finalDoctorId, date, time, duration || 30)
     if (!validation.isValid) {
       console.warn("[DEBUG] Validation failed:", validation.error)
       return NextResponse.json({ error: validation.error }, { status: 409 })
     }
 
-    const doctor = await User.findById(doctorId)
-    console.log("[DEBUG] Doctor found:", doctor ? doctor.name : "No doctor found")
-
     const newAppointment = await Appointment.create({
       patientId,
       patientName,
-      doctorId: doctorId.toString(),
+      doctorId: finalDoctorId,
       doctorName,
       date,
       time,
@@ -187,6 +212,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       appointment: {
+        _id: newAppointment._id.toString(),
         id: newAppointment._id.toString(),
         patientId: newAppointment.patientId,
         patientName: newAppointment.patientName,
@@ -203,5 +229,97 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("  Add appointment error:", error)
     return NextResponse.json({ error: "Failed to create appointment" }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    await connectDB()
+    console.log("[DEBUG] Database connected")
+
+    const token = request.headers.get("authorization")?.split(" ")[1]
+    console.log("[DEBUG] Token received:", token ? "Yes" : "No")
+
+    if (!token) {
+      console.warn("[DEBUG] No token found")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const payload = verifyToken(token)
+    console.log("[DEBUG] Token payload:", payload)
+
+    if (!payload) {
+      console.warn("[DEBUG] Invalid token")
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
+
+    const { appointmentId, patientId, patientName, doctorId, doctorName, date, time, type, roomNumber, duration } =
+      await request.json()
+    console.log("[DEBUG] Appointment data:", {
+      appointmentId,
+      patientId,
+      patientName,
+      doctorId,
+      doctorName,
+      date,
+      time,
+      type,
+    })
+
+    if (!appointmentId || !String(appointmentId).trim()) {
+      console.warn("[DEBUG] Appointment ID is missing")
+      return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 })
+    }
+
+    const appointment = await Appointment.findById(appointmentId)
+    console.log("[DEBUG] Appointment found:", appointment ? appointment._id.toString() : "No appointment found")
+
+    if (!appointment) {
+      console.warn("[DEBUG] Appointment not found with ID:", appointmentId)
+      return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+    }
+
+    if (payload?.role === "doctor" && appointment.doctorId !== payload.userId) {
+      console.warn("[DEBUG] Doctor trying to edit another doctor's appointment")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
+      appointmentId,
+      {
+        patientId,
+        patientName,
+        doctorId: String(doctorId),
+        doctorName,
+        date,
+        time,
+        type,
+        roomNumber,
+        duration: duration || 30,
+      },
+      { new: true },
+    )
+    console.log("[DEBUG] Appointment updated:", updatedAppointment._id.toString())
+
+    return NextResponse.json({
+      success: true,
+      appointment: {
+        _id: updatedAppointment._id.toString(),
+        id: updatedAppointment._id.toString(),
+        patientId: updatedAppointment.patientId,
+        patientName: updatedAppointment.patientName,
+        doctorId: updatedAppointment.doctorId,
+        doctorName: updatedAppointment.doctorName,
+        date: updatedAppointment.date,
+        time: updatedAppointment.time,
+        type: updatedAppointment.type,
+        status: updatedAppointment.status,
+        roomNumber: updatedAppointment.roomNumber,
+        duration: updatedAppointment.duration,
+      },
+    })
+  } catch (error) {
+    console.error("  Update appointment error:", error)
+    return NextResponse.json({ error: "Failed to update appointment" }, { status: 500 })
   }
 }

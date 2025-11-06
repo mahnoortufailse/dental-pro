@@ -1,5 +1,6 @@
 import crypto from "crypto"
 import bcrypt from "bcryptjs"
+
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "your-32-char-encryption-key-change!"
 const ALGORITHM = "aes-256-cbc"
 
@@ -24,12 +25,10 @@ export function decryptData(encryptedData: string): string {
 }
 
 export async function hashPassword(password: string): Promise<string> {
- 
   const salt = await bcrypt.genSalt(10)
   return bcrypt.hash(password, salt)
 }
 
 export async function comparePassword(password: string, hashedPassword: string): Promise<boolean> {
- 
   return bcrypt.compare(password, hashedPassword)
 }

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { AppointmentReport, connectDB, Appointment } from "@/lib/db"
+import { AppointmentReport, connectDB, Appointment } from "@/lib/db-server"
 import { decryptData } from "@/lib/encryption"
 
 export async function GET(request: NextRequest, { params }: { params: { token: string } }) {

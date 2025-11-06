@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { ToothChart, connectDB, Patient } from "@/lib/db";
+import { ToothChart, connectDB, Patient } from "@/lib/db-server";
 import { verifyToken, verifyPatientToken } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { User, connectDB } from "@/lib/db"
+import { User, connectDB } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 import bcrypt from "bcryptjs"
 import { sendStaffCredentials } from "@/lib/email"

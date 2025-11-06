@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { MedicalHistory, connectDB, Patient, User, Appointment } from "@/lib/db"
+import { MedicalHistory, connectDB, Patient, User, Appointment } from "@/lib/db-server"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {

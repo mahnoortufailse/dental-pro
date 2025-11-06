@@ -3,16 +3,16 @@
 import type React from "react"
 
 import { useState, useRef } from "react"
-import { Upload, X, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Upload, CheckCircle2 } from "lucide-react"
 import { toast } from "react-hot-toast"
 import { uploadToCloudinary, formatFileSize } from "@/lib/cloudinary-upload"
 
-interface XrayFileUploadProps {
-  onUploadSuccess: (url: string, fileName: string) => void
+interface PatientPhotoUploadProps {
+  onUploadSuccess: (url: string) => void
   isLoading?: boolean
 }
 
-export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileUploadProps) {
+export function PatientPhotoUpload({ onUploadSuccess, isLoading = false }: PatientPhotoUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -90,8 +90,8 @@ export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileU
       clearInterval(progressInterval)
       setUploadProgress(100)
 
-      toast.success("X-ray uploaded successfully!")
-      onUploadSuccess(url, selectedFile.name)
+      toast.success("Photo uploaded successfully!")
+      onUploadSuccess(url)
 
       // Reset
       setTimeout(() => {
@@ -127,7 +127,7 @@ export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileU
           ref={fileInputRef}
           type="file"
           onChange={handleInputChange}
-          accept=".jpg,.jpeg,.png,.gif,.webp"
+          accept="image/*"
           disabled={uploading || isLoading}
           className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
         />
@@ -145,38 +145,13 @@ export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileU
             <>
               <Upload className="w-10 h-10 text-muted-foreground" />
               <div className="text-center">
-                <p className="font-semibold text-foreground">Drag and drop your X-ray image</p>
+                <p className="font-semibold text-foreground">Drag and drop patient photo</p>
                 <p className="text-sm text-muted-foreground">or click to browse (Max 1MB)</p>
               </div>
             </>
           )}
         </div>
       </div>
-
-      {/* File Info */}
-      {selectedFile && (
-        <div className="bg-muted/50 rounded-lg p-3 border border-border flex items-start justify-between gap-3">
-          <div className="flex items-start gap-2 flex-1">
-            <AlertCircle className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-foreground">Image ready to upload</p>
-              <p className="text-xs text-muted-foreground">X-ray image file</p>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              setSelectedFile(null)
-              if (fileInputRef.current) {
-                fileInputRef.current.value = ""
-              }
-            }}
-            disabled={uploading || isLoading}
-            className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* Upload Progress */}
       {uploading && (
@@ -198,7 +173,7 @@ export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileU
           disabled={uploading || isLoading}
           className="w-full bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          Upload X-ray
+          Upload Photo
         </button>
       )}
     </div>

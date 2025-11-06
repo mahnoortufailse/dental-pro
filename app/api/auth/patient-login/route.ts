@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { Patient, connectDB } from "@/lib/db";
+import { Patient, connectDB } from "@/lib/db-server";
 import { comparePassword } from "@/lib/encryption";
 
 export async function POST(request: NextRequest) {

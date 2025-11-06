@@ -10,7 +10,7 @@ import {
   MedicalHistory,
   AppointmentReport,
   Billing,
-} from "@/lib/db"
+} from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 import { Types } from "mongoose"
 
@@ -141,7 +141,7 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     const payload = verifyToken(token)
     if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
 
-    if (payload.role !== "admin" && payload.role !== "receptionist") {
+    if (payload.role !== "admin" && payload.role !== "receptionist" && payload.role !== "hr") {
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 

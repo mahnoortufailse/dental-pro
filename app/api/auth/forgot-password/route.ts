@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { User, Patient, connectDB } from "@/lib/db"
+import { User, Patient, connectDB } from "@/lib/db-server"
 import { sendPasswordResetEmail } from "@/lib/email"
 import crypto from "crypto"
 
