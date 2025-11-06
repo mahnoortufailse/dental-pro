@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { Appointment, connectDB, User } from "@/lib/db"
+import { Appointment, connectDB, User } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 import { sendAppointmentReschedule, sendAppointmentCancellation } from "@/lib/whatsapp-service"
 import { validateAppointmentScheduling } from "@/lib/appointment-validation"
@@ -97,7 +97,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     if (updateData.status === "closed" && originalAppointment.status !== "closed") {
       console.log("🟠 [PUT] Checking for medical report before closing appointment...")
-      const { AppointmentReport } = await import("@/lib/db")
+      const { AppointmentReport } = await import("@/lib/db-server")
       const report = await AppointmentReport.findOne({
         appointmentId: id,
         patientId: originalAppointment.patientId,
@@ -144,7 +144,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     console.log("🟢 [PUT] Appointment updated successfully")
 
     // Fetch patient
-    const { Patient } = await import("@/lib/db")
+    const { Patient } = await import("@/lib/db-server")
     const patient = await Patient.findById(originalAppointment.patientId)
     console.log("🟠 [PUT] Patient found:", patient ? patient.name : "❌ No patient found")
 
@@ -154,7 +154,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       if (updateData.status === "closed" && originalAppointment.status !== "closed") {
         console.log("🟠 [PUT] Appointment marked as closed — checking for medical report...")
 
-        const { AppointmentReport } = await import("@/lib/db")
+        const { AppointmentReport } = await import("@/lib/db-server")
         const report = await AppointmentReport.findOne({
           appointmentId: id,
           patientId: originalAppointment.patientId,

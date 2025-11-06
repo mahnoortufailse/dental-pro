@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { PatientImage, connectDB, Patient } from "@/lib/db"
+import { PatientImage, connectDB, Patient } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {

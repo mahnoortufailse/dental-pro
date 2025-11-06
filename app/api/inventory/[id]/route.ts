@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { Inventory, connectDB } from "@/lib/db"
+import { Inventory, connectDB } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 import { Types } from "mongoose"
 

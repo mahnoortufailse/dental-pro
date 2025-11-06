@@ -53,6 +53,7 @@ export function Sidebar() {
         { label: "Patients", href: "/dashboard/patients", icon: Users },
         { label: "Appointments", href: "/dashboard/appointments", icon: Calendar },
         { label: "Appointments Table", href: "/dashboard/appointments-table", icon: Table },
+        { label: "Forwarded Requests", href: "/dashboard/forwarded-requests", icon: FileText },
         { label: "Medical Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Billing", href: "/dashboard/billing", icon: FileText },
         { label: "Inventory", href: "/dashboard/inventory", icon: Package },
@@ -77,6 +78,7 @@ export function Sidebar() {
         { label: "Patients", href: "/dashboard/patients", icon: Users },
         { label: "Appointments", href: "/dashboard/appointments", icon: Calendar },
         { label: "Appointments Table", href: "/dashboard/appointments-table", icon: Table },
+        { label: "Forwarded Requests", href: "/dashboard/forwarded-requests", icon: FileText },
         { label: "Medical Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Billing", href: "/dashboard/billing", icon: FileText },
       ]
@@ -149,28 +151,27 @@ export function Sidebar() {
         {/* Mobile Header Spacing */}
         <div className="md:hidden h-16" />
 
-        {/* Navigation */}
-        <nav className="flex-1 p-2 space-y-1 overflow-y-hidden ">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            const active = isActive(item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                  active
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/20 hover:text-sidebar-accent-foreground"
-                }`}
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            )
-          })}
-        </nav>
+     <nav className="flex-1 p-2 space-y-1 overflow-y-auto scrollbar-thin">
+  {menuItems.map((item) => {
+    const Icon = item.icon
+    const active = isActive(item.href)
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={() => setIsOpen(false)}
+        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+          active
+            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-accent/20 hover:text-sidebar-accent-foreground"
+        }`}
+      >
+        <Icon className="w-5 h-5 flex-shrink-0" />
+        <span>{item.label}</span>
+      </Link>
+    )
+  })}
+</nav>
 
         {/* User Info & Logout */}
         <div className="p-4 border-t border-sidebar-border space-y-4">

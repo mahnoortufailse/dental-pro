@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { Appointment, connectDB, AppointmentReport } from "@/lib/db"
+import { Appointment, connectDB, AppointmentReport } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 import { sendAppointmentReschedule, sendAppointmentCancellation } from "@/lib/whatsapp-service"
 import { validateAppointmentScheduling } from "@/lib/appointment-validation"
@@ -131,7 +131,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     console.log("🟢 [PUT] Appointment updated successfully")
 
     // Fetch patient
-    const { Patient } = await import("@/lib/db")
+    const { Patient } = await import("@/lib/db-server")
     const patient = await Patient.findById(originalAppointment.patientId)
     console.log("🟠 [PUT] Patient found:", patient ? patient.name : "❌ No patient found")
 

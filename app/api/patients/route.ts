@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { Patient, User, connectDB } from "@/lib/db"
+import { Patient, User, connectDB } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 import { Types } from "mongoose"
 import { formatPhoneForDatabase } from "@/lib/validation"
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const query: any = {}
 
     if (payload.role === "doctor") {
-      const { Appointment } = await import("@/lib/db")
+      const { Appointment } = await import("@/lib/db-server")
 
       const appointments = await Appointment.find({
         doctorId: payload.userId,
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
       idNumber,
       address,
       insuranceNumber,
+      photoUrl,
     } = await request.json()
 
     // Validate critical credentials
@@ -191,6 +192,7 @@ export async function POST(request: NextRequest) {
       medicalConditions,
       status: "active",
       balance: 0,
+      photoUrl: photoUrl || null,
       assignedDoctorId: doctor._id,
       doctorHistory: [
         {
@@ -338,7 +340,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!deletedPatient) {
       return NextResponse.json({ error: "Patient not found" }, { status: 404 })
     }
-
     return NextResponse.json({ success: true, message: "Patient deleted successfully" })
   } catch (error) {
     console.error("  DELETE /api/patients error:", error)

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { connectDB, User } from "@/lib/db"
+import { connectDB, User } from "@/lib/db-server"
 import { sendStaffCredentials } from "@/lib/email"
 import { verifyToken } from "@/lib/auth"
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 })
     }
 
-    const adminId = payload.userId
+    const userId = payload.userId
 
     const { name, email, phone, role, specialty } = await request.json()
 
@@ -49,10 +49,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name, email, and role are required" }, { status: 400 })
     }
 
-    // Verify admin authorization
-    const admin = await User.findById(adminId)
-    if (!admin || admin.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized: Only admins can register staff" }, { status: 403 })
+    // Verify admin or HR authorization
+    const currentUser = await User.findById(userId)
+    if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "hr")) {
+      return NextResponse.json({ error: "Unauthorized: Only admins and HR can register staff" }, { status: 403 })
+    }
+
+    // HR users cannot create admin users
+    if (currentUser.role === "hr" && role === "admin") {
+      return NextResponse.json({ error: "Unauthorized: HR cannot create admin users" }, { status: 403 })
     }
 
     // Check if user already exists

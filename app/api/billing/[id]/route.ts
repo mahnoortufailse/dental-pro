@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { connectDB, Billing } from "@/lib/db"
+import { connectDB, Billing } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { User, connectDB } from "@/lib/db"
+import { User, connectDB } from "@/lib/db-server"
 import { generateToken } from "@/lib/auth"
 import { validateEmail, validatePassword } from "@/lib/validation"
 import { sendAccountConfirmation } from "@/lib/whatsapp-service"
