@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useEffect, useState } from "react"
 import { Users, Calendar, TrendingUp, AlertCircle } from "lucide-react"
+import Link from "next/link"
 
 export default function DashboardPage() {
   const { user, token } = useAuth()
@@ -143,9 +144,15 @@ export default function DashboardPage() {
 
             {user?.role === "doctor" && doctorRequests.length > 0 && (
               <div className="stat-card mb-6 sm:mb-8">
-                <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-foreground">
-                  Your Forward Requests Status
-                </h2>
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h2 className="text-lg sm:text-xl font-bold text-foreground">Your Recent Forward Requests</h2>
+                  <Link
+                    href="/dashboard/request-status"
+                    className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+                  >
+                    View All →
+                  </Link>
+                </div>
                 <div className="table-responsive overflow-x-auto">
                   <table className="w-full text-xs sm:text-sm">
                     <thead>

@@ -214,10 +214,25 @@ export default function ClinicalToolsPage() {
 
   const handleToothClick = (toothNumber: number) => {
     if (!toothChart) return
-    const statuses = ["healthy", "cavity", "missing", "treated", "root_canal", "crown"]
+    const statuses = ["healthy", "cavity", "filling", "implant", "missing", "root_canal", "treated", "crown"]
     const currentTeeth = toothChart.teeth || {}
     const currentStatus = currentTeeth[toothNumber]?.status || "healthy"
-    const nextStatus = statuses[(statuses.indexOf(currentStatus) + 1) % statuses.length]
+
+    const normalizedStatus = currentStatus.replace("-", "_")
+    const currentIndex = statuses.indexOf(normalizedStatus)
+
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % statuses.length
+    const nextStatus = statuses[nextIndex]
+
+    console.log("[v0] Tooth click debug:", {
+      toothNumber,
+      currentStatus,
+      normalizedStatus,
+      currentIndex,
+      nextIndex,
+      nextStatus,
+      availableStatuses: statuses,
+    })
 
     setToothChart({
       ...toothChart,

@@ -19,40 +19,84 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
   // Image mapping
   const getToothImageNumber = (toothNumber: number): number => {
     const toothImageMap: Record<number, number> = {
-      18: 1, 17: 2, 16: 3, 15: 4, 14: 5, 13: 6, 12: 7, 11: 8,
-      21: 9, 22: 10, 23: 11, 24: 12, 25: 13, 26: 14, 27: 15, 28: 16,
-      38: 17, 37: 18, 36: 19, 35: 20, 34: 21, 33: 22, 32: 23, 31: 24,
-      41: 25, 42: 26, 43: 27, 44: 28, 45: 29, 46: 30, 47: 31, 48: 32,
+      18: 1,
+      17: 2,
+      16: 3,
+      15: 4,
+      14: 5,
+      13: 6,
+      12: 7,
+      11: 8,
+      21: 9,
+      22: 10,
+      23: 11,
+      24: 12,
+      25: 13,
+      26: 14,
+      27: 15,
+      28: 16,
+      38: 17,
+      37: 18,
+      36: 19,
+      35: 20,
+      34: 21,
+      33: 22,
+      32: 23,
+      31: 24,
+      41: 25,
+      42: 26,
+      43: 27,
+      44: 28,
+      45: 29,
+      46: 30,
+      47: 31,
+      48: 32,
     }
     return toothImageMap[toothNumber] || toothNumber
   }
 
-  // Tooth colors based on status - FIXED: corrected status keys
   const getToothColor = (status: string) => {
     const colors: Record<string, string> = {
       healthy: "#10b981",
       cavity: "#ef4444",
       missing: "#9ca3af",
-      filling: "#f59e0b", // This should match the status value from your button
+      filling: "#f59e0b",
       root_canal: "#f97316",
       crown: "#8b5cf6",
-      implant: "#3b82f6", // This should match the status value from your button
+      implant: "#3b82f6",
+      treated: "#06b6d4",
     }
-    return colors[status] || "#3b82f6"
+    const normalizedStatus = status.replace("-", "_")
+    return colors[normalizedStatus] || "#3b82f6"
   }
 
-  // Status display names - FIXED: corrected status keys
   const getStatusDisplayName = (status: string) => {
     const statusNames: Record<string, string> = {
       healthy: "Healthy",
       cavity: "Cavity",
       missing: "Missing",
-      filling: "Filling", // Fixed: was "Filling" but make sure your button sends "filling"
+      filling: "Filling",
       root_canal: "Root Canal",
       crown: "Crown",
-      implant: "Implant", // Fixed: was "Implant" but make sure your button sends "implant"
+      implant: "Implant",
+      treated: "Treated",
     }
-    return statusNames[status] || status // Return the original status if not found
+    return statusNames[status] || status
+  }
+
+  const getToothIndicator = (status: string) => {
+    switch (status) {
+      case "filling":
+        return ""
+      case "implant":
+        return ""
+      case "missing":
+        return ""
+      case "cavity":
+        return ""
+      default:
+        return ""
+    }
   }
 
   // Tooth names based on FDI numbering
@@ -121,13 +165,13 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
     )
   }
 
-  // Render row of teeth
   const renderTeethRow = (toothNumbers: number[], bgColor: string, borderColor: string) => (
     <div className={`grid grid-cols-8 gap-3 p-6 ${bgColor} rounded-lg border ${borderColor}`}>
       {toothNumbers.map((toothNum) => {
         const toothStatus = teeth[toothNum]?.status || "healthy"
         const statusDisplayName = getStatusDisplayName(toothStatus)
-        
+        const indicator = getToothIndicator(toothStatus)
+
         return (
           <button
             key={toothNum}
@@ -148,6 +192,15 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
             <div className="w-full h-full">
               <ToothImage toothNumber={toothNum} status={toothStatus} />
             </div>
+
+            {indicator && (
+              <div
+                className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md"
+                style={{ backgroundColor: getToothColor(toothStatus) }}
+              >
+                {indicator}
+              </div>
+            )}
 
             {/* Tooltip - only visible on hover */}
             <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white border border-gray-300 rounded-md shadow-md px-2 py-1 text-center z-50 min-w-[120px]">
@@ -171,7 +224,7 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
         {renderTeethRow(
           [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28],
           "bg-blue-50",
-          "border-blue-200"
+          "border-blue-200",
         )}
       </div>
 
@@ -181,21 +234,21 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
         {renderTeethRow(
           [38, 37, 36, 35, 34, 33, 32, 31, 41, 42, 43, 44, 45, 46, 47, 48],
           "bg-green-50",
-          "border-green-200"
+          "border-green-200",
         )}
       </div>
 
-      {/* Legend */}
       <div className="p-4 bg-muted rounded-lg border border-border">
         <h3 className="font-semibold text-foreground mb-3 text-sm">Tooth Status Legend</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
           <LegendItem color="#10b981" label="Healthy" />
-          <LegendItem color="#ef4444" label="Cavity" />
-          <LegendItem color="#9ca3af" label="Missing" dashed />
-          <LegendItem color="#f59e0b" label="Filling" />
+          <LegendItem color="#ef4444" label="Cavity" indicator="●" />
+          <LegendItem color="#9ca3af" label="Missing" dashed indicator="✕" />
+          <LegendItem color="#f59e0b" label="Filling" indicator="▓" />
           <LegendItem color="#f97316" label="Root Canal" />
           <LegendItem color="#8b5cf6" label="Crown" />
-          <LegendItem color="#3b82f6" label="Implant" />
+          <LegendItem color="#3b82f6" label="Implant" indicator="⊙" />
+          <LegendItem color="#06b6d4" label="Treated" />
         </div>
       </div>
 
@@ -217,13 +270,24 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
   )
 }
 
-function LegendItem({ color, label, dashed = false }: { color: string; label: string; dashed?: boolean }) {
+function LegendItem({
+  color,
+  label,
+  dashed = false,
+  indicator,
+}: { color: string; label: string; dashed?: boolean; indicator?: string }) {
   return (
     <div className="flex items-center gap-2">
       <div
-        className={`w-4 h-4 rounded border-4 ${dashed ? "border-dashed" : ""}`}
+        className={`w-4 h-4 rounded border-4 ${dashed ? "border-dashed" : ""} flex items-center justify-center`}
         style={{ borderColor: color, backgroundColor: "#f8fafc" }}
-      />
+      >
+        {indicator && (
+          <span className="text-xs font-bold" style={{ color }}>
+            {indicator}
+          </span>
+        )}
+      </div>
       <span className="text-foreground">{label}</span>
     </div>
   )
