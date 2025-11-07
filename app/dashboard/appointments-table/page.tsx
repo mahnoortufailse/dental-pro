@@ -99,19 +99,12 @@ function ActionDropdown({
     const items = []
 
     // Edit action
-    if (
-      appointment.status !== "completed" &&
-      appointment.status !== "closed" &&
-      (userRole !== "doctor")
-    ) {
+    if (appointment.status !== "completed" && appointment.status !== "closed" && userRole !== "doctor") {
       items.push({
         label: "Edit",
         icon: <Edit className="w-4 h-4" />,
         onClick: () => onEdit(appointment),
-        disabled:
-          loading.addAppointment ||
-          loading.updateAppointment ||
-          loading.deleteAppointment,
+        disabled: loading.addAppointment || loading.updateAppointment || loading.deleteAppointment,
         className: "text-blue-600",
       })
     }
@@ -128,14 +121,15 @@ function ActionDropdown({
     }
 
     // View Details action
+    if (userRole !== "doctor") {
     items.push({
       label: "View Details",
       icon: <Eye className="w-4 h-4" />,
-      onClick: () => window.open(`/dashboard/appointments/${appointmentId}`, "_blank"),
+      onClick: () => (window.location.href = `/dashboard/appointments/${appointmentId}`),
       disabled: loading.appointments,
       className: "text-blue-600",
     })
-
+  }
     // Doctor-specific actions
     if (
       userRole === "doctor" &&
@@ -295,9 +289,10 @@ function AppointmentsTableView({
           <tbody>
             {filteredAppointments.map((appointment) => {
               const hasReport = appointmentReports[appointment._id || appointment.id]
+              const appointmentId = appointment._id || appointment.id
 
               return (
-                <tr key={appointment._id || appointment.id} className="border-b border-border hover:bg-muted/50">
+                <tr key={appointmentId} className="border-b border-border hover:bg-muted/50">
                   <td className="p-4 text-foreground">{appointment.patientName}</td>
                   <td className="p-4 text-foreground">{appointment.doctorName}</td>
                   <td className="p-4 text-foreground">
@@ -330,6 +325,7 @@ function AppointmentsTableView({
                   </td>
                   <td className="p-4">
                     <ActionDropdown
+                      key={`${appointmentId}-${hasReport ? "with-report" : "no-report"}`}
                       appointment={appointment}
                       hasReport={hasReport}
                       userRole={userRole}
@@ -420,6 +416,35 @@ export default function AppointmentsTablePage() {
 
   const [showReferralModal, setShowReferralModal] = useState(false)
 
+ const checkAppointmentReports = async () => {
+  try {
+    const reportChecks: Record<string, boolean> = {}
+
+    // Check each appointment for a report
+    for (const apt of appointments) {
+      const appointmentId = apt._id || apt.id
+      try {
+        const res = await fetch(`/api/appointment-reports?appointmentId=${appointmentId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          reportChecks[appointmentId] = data.reports && data.reports.length > 0
+        } else {
+          reportChecks[appointmentId] = false
+        }
+      } catch (error) {
+        console.error(`Failed to check report for appointment ${appointmentId}:`, error)
+        reportChecks[appointmentId] = false
+      }
+    }
+
+    setAppointmentReports(reportChecks)
+  } catch (error) {
+    console.error("Failed to check appointment reports:", error)
+  }
+}
+
   useEffect(() => {
     if (token) {
       fetchAppointments()
@@ -427,7 +452,9 @@ export default function AppointmentsTablePage() {
       if (user?.role !== "doctor") {
         fetchDoctors()
       }
+      // Call checkAppointmentReports on initial load
       fetchAppointmentReports()
+      checkAppointmentReports()
     }
   }, [token, user])
 
@@ -685,7 +712,11 @@ export default function AppointmentsTablePage() {
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
-
+  useEffect(() => {
+  if (appointments.length > 0 && token) {
+    checkAppointmentReports()
+  }
+}, [appointments, token])
   const handleAddAppointment = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -865,69 +896,76 @@ export default function AppointmentsTablePage() {
   }
 
   const handleCreateReport = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedAppointment) return
+  e.preventDefault()
+  if (!selectedAppointment) return
 
-    if (!validateReportForm()) {
-      toast.error("Please fix the errors in the form")
-      return
-    }
-
-    setLoading((prev) => ({ ...prev, createReport: true }))
-    try {
-      const proceduresArray = Array.isArray(reportData.procedures)
-        ? reportData.procedures.filter((p) => p && p.trim())
-        : reportData.procedures
-            .split("\n")
-            .map((p) => p.trim())
-            .filter(Boolean)
-
-      const res = await fetch("/api/appointment-reports", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          appointmentId: selectedAppointment._id || selectedAppointment.id,
-          patientId: selectedAppointment.patientId,
-          procedures: proceduresArray,
-          findings: reportData.findings.trim(),
-          notes: reportData.notes.trim(),
-          nextVisit: reportData.nextVisit || null,
-          followUpDetails: reportData.followUpDetails || "",
-        }),
-      })
-
-      const responseData = await res.json()
-
-      if (res.ok) {
-        toast.success("Report created successfully")
-        setAppointmentReports({
-          ...appointmentReports,
-          [selectedAppointment._id || selectedAppointment.id]: true,
-        })
-        setShowReportForm(false)
-        setReportErrors({})
-        setReportData({
-          procedures: [],
-          findings: "",
-          notes: "",
-          nextVisit: "",
-          followUpDetails: "",
-        })
-        setSelectedAppointment(null)
-      } else {
-        console.error("[v0] Report creation error:", responseData)
-        toast.error(responseData.error || "Failed to create report")
-      }
-    } catch (error) {
-      console.error("[v0] Failed to create report:", error)
-      toast.error("Error creating report")
-    } finally {
-      setLoading((prev) => ({ ...prev, createReport: false }))
-    }
+  if (!validateReportForm()) {
+    toast.error("Please fix the errors in the form")
+    return
   }
+
+  setLoading((prev) => ({ ...prev, createReport: true }))
+  try {
+    const proceduresArray = Array.isArray(reportData.procedures)
+      ? reportData.procedures.filter((p) => p && p.trim())
+      : reportData.procedures
+          .split("\n")
+          .map((p) => p.trim())
+          .filter(Boolean)
+
+    const res = await fetch("/api/appointment-reports", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        appointmentId: selectedAppointment._id || selectedAppointment.id,
+        patientId: selectedAppointment.patientId,
+        procedures: proceduresArray,
+        findings: reportData.findings.trim(),
+        notes: reportData.notes.trim(),
+        nextVisit: reportData.nextVisit || null,
+        followUpDetails: reportData.followUpDetails || "",
+      }),
+    })
+
+    const responseData = await res.json()
+
+    if (res.ok) {
+      toast.success("Report created successfully")
+      
+      // Update the appointmentReports state immediately
+      const appointmentId = selectedAppointment._id || selectedAppointment.id
+      setAppointmentReports(prev => ({
+        ...prev,
+        [appointmentId]: true
+      }))
+      
+      // Also refresh the complete list
+      await checkAppointmentReports()
+      
+      setShowReportForm(false)
+      setReportErrors({})
+      setReportData({
+        procedures: [],
+        findings: "",
+        notes: "",
+        nextVisit: "",
+        followUpDetails: "",
+      })
+      setSelectedAppointment(null)
+    } else {
+      console.error("[v0] Report creation error:", responseData)
+      toast.error(responseData.error || "Failed to create report")
+    }
+  } catch (error) {
+    console.error("[v0] Failed to create report:", error)
+    toast.error("Error creating report")
+  } finally {
+    setLoading((prev) => ({ ...prev, createReport: false }))
+  }
+}
 
   // Function to check if appointment can be closed
   const canCloseAppointment = (appointmentId: string) => {

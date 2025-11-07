@@ -14,6 +14,16 @@ export default function DashboardPage() {
   const [appointments, setAppointments] = useState([])
   const [doctorRequests, setDoctorRequests] = useState([])
 
+  const isToday = (dateString: string) => {
+    const appointmentDate = new Date(dateString)
+    const today = new Date()
+    return (
+      appointmentDate.getFullYear() === today.getFullYear() &&
+      appointmentDate.getMonth() === today.getMonth() &&
+      appointmentDate.getDate() === today.getDate()
+    )
+  }
+
   useEffect(() => {
     if (token) {
       fetchDashboardData()
@@ -40,8 +50,9 @@ export default function DashboardPage() {
 
       if (appointmentsRes.status === "fulfilled" && appointmentsRes.value.ok) {
         const data = await appointmentsRes.value.json()
-        setAppointments(data.appointments || [])
-        appointmentCount = data.appointments?.length || 0
+        const todayAppointments = (data.appointments || []).filter((apt: any) => isToday(apt.date))
+        setAppointments(todayAppointments)
+        appointmentCount = todayAppointments.length
       }
 
       if (patientsRes.status === "fulfilled" && patientsRes.value.ok) {

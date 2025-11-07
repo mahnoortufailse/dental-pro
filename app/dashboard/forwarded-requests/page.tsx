@@ -210,181 +210,187 @@ export default function ForwardedRequestsPage() {
     return Object.keys(errors).length === 0
   }
 
-  const createAppointmentAndCompleteReferral = async () => {
-    if (!selectedReferral || !validateAppointmentForm()) {
-      toast.error("Please fix the errors in the form")
+ const createAppointmentAndCompleteReferral = async () => {
+  if (!selectedReferral || !validateAppointmentForm()) {
+    toast.error("Please fix the errors in the form")
+    return
+  }
+
+  // Validate and format the date of birth
+  const patientDob = selectedReferral.patientDob
+  if (!patientDob) {
+    toast.error("Patient date of birth is required")
+    return
+  }
+
+  let formattedDob
+  try {
+    const dobDate = new Date(patientDob)
+    if (isNaN(dobDate.getTime())) {
+      toast.error("Invalid date of birth format")
       return
     }
+    formattedDob = dobDate.toISOString().split("T")[0]
+  } catch (error) {
+    toast.error("Invalid date of birth")
+    return
+  }
 
-    // Validate and format the date of birth
-    const patientDob = selectedReferral.patientDob
-    if (!patientDob) {
-      toast.error("Patient date of birth is required")
-      return
+  console.log("[v0] Validating appointment time conflict for doctor:", selectedReferral.doctorId)
+  const validation = await validateAppointmentScheduling(
+    selectedReferral.doctorId,
+    formData.appointmentDate,
+    formData.appointmentTime,
+    formData.duration || 30,
+    token,
+    undefined,
+  )
+
+  if (!validation.isValid) {
+    toast.error(validation.error || "Time conflict detected. Please choose another time.")
+    return
+  }
+
+  setLoading((prev) => ({ ...prev, createAppointment: true }))
+  try {
+    // Prepare patient data with ALL required fields from backend
+    const patientData = {
+      name: selectedReferral.patientName,
+      phone: selectedReferral.patientPhone,
+      email: selectedReferral.patientEmail || "",
+      dob: formattedDob,
+      idNumber: selectedReferral.patientIdNumber || "N/A",
+      address: selectedReferral.patientAddress || "",
+      insuranceProvider: "",
+      insuranceNumber: "",
+      allergies: selectedReferral.patientAllergies || [],
+      medicalConditions: selectedReferral.patientMedicalConditions || [],
+      assignedDoctorId: selectedReferral.doctorId,
+      photoUrl: selectedReferral.pictureUrl || null,
     }
 
-    let formattedDob
-    try {
-      const dobDate = new Date(patientDob)
-      if (isNaN(dobDate.getTime())) {
-        toast.error("Invalid date of birth format")
-        return
-      }
-      formattedDob = dobDate.toISOString().split("T")[0]
-    } catch (error) {
-      toast.error("Invalid date of birth")
-      return
-    }
+    console.log("Sending patient data to API:", patientData)
 
-    console.log("[v0] Validating appointment time conflict for doctor:", selectedReferral.doctorId)
-    const validation = await validateAppointmentScheduling(
-      selectedReferral.doctorId,
-      formData.appointmentDate,
-      formData.appointmentTime,
-      formData.duration || 30,
-      token,
-      undefined,
-    )
+    const patientRes = await fetch("/api/patients", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(patientData),
+    })
 
-    if (!validation.isValid) {
-      toast.error(validation.error || "Time conflict detected. Please choose another time.")
-      return
-    }
+    console.log("Patient API response status:", patientRes.status)
 
-    setLoading((prev) => ({ ...prev, createAppointment: true }))
-    try {
-      // Prepare patient data with ALL required fields from backend
-      const patientData = {
-        name: selectedReferral.patientName,
-        phone: selectedReferral.patientPhone,
-        email: selectedReferral.patientEmail || "",
-        dob: formattedDob,
-        idNumber: selectedReferral.patientIdNumber || "N/A",
-        address: selectedReferral.patientAddress || "",
-        insuranceProvider: "",
-        insuranceNumber: "",
-        allergies: selectedReferral.patientAllergies || [],
-        medicalConditions: selectedReferral.patientMedicalConditions || [],
-        assignedDoctorId: selectedReferral.doctorId,
-        photoUrl: selectedReferral.pictureUrl || null,
-      }
+    let patientId
 
-      console.log("Sending patient data to API:", patientData)
+    if (patientRes.ok) {
+      const patientResponse = await patientRes.json()
+      patientId = patientResponse.patient._id
+      console.log("Patient created successfully, ID:", patientId)
+    } else if (patientRes.status === 409) {
+      // Handle email conflict error properly
+      const errorData = await patientRes.json()
+      console.error("Email conflict error:", errorData)
 
-      const patientRes = await fetch("/api/patients", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      // Show detailed error message
+      toast.error(
+        <div className="text-center">
+          <div className="font-semibold">Email Conflict Detected</div>
+          <div className="text-sm mt-1">
+            {errorData.error || "Email already exists in staff records. Please use a different email."}
+          </div>
+        </div>,
+        {
+          duration: 3000,
+          icon: "❌",
         },
-        body: JSON.stringify(patientData),
-      })
+      )
 
-      console.log("Patient API response status:", patientRes.status)
+      // Auto-reject the forward request if email conflict
+      await rejectForwardRequest("Email conflict: " + (errorData.error || "Email already exists in staff records"))
+      
+      // Stop further execution
+      setLoading((prev) => ({ ...prev, createAppointment: false }))
+      return
+    } else {
+      // Handle other errors
+      const errorData = await patientRes.json()
+      console.error("Patient creation failed:", errorData)
+      toast.error(errorData.error || `Failed to create patient: ${patientRes.status}`)
+      setLoading((prev) => ({ ...prev, createAppointment: false }))
+      return
+    }
 
-      let patientId
-      if (patientRes.ok) {
-        const patientResponse = await patientRes.json()
-        patientId = patientResponse.patient._id
-        console.log("Patient created successfully, ID:", patientId)
-      } else if (patientRes.status === 409) {
-        // Patient already exists
-        const patientResponse = await patientRes.json()
-        patientId = patientResponse.patient._id
-        console.log("Patient already exists, ID:", patientId)
-      } else {
-        const errorData = await patientRes.json()
-        console.error("Patient creation failed:", errorData)
+    // Create the appointment (only if patient was created successfully)
+    const appointmentRes = await fetch("/api/appointments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        patientId,
+        patientName: selectedReferral.patientName,
+        doctorId: selectedReferral.doctorId,
+        doctorName: selectedReferral.doctorName,
+        date: formData.appointmentDate,
+        time: formData.appointmentTime,
+        type: formData.appointmentType,
+        roomNumber: formData.roomNumber,
+        duration: formData.duration,
+      }),
+    })
 
-        if (errorData.error && errorData.error.includes("Email already exists in staff records")) {
-          toast.error(
-            <div className="text-center">
-              <div className="font-semibold">Email Conflict Detected</div>
-              <div className="text-sm mt-1">{errorData.error}</div>
-            </div>,
-            {
-              duration: 8000,
-              icon: "❌",
-            },
-          )
-          // Auto-reject the forward request if email conflict
-          await rejectForwardRequest("Email conflict: " + errorData.error)
-          return
-        }
+    if (appointmentRes.ok) {
+      const appointmentData = await appointmentRes.json()
+      const appointmentId = appointmentData.appointment._id
 
-        toast.error(errorData.error || `Failed to create patient: ${patientRes.status}`)
-        return
-      }
-
-      // Create the appointment
-      const appointmentRes = await fetch("/api/appointments", {
-        method: "POST",
+      // Update referral as completed
+      const updateRes = await fetch(`/api/patient-referrals/${selectedReferral._id}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          patientId,
-          patientName: selectedReferral.patientName,
-          doctorId: selectedReferral.doctorId,
-          doctorName: selectedReferral.doctorName,
-          date: formData.appointmentDate,
-          time: formData.appointmentTime,
-          type: formData.appointmentType,
-          roomNumber: formData.roomNumber,
-          duration: formData.duration,
+          status: "completed",
+          appointmentId,
+          notes: formData.notes,
         }),
       })
 
-      if (appointmentRes.ok) {
-        const appointmentData = await appointmentRes.json()
-        const appointmentId = appointmentData.appointment._id
-
-        // Update referral as completed
-        const updateRes = await fetch(`/api/patient-referrals/${selectedReferral._id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            status: "completed",
-            appointmentId,
-            notes: formData.notes,
-          }),
+      if (updateRes.ok) {
+        toast.success("Patient registered and appointment booked successfully")
+        setShowDetailModal(false)
+        setSelectedReferral(null)
+        setPictureFile(null)
+        setPreviewUrl("")
+        setFormData({
+          appointmentDate: "",
+          appointmentTime: "",
+          appointmentType: "Consultation",
+          roomNumber: "",
+          duration: 30,
+          notes: "",
         })
-
-        if (updateRes.ok) {
-          toast.success("Patient registered and appointment booked successfully")
-          setShowDetailModal(false)
-          setSelectedReferral(null)
-          setPictureFile(null)
-          setPreviewUrl("")
-          setFormData({
-            appointmentDate: "",
-            appointmentTime: "",
-            appointmentType: "Consultation",
-            roomNumber: "",
-            duration: 30,
-            notes: "",
-          })
-          setFormErrors({})
-          fetchReferrals()
-        } else {
-          const errorData = await updateRes.json()
-          toast.error(errorData.error || "Failed to update referral status")
-        }
+        setFormErrors({})
+        fetchReferrals()
       } else {
-        const errorData = await appointmentRes.json()
-        toast.error(errorData.error || "Failed to create appointment")
+        const errorData = await updateRes.json()
+        toast.error(errorData.error || "Failed to update referral status")
       }
-    } catch (error) {
-      console.error("Failed to create appointment:", error)
-      toast.error("Error creating appointment")
-    } finally {
-      setLoading((prev) => ({ ...prev, createAppointment: false }))
+    } else {
+      const errorData = await appointmentRes.json()
+      toast.error(errorData.error || "Failed to create appointment")
     }
+  } catch (error) {
+    console.error("Failed to create appointment:", error)
+    toast.error("Error creating appointment")
+  } finally {
+    setLoading((prev) => ({ ...prev, createAppointment: false }))
   }
+}
 
   const rejectForwardRequest = async (reason?: string) => {
     if (!selectedReferral) return

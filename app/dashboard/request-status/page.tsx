@@ -8,6 +8,7 @@ import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 import { AlertCircle, Loader2, Search } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 interface PatientReferral {
   _id: string
@@ -40,6 +41,7 @@ export default function RequestStatusPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "in-progress" | "completed" | "rejected">("all")
+  const [selectedReferral, setSelectedReferral] = useState<PatientReferral | null>(null)
 
   useEffect(() => {
     if (token && user?.role === "doctor") {
@@ -228,11 +230,22 @@ export default function RequestStatusPage() {
                             {referral.referralReason}
                           </td>
                           <td className="px-4 sm:px-6 py-3">
-                            <span
-                              className={`inline-block text-xs px-2 py-1 rounded-full font-medium ${getStatusBadgeColor(referral.status)}`}
-                            >
-                              {referral.status}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`inline-block text-xs px-2 py-1 rounded-full font-medium ${getStatusBadgeColor(referral.status)}`}
+                              >
+                                {referral.status}
+                              </span>
+                              {referral.status === "rejected" && (
+                                <button
+                                  onClick={() => setSelectedReferral(referral)}
+                                  className="text-xs text-primary hover:underline cursor-pointer font-medium"
+                                  title="View rejection details"
+                                >
+                                  View Detail
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden lg:table-cell text-sm">
                             {new Date(referral.createdAt).toLocaleDateString()}
@@ -257,6 +270,133 @@ export default function RequestStatusPage() {
             )}
           </div>
         </main>
+
+        <Dialog open={!!selectedReferral} onOpenChange={(open) => !open && setSelectedReferral(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Request Details</DialogTitle>
+              <DialogDescription>View complete details of the patient referral request</DialogDescription>
+            </DialogHeader>
+
+            {selectedReferral && (
+              <div className="space-y-6">
+                {/* Patient Information */}
+                <div className="border-b border-border pb-4">
+                  <h3 className="font-semibold text-foreground mb-3">Patient Information</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Patient Name</p>
+                      <p className="text-foreground">{selectedReferral.patientName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Phone</p>
+                      <p className="text-foreground">{selectedReferral.patientPhone}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Email</p>
+                      <p className="text-foreground">{selectedReferral.patientEmail}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Date of Birth</p>
+                      <p className="text-foreground">{selectedReferral.patientDob}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-1">ID Number</p>
+                      <p className="text-foreground">{selectedReferral.patientIdNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Address</p>
+                      <p className="text-foreground">{selectedReferral.patientAddress}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Request Information */}
+                <div className="border-b border-border pb-4">
+                  <h3 className="font-semibold text-foreground mb-3">Request Information</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Status</p>
+                      <span
+                        className={`inline-block text-xs px-2 py-1 rounded-full font-medium ${getStatusBadgeColor(
+                          selectedReferral.status,
+                        )}`}
+                      >
+                        {selectedReferral.status}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Submitted Date</p>
+                      <p className="text-foreground">{new Date(selectedReferral.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Updated Date</p>
+                      <p className="text-foreground">{new Date(selectedReferral.updatedAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Referral Reason */}
+                <div className="border-b border-border pb-4">
+                  <h3 className="font-semibold text-foreground mb-2">Referral Reason</h3>
+                  <p className="text-foreground text-sm">{selectedReferral.referralReason}</p>
+                </div>
+
+                {/* Medical Conditions and Allergies */}
+                <div className="border-b border-border pb-4">
+                  <h3 className="font-semibold text-foreground mb-3">Medical Details</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-2">Medical Conditions</p>
+                      <div className="space-y-1">
+                        {selectedReferral.patientMedicalConditions &&
+                        selectedReferral.patientMedicalConditions.length > 0 ? (
+                          selectedReferral.patientMedicalConditions.map((condition, idx) => (
+                            <p key={idx} className="text-foreground text-sm">
+                              • {condition}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground text-sm">None</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium mb-2">Allergies</p>
+                      <div className="space-y-1">
+                        {selectedReferral.patientAllergies && selectedReferral.patientAllergies.length > 0 ? (
+                          selectedReferral.patientAllergies.map((allergy, idx) => (
+                            <p key={idx} className="text-foreground text-sm">
+                              • {allergy}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground text-sm">None</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rejection Reason */}
+                {selectedReferral.status === "rejected" && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-red-900 mb-2">Rejection Reason</h3>
+                    <p className="text-red-800 text-sm">{selectedReferral.rejectionReason || selectedReferral.notes}</p>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {selectedReferral.notes && (
+                  <div className="border-t border-border pt-4">
+                    <h3 className="font-semibold text-foreground mb-2">Notes</h3>
+                    <p className="text-foreground text-sm">{selectedReferral.notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </ProtectedRoute>
   )
