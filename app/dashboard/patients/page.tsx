@@ -494,7 +494,7 @@ export default function PatientsPage() {
       photoUrl: url,
     }));
     setShowPhotoUpload(false);
-    toast.success("Photo uploaded successfully");
+    
   };
 
   const handleUpdateMedicalInfo = async (e: React.FormEvent) => {
