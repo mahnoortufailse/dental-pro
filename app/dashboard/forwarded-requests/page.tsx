@@ -41,7 +41,7 @@ interface PatientReferral {
   patientAllergies: string[]
   patientMedicalConditions: string[]
   referralReason: string
-  status: "pending" | "in-progress" | "completed" | "rejected" 
+  status: "pending" | "in-progress" | "completed" | "rejected"
   pictureUrl?: string
   pictureSavedBy?: string
   appointmentId?: string
@@ -237,41 +237,40 @@ export default function ForwardedRequestsPage() {
     }
 
     console.log("[v0] Validating appointment time conflict for doctor:", selectedReferral.doctorId)
-     // Make sure to pass the token here
-  const validation = await validateAppointmentScheduling(
-    selectedReferral.doctorId,
-    formData.appointmentDate,
-    formData.appointmentTime,
-    formData.duration || 30,
-    token, // ← Make sure this is passed
-    undefined // excludeAppointmentId (not needed for new appointments)
-  )
+    const validation = await validateAppointmentScheduling(
+      selectedReferral.doctorId,
+      formData.appointmentDate,
+      formData.appointmentTime,
+      formData.duration || 30,
+      token,
+      undefined,
+    )
 
-  if (!validation.isValid) {
-    toast.error(validation.error || "Time conflict detected. Please choose another time.")
-    return
-  }
+    if (!validation.isValid) {
+      toast.error(validation.error || "Time conflict detected. Please choose another time.")
+      return
+    }
+
     setLoading((prev) => ({ ...prev, createAppointment: true }))
     try {
       // Prepare patient data with ALL required fields from backend
       const patientData = {
         name: selectedReferral.patientName,
         phone: selectedReferral.patientPhone,
-        email: selectedReferral.patientEmail || "", // Backend expects this field
-        dob: formattedDob, // Backend expects 'dob' not 'dateOfBirth'
-        idNumber: selectedReferral.patientIdNumber || "N/A", // Required by backend
+        email: selectedReferral.patientEmail || "",
+        dob: formattedDob,
+        idNumber: selectedReferral.patientIdNumber || "N/A",
         address: selectedReferral.patientAddress || "",
-        insuranceProvider: "", // Required by backend schema
-        insuranceNumber: "", // Required by backend schema
+        insuranceProvider: "",
+        insuranceNumber: "",
         allergies: selectedReferral.patientAllergies || [],
         medicalConditions: selectedReferral.patientMedicalConditions || [],
-        assignedDoctorId: selectedReferral.doctorId, // REQUIRED - use the referring doctor's ID
+        assignedDoctorId: selectedReferral.doctorId,
         photoUrl: selectedReferral.pictureUrl || null,
       }
 
       console.log("Sending patient data to API:", patientData)
 
-      // First, create the patient (if doesn't exist)
       const patientRes = await fetch("/api/patients", {
         method: "POST",
         headers: {
@@ -481,58 +480,58 @@ export default function ForwardedRequestsPage() {
                 <p className="text-muted-foreground">No pending forwarded requests at the moment.</p>
               </div>
             ) : (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-  {referrals.map((referral) => (
-    <div
-      key={referral._id}
-      className="bg-card rounded-lg shadow-md border border-border p-6 hover:shadow-lg transition-shadow"
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">{referral.patientName}</h3>
-          <p className="text-sm text-muted-foreground">Referred by: {referral.doctorName}</p>
-        </div>
-        <span
-          className={`text-xs px-2 py-1 rounded font-medium ${
-            referral.status === "pending"
-              ? "bg-amber-100 text-amber-800"
-              : referral.status === "in-progress"
-                ? "bg-blue-100 text-blue-800"
-                : referral.status === "completed"
-                  ? "bg-green-100 text-green-800"
-                  : "bg-red-100 text-red-800"
-          }`}
-        >
-          {referral.status}
-        </span>
-      </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {referrals.map((referral) => (
+                  <div
+                    key={referral._id}
+                    className="bg-card rounded-lg shadow-md border border-border p-6 hover:shadow-lg transition-shadow"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground">{referral.patientName}</h3>
+                        <p className="text-sm text-muted-foreground">Referred by: {referral.doctorName}</p>
+                      </div>
+                      <span
+                        className={`text-xs px-2 py-1 rounded font-medium ${
+                          referral.status === "pending"
+                            ? "bg-amber-100 text-amber-800"
+                            : referral.status === "in-progress"
+                              ? "bg-blue-100 text-blue-800"
+                              : referral.status === "completed"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {referral.status}
+                      </span>
+                    </div>
 
-      <div className="space-y-2 mb-4 text-sm">
-        <p className="text-muted-foreground">
-          <strong>Phone:</strong> {referral.patientPhone}
-        </p>
-        <p className="text-muted-foreground">
-          <strong>DOB:</strong> {referral.patientDob}
-        </p>
-        <p className="text-muted-foreground">
-          <strong>Reason:</strong> {referral.referralReason}
-        </p>
-      </div>
+                    <div className="space-y-2 mb-4 text-sm">
+                      <p className="text-muted-foreground">
+                        <strong>Phone:</strong> {referral.patientPhone}
+                      </p>
+                      <p className="text-muted-foreground">
+                        <strong>DOB:</strong> {referral.patientDob}
+                      </p>
+                      <p className="text-muted-foreground">
+                        <strong>Reason:</strong> {referral.referralReason}
+                      </p>
+                    </div>
 
-      {/* Only show button for pending and in-progress statuses */}
-      {(referral.status === "pending" || referral.status === "in-progress") && (
-        <button
-          onClick={() => handleOpenReferral(referral)}
-          disabled={loading.createAppointment}
-          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
-        >
-          <CheckCircle className="w-4 h-4" />
-          Review & Process
-        </button>
-      )}
-    </div>
-  ))}
-</div>
+                    {/* Only show button for pending and in-progress statuses */}
+                    {(referral.status === "pending" || referral.status === "in-progress") && (
+                      <button
+                        onClick={() => handleOpenReferral(referral)}
+                        disabled={loading.createAppointment}
+                        className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Review & Process
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
 
             {showDetailModal && selectedReferral && (

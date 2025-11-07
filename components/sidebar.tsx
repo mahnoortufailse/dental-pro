@@ -68,6 +68,7 @@ export function Sidebar() {
         { label: "My Appointments", href: "/dashboard/appointments", icon: Calendar },
         { label: "Appointments Table", href: "/dashboard/appointments-table", icon: Table },
         { label: "Patients Reports", href: "/dashboard/medical-reports", icon: FileText },
+        { label: "Request Status", href: "/dashboard/request-status", icon: FileText },
         { label: "Clinical Tools", href: "/dashboard/clinical-tools", icon: Stethoscope },
       ]
     }
@@ -151,34 +152,34 @@ export function Sidebar() {
         {/* Mobile Header Spacing */}
         <div className="md:hidden h-16" />
 
-     <nav className="flex-1 p-2 space-y-1 overflow-y-auto scrollbar-thin">
-  {menuItems.map((item) => {
-    const Icon = item.icon
-    const active = isActive(item.href)
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={() => setIsOpen(false)}
-        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-          active
-            ? "bg-sidebar-primary text-sidebar-primary-foreground"
-            : "text-sidebar-foreground hover:bg-sidebar-accent/20 hover:text-sidebar-accent-foreground"
-        }`}
-      >
-        <Icon className="w-5 h-5 flex-shrink-0" />
-        <span>{item.label}</span>
-      </Link>
-    )
-  })}
-</nav>
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto scrollbar-thin">
+          {menuItems.map((item) => {
+            const Icon = item.icon
+            const active = isActive(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setIsOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                  active
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/20 hover:text-sidebar-accent-foreground"
+                }`}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            )
+          })}
+        </nav>
 
         {/* User Info & Logout */}
         <div className="p-4 border-t border-sidebar-border space-y-4">
-          {/* <div className="text-sm">
+          <div className="text-sm">
             <p className="text-xs text-sidebar-foreground/60 uppercase tracking-wider">Logged in as</p>
             <p className="font-semibold text-sidebar-foreground truncate">{user?.name}</p>
-          </div> */}
+          </div>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors text-sm font-medium cursor-pointer"
