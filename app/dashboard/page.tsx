@@ -456,7 +456,7 @@ const handleAction = async (
                     Recent Patient Requests
                   </h2>
                   <Link
-                    href="/dashboard/request-status?tab=patient-referrals"
+                    href="/dashboard/request-status"
                     className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                   >
                     View All →
@@ -554,7 +554,7 @@ const handleAction = async (
                       Recent Appointment Forwards
                     </h2>
                     <Link
-                      href="/dashboard/request-status?tab=appointment-referrals"
+                      href="/dashboard/request-status"
                       className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                     >
                       View All →
