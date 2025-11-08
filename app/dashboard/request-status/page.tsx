@@ -290,8 +290,7 @@ export default function RequestStatusPage() {
                         </tbody>
                       </table>
                     </div>
-
-                    {/* Pagination Info */}
+                  
                     <div className="px-4 sm:px-6 py-4 border-t border-border flex items-center justify-between text-sm text-muted-foreground">
                       <div>
                         Showing <span className="font-medium">{sortedReferrals.length}</span> of{" "}
