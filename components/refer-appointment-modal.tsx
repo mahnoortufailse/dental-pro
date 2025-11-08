@@ -1,3 +1,4 @@
+//@ts-nocheck
 "use client"
 
 import type React from "react"
@@ -37,6 +38,8 @@ export function ReferAppointmentModal({
       fetchDoctors()
     }
   }, [isOpen])
+
+  
 
   const fetchDoctors = async () => {
     setFetchingDoctors(true)
@@ -105,6 +108,8 @@ export function ReferAppointmentModal({
   }
 
   if (!isOpen) return null
+
+ 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">

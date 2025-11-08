@@ -252,12 +252,16 @@ const appointmentReferralSchema = new mongoose.Schema({
   appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Appointment", required: true },
   patientId: { type: String, required: true },
   patientName: { type: String, required: true },
-  fromDoctorId: { type: String, required: true }, // Original doctor referring the appointment
+  fromDoctorId: { type: String, required: true },
   fromDoctorName: { type: String, required: true },
-  toDoctorId: { type: String, required: true }, // Doctor receiving the referral
+  toDoctorId: { type: String, required: true },
   toDoctorName: { type: String, required: true },
   referralReason: { type: String, required: true },
-  status: { type: String, enum: ["pending", "accepted", "completed", "referred_back"], default: "pending" },
+  status: { 
+    type: String, 
+    enum: ["pending", "accepted", "completed", "referred_back", "rejected"], // ← ADD "rejected" HERE
+    default: "pending" 
+  },
   notes: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
