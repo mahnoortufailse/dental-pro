@@ -131,7 +131,7 @@ export default function RequestStatusPage() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Patient Referrals Request
+                Patient Referrals 
               </button>
               <button
                 onClick={() => setActiveTab("appointment-referrals")}
