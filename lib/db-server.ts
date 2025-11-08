@@ -105,6 +105,10 @@ const appointmentSchema = new mongoose.Schema({
   status: { type: String, enum: ["pending", "confirmed", "completed", "cancelled", "closed"], default: "pending" },
   roomNumber: String,
   duration: Number,
+  originalDoctorId: { type: String, default: null }, // Track the original doctor when referred
+  originalDoctorName: { type: String, default: null },
+  isReferred: { type: Boolean, default: false }, // Flag to indicate if appointment is currently referred
+  currentReferralId: { type: mongoose.Schema.Types.ObjectId, ref: "AppointmentReferral", default: null }, // Link to active referral
   createdAt: { type: Date, default: Date.now },
 })
 
@@ -243,6 +247,22 @@ const patientReferralRequestSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 })
 
+// Define AppointmentReferral schema for doctor-to-doctor appointment referrals
+const appointmentReferralSchema = new mongoose.Schema({
+  appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Appointment", required: true },
+  patientId: { type: String, required: true },
+  patientName: { type: String, required: true },
+  fromDoctorId: { type: String, required: true }, // Original doctor referring the appointment
+  fromDoctorName: { type: String, required: true },
+  toDoctorId: { type: String, required: true }, // Doctor receiving the referral
+  toDoctorName: { type: String, required: true },
+  referralReason: { type: String, required: true },
+  status: { type: String, enum: ["pending", "accepted", "completed", "referred_back"], default: "pending" },
+  notes: { type: String, default: "" },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+})
+
 // Create or get models
 export const User = mongoose.models.User || mongoose.model("User", userSchema)
 export const Patient = mongoose.models.Patient || mongoose.model("Patient", patientSchema)
@@ -258,6 +278,8 @@ export const PatientReferral =
   mongoose.models.PatientReferral || mongoose.model("PatientReferral", patientReferralSchema)
 export const PatientReferralRequest =
   mongoose.models.PatientReferralRequest || mongoose.model("PatientReferralRequest", patientReferralRequestSchema)
+export const AppointmentReferral =
+  mongoose.models.AppointmentReferral || mongoose.model("AppointmentReferral", appointmentReferralSchema)
 
 // Connect to MongoDB
 const cached = global as any

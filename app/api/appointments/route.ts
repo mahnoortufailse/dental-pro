@@ -28,13 +28,16 @@ export async function GET(request: NextRequest) {
     const query: any = {}
 
     if (payload?.role === "doctor") {
-      // For doctors, show only their appointments
-      query.doctorId = String(payload.userId)
-      console.log("  Doctor fetching appointments - doctorId:", query.doctorId)
+      query.$or = [
+        { doctorId: String(payload.userId) }, // Current appointments assigned to this doctor
+        { originalDoctorId: String(payload.userId) }, // Referred appointments they referred out
+      ]
+      console.log("[v0] Doctor fetching appointments with query:", JSON.stringify(query))
+      console.log("[v0] Doctor ID:", String(payload.userId))
     } else if (patientId) {
       // For patients, show only their appointments
       query.patientId = patientId
-      console.log("  Patient fetching appointments - patientId:", patientId)
+      console.log("[v0] Patient fetching appointments - patientId:", patientId)
     }
     // For admin and receptionist, show all appointments
 
@@ -43,7 +46,17 @@ export async function GET(request: NextRequest) {
       time: -1,
     })
 
-    console.log("  Found appointments:", appointments.length, "for query:", query)
+    console.log("[v0] Found appointments:", appointments.length, "for query:", query)
+    console.log(
+      "[v0] Appointments details:",
+      appointments.map((apt) => ({
+        _id: apt._id,
+        doctorId: apt.doctorId,
+        originalDoctorId: apt.originalDoctorId,
+        isReferred: apt.isReferred,
+        patientName: apt.patientName,
+      })),
+    )
 
     return NextResponse.json({
       success: true,
@@ -60,10 +73,14 @@ export async function GET(request: NextRequest) {
         status: apt.status,
         roomNumber: apt.roomNumber,
         duration: apt.duration,
+        isReferred: apt.isReferred || false,
+        originalDoctorId: apt.originalDoctorId || null,
+        originalDoctorName: apt.originalDoctorName || null,
+        currentReferralId: apt.currentReferralId || null,
       })),
     })
   } catch (error) {
-    console.error("  Get appointments error:", error)
+    console.error("[v0] Get appointments error:", error)
     return NextResponse.json({ error: "Failed to fetch appointments" }, { status: 500 })
   }
 }
@@ -145,6 +162,10 @@ export async function POST(request: NextRequest) {
       status: "confirmed",
       roomNumber,
       duration: duration || 30,
+      isReferred: false,
+      originalDoctorId: null,
+      originalDoctorName: null,
+      currentReferralId: null,
     })
     console.log("[DEBUG] Appointment created:", newAppointment._id.toString())
 
@@ -224,6 +245,10 @@ export async function POST(request: NextRequest) {
         status: newAppointment.status,
         roomNumber: newAppointment.roomNumber,
         duration: newAppointment.duration,
+        isReferred: newAppointment.isReferred,
+        originalDoctorId: newAppointment.originalDoctorId,
+        originalDoctorName: newAppointment.originalDoctorName,
+        currentReferralId: newAppointment.currentReferralId,
       },
     })
   } catch (error) {
@@ -316,10 +341,70 @@ export async function PUT(request: NextRequest) {
         status: updatedAppointment.status,
         roomNumber: updatedAppointment.roomNumber,
         duration: updatedAppointment.duration,
+        isReferred: updatedAppointment.isReferred,
+        originalDoctorId: updatedAppointment.originalDoctorId,
+        originalDoctorName: updatedAppointment.originalDoctorName,
+        currentReferralId: updatedAppointment.currentReferralId,
       },
     })
   } catch (error) {
     console.error("  Update appointment error:", error)
     return NextResponse.json({ error: "Failed to update appointment" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    await connectDB()
+    console.log("[DEBUG] Database connected")
+
+    const token = request.headers.get("authorization")?.split(" ")[1]
+    console.log("[DEBUG] Token received:", token ? "Yes" : "No")
+
+    if (!token) {
+      console.warn("[DEBUG] No token found")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const payload = verifyToken(token)
+    console.log("[DEBUG] Token payload:", payload)
+
+    if (!payload) {
+      console.warn("[DEBUG] Invalid token")
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const appointmentId = searchParams.get("id")
+    console.log("[DEBUG] Appointment ID to delete:", appointmentId)
+
+    if (!appointmentId || !String(appointmentId).trim()) {
+      console.warn("[DEBUG] Appointment ID is missing")
+      return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 })
+    }
+
+    const appointment = await Appointment.findById(appointmentId)
+    console.log("[DEBUG] Appointment found:", appointment ? appointment._id.toString() : "No appointment found")
+
+    if (!appointment) {
+      console.warn("[DEBUG] Appointment not found with ID:", appointmentId)
+      return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+    }
+
+    if (payload?.role === "doctor" && appointment.doctorId !== payload.userId) {
+      console.warn("[DEBUG] Doctor trying to delete another doctor's appointment")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    await Appointment.findByIdAndDelete(appointmentId)
+    console.log("[DEBUG] Appointment deleted:", appointmentId)
+
+    return NextResponse.json({
+      success: true,
+      message: "Appointment deleted successfully",
+    })
+  } catch (error) {
+    console.error("  Delete appointment error:", error)
+    return NextResponse.json({ error: "Failed to delete appointment" }, { status: 500 })
   }
 }

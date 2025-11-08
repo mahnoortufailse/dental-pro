@@ -25,18 +25,17 @@ export async function GET(request: NextRequest) {
 
     const query: any = {}
 
-    if (payload?.role === "doctor") {
+    if (appointmentId) {
+      query.appointmentId = appointmentId
+      // Don't filter by doctorId when checking specific appointment - any doctor's report counts
+    } else if (payload?.role === "doctor") {
+      // Only filter by doctorId when fetching all reports for a doctor's dashboard
       query.doctorId = payload.userId
     } else if (payload?.role === "admin" || payload?.role === "receptionist") {
-      // Admin and receptionist only see created reports (reports that exist)
-      // No additional filter needed - just fetch existing reports
+      // Admin and receptionist see all reports
     } else if (patientId) {
       // For patients, only show their own reports
       query.patientId = patientId
-    }
-
-    if (appointmentId) {
-      query.appointmentId = appointmentId
     }
 
     if (queryPatientId && payload?.role !== "doctor" && !patientId) {
@@ -187,7 +186,6 @@ export async function POST(request: NextRequest) {
     // if (patientData?.phone) {
     //   console.log("  Scheduling WhatsApp notification for 1 minute after report creation")
 
-     
     //     try {
     //       console.log("  Sending WhatsApp medical report link to patient:", patientData.phone)
     //       const { sendMedicalReportLink } = await import("@/lib/whatsapp-service")
