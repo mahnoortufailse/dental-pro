@@ -124,7 +124,7 @@ export default function RequestStatusPage() {
             {/* Tab Navigation */}
             <div className="flex gap-2 mb-6 border-b border-border">
               <button
-                onClick={() => setActiveTab("patient-referrals")}
+                onClick={() => setActiveTab("patient-referrals ")}
                 className={`px-4 py-2 font-medium text-sm transition-colors ${
                   activeTab === "patient-referrals"
                     ? "text-primary border-b-2 border-primary"
