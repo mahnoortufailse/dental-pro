@@ -41,7 +41,7 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
   useEffect(() => {
     fetchReferrals()
   }, [])
-
+  
   const fetchReferrals = async () => {
     setLoading(true)
     try {
@@ -62,47 +62,52 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
     }
   }
 
-  const handleAction = async (
-    referralId: string,
-    action: "accept" | "reject" | "refer_back" | "complete",
-    notes?: string,
-  ) => {
-    setActionLoading(true)
-    try {
-      const res = await fetch(`/api/appointment-referrals/${referralId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action, notes }),
-      })
+ // In your frontend component
+const handleAction = async (
+  referralId: string,
+  action: "accept" | "reject" | "refer_back" | "complete",
+  notes?: string,
+) => {
+  console.log(`[FRONTEND] Action triggered:`, { referralId, action, notes })
+  setActionLoading(true)
+  try {
+    const res = await fetch(`/api/appointment-referrals/${referralId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ action, notes }),
+    })
 
-      if (res.ok) {
-        const data = await res.json()
-        setReferrals(referrals.map((r) => (r._id === referralId ? data.referral : r)))
+    console.log(`[FRONTEND] Response status:`, res.status)
+    const data = await res.json()
+    console.log(`[FRONTEND] Response data:`, data)
 
-        const actionMessages = {
-          accept: "✓ Referral accepted! You can now proceed with the treatment.",
-          reject: "✗ Referral rejected.",
-          refer_back: "↶ Appointment referred back to the original doctor.",
-          complete: "✓ Treatment completed and referred back.",
-        }
+    if (res.ok) {
+      setReferrals(referrals.map((r) => (r._id === referralId ? data.referral : r)))
 
-        toast.success(actionMessages[action as keyof typeof actionMessages])
-        setSelectedReferral(null)
-        setActionNotes("")
-      } else {
-        const errorData = await res.json()
-        toast.error(errorData.error || "Failed to update referral")
+      const actionMessages = {
+        accept: "✓ Referral accepted! You can now proceed with the treatment.",
+        reject: "✗ Referral rejected.",
+        refer_back: "↶ Appointment referred back to the original doctor.",
+        complete: "✓ Treatment completed and referred back.",
       }
-    } catch (error) {
-      console.error("Failed to update referral:", error)
-      toast.error("Error updating referral")
-    } finally {
-      setActionLoading(false)
+
+      toast.success(actionMessages[action as keyof typeof actionMessages])
+      setSelectedReferral(null)
+      setActionNotes("")
+    } else {
+      console.error(`[FRONTEND] Failed to ${action} referral:`, data.error)
+      toast.error(data.error || `Failed to ${action} referral`)
     }
+  } catch (error) {
+    console.error("[FRONTEND] Failed to update referral:", error)
+    toast.error("Network error updating referral")
+  } finally {
+    setActionLoading(false)
   }
+}
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -155,6 +160,8 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
   const completedReferrals = referrals.filter((r) => r.status === "completed")
   const referredBackReferrals = referrals.filter((r) => r.status === "referred_back")
   const rejectedReferrals = referrals.filter((r) => r.status === "rejected")
+
+
 
   return (
     <div className="space-y-6">

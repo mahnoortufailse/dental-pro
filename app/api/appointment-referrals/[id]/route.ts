@@ -24,14 +24,28 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Action is required" }, { status: 400 })
     }
 
+    console.log(`[DEBUG] Referral update attempt:`, {
+      referralId: id,
+      action,
+      notes,
+      userId: payload.userId
+    })
+
     const referral = await AppointmentReferral.findById(id)
     if (!referral) {
       return NextResponse.json({ error: "Referral not found" }, { status: 404 })
     }
 
+    console.log(`[DEBUG] Found referral:`, {
+      currentStatus: referral.status,
+      toDoctorId: referral.toDoctorId,
+      fromDoctorId: referral.fromDoctorId,
+      appointmentId: referral.appointmentId
+    })
+
     // Verify permissions based on action
     if (action === "accept") {
-      if (referral.toDoctorId !== payload.userId) {
+      if (String(referral.toDoctorId) !== String(payload.userId)) {
         return NextResponse.json({ error: "Only the referred-to doctor can accept this referral" }, { status: 403 })
       }
 
@@ -51,8 +65,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
       referral.status = "accepted"
       referral.updatedAt = new Date()
+      
     } else if (action === "refer_back") {
-      if (referral.toDoctorId !== payload.userId) {
+      if (String(referral.toDoctorId) !== String(payload.userId)) {
         return NextResponse.json({ error: "Only the doctor currently assigned can refer back" }, { status: 403 })
       }
 
@@ -73,56 +88,61 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       referral.status = "referred_back"
       referral.notes = notes || ""
       referral.updatedAt = new Date()
+      
     } else if (action === "complete") {
-      if (referral.toDoctorId !== payload.userId) {
+      if (String(referral.toDoctorId) !== String(payload.userId)) {
         return NextResponse.json({ error: "Only the doctor currently assigned can mark as complete" }, { status: 403 })
       }
 
       referral.status = "completed"
       referral.notes = notes || ""
       referral.updatedAt = new Date()
+      
     } else if (action === "reject") {
-      if (referral.toDoctorId !== payload.userId) {
-        return NextResponse.json({ error: "Only the referred-to doctor can reject this referral" }, { status: 403 })
+      // FIX: Only allow the referred-to doctor to reject
+      if (String(referral.toDoctorId) !== String(payload.userId)) {
+        return NextResponse.json({ 
+          error: `Only the referred-to doctor can reject this referral. Current user: ${payload.userId}, To Doctor: ${referral.toDoctorId}` 
+        }, { status: 403 })
       }
 
+      // FIX: Allow rejection only for pending referrals
       if (referral.status !== "pending") {
-        return NextResponse.json({ error: "Only pending referrals can be rejected" }, { status: 400 })
+        return NextResponse.json({ 
+          error: `Only pending referrals can be rejected. Current status: ${referral.status}` 
+        }, { status: 400 })
       }
 
-      const appointment = await Appointment.findById(referral.appointmentId)
-      if (!appointment) {
-        return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
-      }
-
-      await Appointment.findByIdAndUpdate(referral.appointmentId, {
-        doctorId: appointment.originalDoctorId || appointment.doctorId,
-        doctorName: appointment.originalDoctorName || appointment.doctorName,
-        isReferred: false,
-        originalDoctorId: null,
-        originalDoctorName: null,
-        currentReferralId: null,
-      })
-
-      referral.status = "rejected"
-      referral.notes = notes || "Referral rejected"
+      // TEMPORARY FIX: Use 'referred_back' instead of 'rejected' until schema is updated
+      console.log(`[DEBUG] Attempting to reject referral, using 'referred_back' as temporary status`)
+      referral.status = "referred_back"
+      referral.notes = (notes || "Referral rejected") + " [REJECTED - TEMPORARY STATUS]"
       referral.updatedAt = new Date()
+      
     } else {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }
 
+    console.log(`[DEBUG] Saving referral with new status:`, referral.status)
+    
     await referral.save()
 
-    console.log("[v0] Referral updated:", {
+    console.log("[DEBUG] Referral updated successfully:", {
       referralId: id,
       action,
-      status: referral.status,
+      newStatus: referral.status,
       appointmentId: referral.appointmentId,
     })
 
     return NextResponse.json({ success: true, referral })
   } catch (error) {
-    console.error("PUT appointment referral error:", error)
-    return NextResponse.json({ error: "Failed to update referral" }, { status: 500 })
+    console.error("PUT appointment referral error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    })
+    return NextResponse.json({ 
+      error: `Failed to update referral: ${error.message}` 
+    }, { status: 500 })
   }
 }
