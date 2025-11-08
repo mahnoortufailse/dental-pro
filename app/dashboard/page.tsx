@@ -392,61 +392,7 @@ const handleAction = async (
                 </>
               )}
             </div>
-            <div className="stat-card mb-6 sm:mb-8">
-              <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-foreground">
-                Today's Schedule
-              </h2>
-              {appointments.length > 0 ? (
-                <div className="table-responsive">
-                  <table className="w-full text-xs sm:text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
-                          Time
-                        </th>
-                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
-                          Patient
-                        </th>
-                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground hidden sm:table-cell">
-                          Doctor
-                        </th>
-                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground hidden md:table-cell">
-                          Type
-                        </th>
-                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {appointments.slice(0, 5).map((apt) => (
-                        <tr key={apt.id} className="table-row">
-                          <td className="py-2 sm:py-3 px-2 sm:px-4">
-                            {apt.time}
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 font-medium">
-                            {apt.patientName}
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden sm:table-cell">
-                            {apt.doctorName}
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden md:table-cell">
-                            {apt.type}
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4">
-                            <span className="badge-success">{apt.status}</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-8 text-sm">
-                  No appointments scheduled for today
-                </p>
-              )}
-            </div>
+           
             {/* Recent Patient Requests (Table format) */}
             {user?.role === "doctor" && recentPatientReferrals.length > 0 && (
               <div className="stat-card mb-6 sm:mb-8">
@@ -641,6 +587,62 @@ const handleAction = async (
                   </div>
                 </div>
               )}
+
+               <div className="stat-card mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-foreground">
+                Today's Schedule
+              </h2>
+              {appointments.length > 0 ? (
+                <div className="table-responsive">
+                  <table className="w-full text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Time
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Patient
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground hidden sm:table-cell">
+                          Doctor
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground hidden md:table-cell">
+                          Type
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {appointments.slice(0, 5).map((apt) => (
+                        <tr key={apt.id} className="table-row">
+                          <td className="py-2 sm:py-3 px-2 sm:px-4">
+                            {apt.time}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 font-medium">
+                            {apt.patientName}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden sm:table-cell">
+                            {apt.doctorName}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden md:table-cell">
+                            {apt.type}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4">
+                            <span className="badge-success">{apt.status}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8 text-sm">
+                  No appointments scheduled for today
+                </p>
+              )}
+            </div>
           </div>
         </main>
       </div>
