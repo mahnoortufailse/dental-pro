@@ -309,37 +309,36 @@ export default function AppointmentsPage() {
     }
   }
 
-  const handleCompleteAppointment = async (appointmentId: string) => {
-    setLoading((prev) => ({ ...prev, completeAppointment: true }))
-    try {
-      const res = await fetch(`/api/appointments/${appointmentId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.JSON.stringify({ status: "closed" }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setAppointments(
-          appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
-        )
-        toast.success("Appointment closed successfully")
-        setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
-        checkAppointmentReports()
-      } else {
-        const errorData = await res.json()
-        toast.error(errorData.error || "Failed to close appointment")
+   const handleCompleteAppointment = async (appointmentId: string) => {
+      setLoading((prev) => ({ ...prev, completeAppointment: true }))
+      try {
+        const res = await fetch(`/api/appointments/${appointmentId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: "completed" }),
+        })
+  
+        if (res.ok) {
+          const data = await res.json()
+          setAppointments(
+            appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
+          )
+          toast.success("Appointment marked as completed")
+          setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
+        } else {
+          const errorData = await res.json()
+          toast.error(errorData.error || "Failed to complete appointment")
+        }
+      } catch (error) {
+        console.error("Failed to complete appointment:", error)
+        toast.error("Error completing appointment")
+      } finally {
+        setLoading((prev) => ({ ...prev, completeAppointment: false }))
       }
-    } catch (error) {
-      console.error("Failed to close appointment:", error)
-      toast.error("Error closing appointment")
-    } finally {
-      setLoading((prev) => ({ ...prev, completeAppointment: false }))
     }
-  }
 
   const currentUserId = user?.userId || user?.id
 
