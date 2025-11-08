@@ -5,14 +5,58 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useEffect, useState } from "react"
-import { Users, Calendar, TrendingUp, AlertCircle } from "lucide-react"
+import { Users, Calendar, TrendingUp, AlertCircle, UserPlus, ArrowRightLeft, Eye, Clock, CheckCircle, X, FileText, User, ArrowRight, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { toast } from "react-hot-toast"
+
+interface PatientReferral {
+  _id: string
+  doctorId: string
+  doctorName: string
+  patientName: string
+  patientPhone: string
+  referralReason: string
+  status: "pending" | "in-progress" | "completed" | "rejected"
+  createdAt: string
+  updatedAt: string
+}
+
+interface AppointmentReferral {
+  _id: string
+  id: string
+  appointmentId: string
+  patientId: string
+  patientName: string
+  fromDoctorId: string
+  fromDoctorName: string
+  toDoctorId: string
+  toDoctorName: string
+  referralReason: string
+  status: "pending" | "accepted" | "completed" | "referred_back" | "rejected"
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
 
 export default function DashboardPage() {
   const { user, token } = useAuth()
-  const [stats, setStats] = useState({ appointments: 0, patients: 0, lowStock: 0, revenue: 0, pendingRequests: 0 })
+  const [stats, setStats] = useState({
+    appointments: 0,
+    patients: 0,
+    lowStock: 0,
+    revenue: 0,
+    pendingRequests: 0,
+    patientReferrals: 0,
+    appointmentReferrals: 0,
+  })
   const [appointments, setAppointments] = useState([])
   const [doctorRequests, setDoctorRequests] = useState([])
+  const [recentPatientReferrals, setRecentPatientReferrals] = useState<PatientReferral[]>([])
+  const [recentAppointmentReferrals, setRecentAppointmentReferrals] = useState<AppointmentReferral[]>([])
+  const [selectedReferral, setSelectedReferral] = useState<AppointmentReferral | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [actionNotes, setActionNotes] = useState("")
 
   const isToday = (dateString: string) => {
     const appointmentDate = new Date(dateString)
@@ -32,21 +76,27 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const [appointmentsRes, patientsRes, inventoryRes, billingRes, referralsRes] = await Promise.allSettled([
-        fetch("/api/appointments", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/patients", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/inventory", { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
-        fetch("/api/billing", { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
-        user?.role === "doctor"
-          ? fetch("/api/patient-referrals", { headers: { Authorization: `Bearer ${token}` } })
-          : Promise.resolve(null),
-      ])
+      const [appointmentsRes, patientsRes, inventoryRes, billingRes, referralsRes, patientReferralsRes] =
+        await Promise.allSettled([
+          fetch("/api/appointments", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/patients", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/inventory", { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
+          fetch("/api/billing", { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
+          user?.role === "doctor"
+            ? fetch("/api/appointment-referrals?type=all", { headers: { Authorization: `Bearer ${token}` } })
+            : Promise.resolve(null),
+          user?.role === "doctor"
+            ? fetch("/api/patient-referrals", { headers: { Authorization: `Bearer ${token}` } })
+            : Promise.resolve(null),
+        ])
 
       let appointmentCount = 0
       let patientCount = 0
       let lowStockCount = 0
       let totalRevenue = 0
       let pendingRequestsCount = 0
+      let patientReferralsCount = 0
+      let appointmentReferralsCount = 0
 
       if (appointmentsRes.status === "fulfilled" && appointmentsRes.value.ok) {
         const data = await appointmentsRes.value.json()
@@ -73,9 +123,25 @@ export default function DashboardPage() {
       if (user?.role === "doctor" && referralsRes?.status === "fulfilled" && referralsRes.value?.ok) {
         const data = await referralsRes.value.json()
         setDoctorRequests(data.referrals || [])
+        appointmentReferralsCount = (data.referrals || []).length
         pendingRequestsCount = (data.referrals || []).filter(
-          (r: any) => r.status === "pending" || r.status === "in-progress",
+          (r: any) => r.status === "pending" || r.status === "accepted",
         ).length
+        const allAppointmentReferrals = data.referrals || []
+        const recent = allAppointmentReferrals
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0,3)
+        setRecentAppointmentReferrals(recent)
+      }
+
+      if (user?.role === "doctor" && patientReferralsRes?.status === "fulfilled" && patientReferralsRes.value?.ok) {
+        const data = await patientReferralsRes.value.json()
+        patientReferralsCount = (data.referrals || []).length
+        const allPatientReferrals = data.referrals || []
+        const recent = allPatientReferrals
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 3)
+        setRecentPatientReferrals(recent)
       }
 
       setStats({
@@ -84,10 +150,92 @@ export default function DashboardPage() {
         lowStock: lowStockCount,
         revenue: totalRevenue,
         pendingRequests: pendingRequestsCount,
+        patientReferrals: patientReferralsCount,
+        appointmentReferrals: appointmentReferralsCount,
       })
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error)
     }
+  }
+
+  const handleAction = async (
+    referralId: string,
+    action: "accept" | "reject" | "refer_back" | "complete",
+    notes?: string,
+  ) => {
+    setActionLoading(true)
+    try {
+      const res = await fetch(`/api/appointment-referrals/${referralId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action, notes }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setRecentAppointmentReferrals(recentAppointmentReferrals.map((r) => (r._id === referralId ? data.referral : r)))
+        setSelectedReferral(data.referral)
+
+        const actionMessages = {
+          accept: "✓ Referral accepted! You can now proceed with the treatment.",
+          reject: "✗ Referral rejected.",
+          refer_back: "↶ Appointment referred back to the original doctor.",
+          complete: "✓ Treatment completed and referred back.",
+        }
+
+        toast.success(actionMessages[action as keyof typeof actionMessages])
+        setActionNotes("")
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to update referral")
+      }
+    } catch (error) {
+      console.error("Failed to update referral:", error)
+      toast.error("Error updating referral")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-amber-100 text-amber-800 border border-amber-300"
+      case "accepted":
+        return "bg-blue-100 text-blue-800 border border-blue-300"
+      case "completed":
+        return "bg-green-100 text-green-800 border border-green-300"
+      case "referred_back":
+        return "bg-purple-100 text-purple-800 border border-purple-300"
+      case "rejected":
+        return "bg-red-100 text-red-800 border border-red-300"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "pending":
+        return <Clock className="w-3 h-3" />
+      case "accepted":
+        return <CheckCircle className="w-3 h-3" />
+      case "completed":
+        return <CheckCircle className="w-3 h-3" />
+      case "referred_back":
+        return <ArrowRight className="w-3 h-3" />
+      case "rejected":
+        return <X className="w-3 h-3" />
+      default:
+        return null
+    }
+  }
+
+  const isSentReferral = (referral: AppointmentReferral) => {
+    return String(referral.fromDoctorId) === String(user?.userId || user?.id)
   }
 
   return (
@@ -123,13 +271,33 @@ export default function DashboardPage() {
               </div>
 
               {user?.role === "doctor" && (
-                <div className="stat-card">
-                  <div className="stat-icon bg-gradient-to-br from-amber-100 to-amber-50">
-                    <AlertCircle className="w-6 h-6 text-amber-600" />
-                  </div>
-                  <p className="stat-label">Pending Forward Requests</p>
-                  <p className="stat-value">{stats.pendingRequests}</p>
-                </div>
+                <>
+                  <Link
+                    href="/dashboard/request-status"
+                    className="stat-card hover:shadow-lg transition-shadow cursor-pointer"
+                  >
+                    <div className="stat-icon bg-gradient-to-br from-indigo-100 to-indigo-50">
+                      <ArrowRightLeft className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <p className="stat-label">Appointment Forwards</p>
+                    <p className="stat-value">{stats.appointmentReferrals}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Appointments forwarded to/from doctors</p>
+                  </Link>
+
+                  <Link
+                    href="/dashboard/request-status"
+                    className="stat-card hover:shadow-lg transition-shadow cursor-pointer"
+                  >
+                    <div className="stat-icon bg-gradient-to-br from-emerald-100 to-emerald-50">
+                      <UserPlus className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <p className="stat-label">New Patient Requests</p>
+                    <p className="stat-value">{stats.patientReferrals}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Unregistered patients sent to reception for appointment
+                    </p>
+                  </Link>
+                </>
               )}
 
               {user?.role !== "doctor" && (
@@ -152,70 +320,7 @@ export default function DashboardPage() {
                 </>
               )}
             </div>
-
-            {user?.role === "doctor" && doctorRequests.length > 0 && (
               <div className="stat-card mb-6 sm:mb-8">
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h2 className="text-lg sm:text-xl font-bold text-foreground">Your Recent Forward Requests</h2>
-                  <Link
-                    href="/dashboard/request-status"
-                    className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-                  >
-                    View All →
-                  </Link>
-                </div>
-                <div className="table-responsive overflow-x-auto">
-                  <table className="w-full text-xs sm:text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
-                          Patient Name
-                        </th>
-                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
-                          Status
-                        </th>
-                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground hidden sm:table-cell">
-                          Submitted
-                        </th>
-                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
-                          Reason
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {doctorRequests.slice(0, 5).map((req: any) => (
-                        <tr key={req._id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 font-medium">{req.patientName}</td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4">
-                            <span
-                              className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                req.status === "pending"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : req.status === "in-progress"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : req.status === "completed"
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {req.status}
-                            </span>
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden sm:table-cell text-muted-foreground">
-                            {new Date(req.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground truncate max-w-xs">
-                            {req.referralReason}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            <div className="stat-card">
               <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-foreground">Today's Schedule</h2>
               {appointments.length > 0 ? (
                 <div className="table-responsive">
@@ -258,9 +363,462 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground text-center py-8 text-sm">No appointments scheduled for today</p>
               )}
             </div>
+            {/* Recent Patient Requests (Table format) */}
+            {user?.role === "doctor" && recentPatientReferrals.length > 0 && (
+              <div className="stat-card mb-6 sm:mb-8">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h2 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-emerald-600" />
+                    Recent Patient Requests
+                  </h2>
+                  <Link
+                    href="/dashboard/request-status?tab=patient-referrals"
+                    className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+                  >
+                    View All →
+                  </Link>
+                </div>
+                <div className="table-responsive overflow-x-auto">
+                  <table className="w-full text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Patient Name
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Phone
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Referred By
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Status
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground hidden sm:table-cell">
+                          Date
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Reason
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-muted-foreground">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentPatientReferrals.map((req: any) => (
+                        <tr key={req._id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 font-medium">{req.patientName}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground">{req.patientPhone}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground">Dr. {req.doctorName}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4">
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                req.status === "pending"
+                                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                                  : req.status === "in-progress"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : req.status === "completed"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                              }`}
+                            >
+                              {req.status}
+                            </span>
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden sm:table-cell text-muted-foreground">
+                            {new Date(req.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground truncate max-w-xs">
+                            {req.referralReason}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4">
+                            <button
+                              onClick={() => {
+                                // You can implement patient referral modal here if needed
+                              }}
+                              className="flex items-center gap-1 text-primary hover:text-primary/80 font-medium transition-colors text-xs"
+                            >
+                              <Eye className="w-3 h-3" />
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Recent Appointment Forwards (Updated to match ReferRequestsTab style) */}
+            {user?.role === "doctor" && recentAppointmentReferrals.length > 0 && (
+              <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden mb-6 sm:mb-8">
+                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border">
+                  <h2 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
+                    <ArrowRightLeft className="w-5 h-5 text-indigo-600" />
+                    Recent Appointment Forwards
+                  </h2>
+                  <Link
+                    href="/dashboard/request-status?tab=appointment-referrals"
+                    className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+                  >
+                    View All →
+                  </Link>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted border-b border-border">
+                      <tr>
+                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Patient</th>
+                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden lg:table-cell">
+                          Type
+                        </th>
+                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden sm:table-cell">
+                          Doctor
+                        </th>
+                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden md:table-cell">
+                          Reason
+                        </th>
+                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Status</th>
+                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentAppointmentReferrals.map((referral) => (
+                        <tr key={referral._id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                          <td className="px-4 sm:px-6 py-3 font-medium text-foreground">{referral.patientName}</td>
+                          <td className="px-4 sm:px-6 py-3 hidden lg:table-cell">
+                            {isSentReferral(referral) ? (
+                              <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium bg-teal-100 text-teal-800 border border-teal-300">
+                                <ArrowRight className="w-3 h-3" />
+                                Sent
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium bg-indigo-100 text-indigo-800 border border-indigo-300">
+                                <ArrowRight className="w-3 h-3 rotate-180" />
+                                Received
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell text-sm">
+                            {isSentReferral(referral) ? referral.toDoctorName : referral.fromDoctorName}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell text-sm truncate max-w-xs">
+                            {referral.referralReason}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3">
+                            <span
+                              className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${getStatusBadgeColor(referral.status)}`}
+                            >
+                              {getStatusIcon(referral.status)}
+                              {referral.status.charAt(0).toUpperCase() + referral.status.slice(1).replace("_", " ")}
+                            </span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3">
+                            <button
+                              onClick={() => setSelectedReferral(referral)}
+                              className="text-xs text-primary hover:underline cursor-pointer font-medium inline-flex items-center gap-1"
+                            >
+                              <Eye className="w-3 h-3" />
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+           
           </div>
         </main>
       </div>
+
+      {/* Appointment Referral Modal (Same as ReferRequestsTab) */}
+      <Dialog open={!!selectedReferral} onOpenChange={(open) => !open && setSelectedReferral(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Referral Details & Actions
+              {selectedReferral &&
+                (isSentReferral(selectedReferral) ? (
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium bg-teal-100 text-teal-800 border border-teal-300">
+                    <ArrowRight className="w-3 h-3" />
+                    Sent
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium bg-indigo-100 text-indigo-800 border border-indigo-300">
+                    <ArrowRight className="w-3 h-3 rotate-180" />
+                    Received
+                  </span>
+                ))}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedReferral && isSentReferral(selectedReferral)
+                ? "View the status of your referral request"
+                : "Manage the referral request with complete control"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedReferral && (
+            <div className="space-y-6">
+              {/* Referral Flow Timeline */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-xs font-semibold text-blue-900 mb-3">REFERRAL FLOW</p>
+                <div className="flex items-center justify-between text-xs">
+                  <div className="text-center">
+                    <div className="font-semibold text-blue-900">{selectedReferral.fromDoctorName}</div>
+                    <div className="text-blue-700">(Referred From)</div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-blue-600" />
+                  <div className="text-center">
+                    <div className="font-semibold text-blue-900">{selectedReferral.toDoctorName}</div>
+                    <div className="text-blue-700">(Referred To)</div>
+                  </div>
+                  {selectedReferral.status === "referred_back" && (
+                    <>
+                      <ArrowRight className="w-4 h-4 text-blue-600" />
+                      <div className="text-center">
+                        <div className="font-semibold text-green-900">{selectedReferral.fromDoctorName}</div>
+                        <div className="text-green-700">(Returned)</div>
+                      </div>
+                    </>
+                  )}
+                  {selectedReferral.status === "rejected" && (
+                    <>
+                      <X className="w-4 h-4 text-red-600" />
+                      <div className="text-center">
+                        <div className="font-semibold text-red-900">Rejected</div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Patient & Doctor Info */}
+              <div className="border-b border-border pb-4">
+                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Request Information
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Patient</p>
+                    <p className="text-foreground font-medium">{selectedReferral.patientName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-medium mb-1">From Doctor</p>
+                    <p className="text-foreground font-medium">{selectedReferral.fromDoctorName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-medium mb-1">To Doctor</p>
+                    <p className="text-foreground font-medium">{selectedReferral.toDoctorName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Current Status</p>
+                    <span
+                      className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${getStatusBadgeColor(selectedReferral.status)}`}
+                    >
+                      {getStatusIcon(selectedReferral.status)}
+                      {selectedReferral.status.charAt(0).toUpperCase() +
+                        selectedReferral.status.slice(1).replace("_", " ")}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-medium mb-1">
+                      {isSentReferral(selectedReferral) ? "Sent Date" : "Received Date"}
+                    </p>
+                    <p className="text-foreground">
+                      {new Date(selectedReferral.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Referral Reason */}
+              <div className="border-b border-border pb-4">
+                <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Referral Reason
+                </h3>
+                <p className="text-foreground text-sm bg-muted p-3 rounded-lg">{selectedReferral.referralReason}</p>
+              </div>
+
+              {/* Notes (if any) */}
+              {selectedReferral.notes && (
+                <div className="border-b border-border pb-4">
+                  <h3 className="font-semibold text-foreground mb-2">Treatment Notes</h3>
+                  <p className="text-foreground text-sm bg-green-50 border border-green-200 p-3 rounded-lg">
+                    {selectedReferral.notes}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-3 bg-gray-50 p-4 rounded-lg border border-border">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-3">
+                  {isSentReferral(selectedReferral) ? "Referral Status" : "Actions"}
+                </p>
+
+                {isSentReferral(selectedReferral) ? (
+                  // Doctor who SENT the referral - VIEW ONLY
+                  <>
+                    {selectedReferral.status === "pending" && (
+                      <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                        <p className="text-sm text-amber-800">
+                          <strong>Pending:</strong> Waiting for {selectedReferral.toDoctorName} to accept or reject this
+                          referral.
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedReferral.status === "accepted" && (
+                      <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                        <p className="text-sm text-blue-800">
+                          <strong>Accepted:</strong> {selectedReferral.toDoctorName} has accepted this referral and is
+                          currently treating the patient.
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedReferral.status === "completed" && (
+                      <div className="bg-green-50 border border-green-200 p-3 rounded-lg flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <p className="text-sm text-green-800">
+                          <strong>Completed:</strong> This referral has been completed and returned to you.
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedReferral.status === "referred_back" && (
+                      <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg flex items-center gap-2">
+                        <ArrowRight className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                        <p className="text-sm text-purple-800">
+                          <strong>Referred Back:</strong> The appointment has been returned to you by{" "}
+                          {selectedReferral.toDoctorName}. You can now continue treatment.
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedReferral.status === "rejected" && (
+                      <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-center gap-2">
+                        <X className="w-5 h-5 text-red-600 flex-shrink-0" />
+                        <p className="text-sm text-red-800">
+                          <strong>Rejected:</strong> {selectedReferral.toDoctorName} has rejected this referral request.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  // Doctor who RECEIVED the referral - ACTIONABLE
+                  <>
+                    {selectedReferral.status === "pending" && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">ℹ Accept or reject this referral request</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => handleAction(selectedReferral._id, "accept")}
+                            disabled={actionLoading}
+                            className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-3 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                            <CheckCircle className="w-4 h-4" />
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleAction(selectedReferral._id, "reject")}
+                            disabled={actionLoading}
+                            className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white px-4 py-3 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                            <X className="w-4 h-4" />
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedReferral.status === "accepted" && (
+                      <div className="space-y-3">
+                        <p className="text-xs text-muted-foreground">
+                          ℹ Add optional notes and refer the appointment back to the original doctor
+                        </p>
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">Notes (Optional)</label>
+                          <textarea
+                            placeholder="Add any notes before referring back..."
+                            value={actionNotes}
+                            onChange={(e) => setActionNotes(e.target.value)}
+                            disabled={actionLoading}
+                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                            rows={3}
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleAction(selectedReferral._id, "refer_back", actionNotes)}
+                          disabled={actionLoading}
+                          className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                          <ArrowRight className="w-4 h-4" />
+                          Refer Back
+                        </button>
+                      </div>
+                    )}
+
+                    {selectedReferral.status === "completed" && (
+                      <div className="bg-green-50 border border-green-200 p-3 rounded-lg flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <p className="text-sm text-green-800">
+                          <strong>Completed:</strong> You have completed this referral and returned it to{" "}
+                          {selectedReferral.fromDoctorName}.
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedReferral.status === "referred_back" && (
+                      <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg flex items-center gap-2">
+                        <ArrowRight className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                        <p className="text-sm text-purple-800">
+                          <strong>Referred Back:</strong> You have returned this appointment to{" "}
+                          {selectedReferral.fromDoctorName}.
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedReferral.status === "rejected" && (
+                      <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-center gap-2">
+                        <X className="w-5 h-5 text-red-600 flex-shrink-0" />
+                        <p className="text-sm text-red-800">
+                          <strong>Rejected:</strong> You have rejected this referral request from{" "}
+                          {selectedReferral.fromDoctorName}.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Close button */}
+              <button
+                onClick={() => setSelectedReferral(null)}
+                className="w-full bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </ProtectedRoute>
   )
 }

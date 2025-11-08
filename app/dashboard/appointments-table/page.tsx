@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation"
 import { StatCard } from "@/components/appointment-stats-card"
 import { Calendar, Clock, CheckCircle2, XCircle } from "lucide-react"
 import { PatientReferralModal } from "@/components/patient-referral-modal"
+import { ReferAppointmentModal } from "@/components/refer-appointment-modal"
 
 // Separate ActionDropdown component
 function ActionDropdown({
@@ -30,6 +31,7 @@ function ActionDropdown({
   onClose,
   onCancel,
   canCloseAppointment,
+  onReferAppointment,
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [position, setPosition] = useState({ top: 0, left: 0 })
@@ -98,6 +100,11 @@ function ActionDropdown({
   const getActionItems = () => {
     const items = []
 
+    const isOriginalDoctorWithReferral =
+      userRole === "doctor" && appointment.originalDoctorId === userId && appointment.isReferred === true
+
+    const isReferredDoctor = userRole === "doctor" && appointment.doctorId === userId && appointment.isReferred === true
+
     // Edit action
     if (appointment.status !== "completed" && appointment.status !== "closed" && userRole !== "doctor") {
       items.push({
@@ -122,14 +129,14 @@ function ActionDropdown({
 
     // View Details action
     if (userRole !== "doctor") {
-    items.push({
-      label: "View Details",
-      icon: <Eye className="w-4 h-4" />,
-      onClick: () => (window.location.href = `/dashboard/appointments/${appointmentId}`),
-      disabled: loading.appointments,
-      className: "text-blue-600",
-    })
-  }
+      items.push({
+        label: "View Details",
+        icon: <Eye className="w-4 h-4" />,
+        onClick: () => (window.location.href = `/dashboard/appointments/${appointmentId}`),
+        disabled: loading.appointments,
+        className: "text-blue-600",
+      })
+    }
     // Doctor-specific actions
     if (
       userRole === "doctor" &&
@@ -137,32 +144,45 @@ function ActionDropdown({
       appointment.status !== "completed" &&
       appointment.status !== "closed"
     ) {
-      // Report action
-      items.push({
-        label: hasReport ? "View Report" : "Create Report",
-        icon: <FileText className="w-4 h-4" />,
-        onClick: hasReport ? () => onViewReport() : () => onCreateReport(appointment),
-        disabled: loading.createReport,
-        className: "text-blue-600",
-      })
+      if (!isOriginalDoctorWithReferral) {
+        items.push({
+          label: hasReport ? "View Report" : "Create Report",
+          icon: <FileText className="w-4 h-4" />,
+          onClick: hasReport ? () => onViewReport() : () => onCreateReport(appointment),
+          disabled: loading.createReport,
+          className: "text-blue-600",
+        })
+      }
 
-      // Close action
-      items.push({
-        label: "Close Appointment",
-        icon: <CheckCircle className="w-4 h-4" />,
-        onClick: () => onClose(appointmentId),
-        disabled: loading.completeAppointment || !canCloseAppointment(appointmentId),
-        className: canCloseAppointment(appointmentId) ? "text-green-600" : "text-gray-400 cursor-not-allowed",
-      })
+      if (!appointment.isReferred) {
+        items.push({
+          label: "Refer to Doctor",
+          icon: <FileText className="w-4 h-4" />,
+          onClick: () => onReferAppointment(appointment),
+          disabled: false,
+          className: "text-purple-600",
+        })
+      }
 
-      // Cancel action
-      items.push({
-        label: "Cancel Appointment",
-        icon: <X className="w-4 h-4" />,
-        onClick: () => onCancel(appointmentId),
-        disabled: loading.cancelAppointment,
-        className: "text-red-600",
-      })
+      if (!isOriginalDoctorWithReferral && !isReferredDoctor) {
+        items.push({
+          label: "Close Appointment",
+          icon: <CheckCircle className="w-4 h-4" />,
+          onClick: () => onClose(appointmentId),
+          disabled: loading.completeAppointment || !canCloseAppointment(appointmentId),
+          className: canCloseAppointment(appointmentId) ? "text-green-600" : "text-gray-400 cursor-not-allowed",
+        })
+      }
+
+      if (!isOriginalDoctorWithReferral && !isReferredDoctor) {
+        items.push({
+          label: "Cancel Appointment",
+          icon: <X className="w-4 h-4" />,
+          onClick: () => onCancel(appointmentId),
+          disabled: loading.cancelAppointment,
+          className: "text-red-600",
+        })
+      }
     }
 
     return items
@@ -238,6 +258,7 @@ function AppointmentsTableView({
   onClose,
   onCancel,
   canCloseAppointment,
+  onReferAppointment,
 }) {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -266,8 +287,9 @@ function AppointmentsTableView({
   const filteredAppointments =
     userRole === "doctor"
       ? appointments.filter((apt) => {
-          const matches = String(apt.doctorId) === String(userId)
-          return matches
+          const isCurrentDoctor = String(apt.doctorId) === String(userId)
+          const isOriginalDoctor = String(apt.originalDoctorId) === String(userId)
+          return isCurrentDoctor || isOriginalDoctor
         })
       : appointments
 
@@ -298,6 +320,15 @@ function AppointmentsTableView({
                   <td className="p-4 text-foreground">
                     <div>{formatDate(appointment.date)}</div>
                     <div className="text-sm text-muted-foreground">{appointment.time}</div>
+                    {appointment.isReferred && (
+                      <div className="mt-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          {appointment.originalDoctorId === userId
+                            ? `Referred to ${appointment.doctorName}`
+                            : "Referred In"}
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td className="p-4 text-foreground">{appointment.type}</td>
                   <td className="p-4 text-foreground">{appointment.roomNumber}</td>
@@ -338,6 +369,7 @@ function AppointmentsTableView({
                       onClose={onClose}
                       onCancel={onCancel}
                       canCloseAppointment={canCloseAppointment}
+                      onReferAppointment={onReferAppointment}
                     />
                   </td>
                 </tr>
@@ -416,34 +448,37 @@ export default function AppointmentsTablePage() {
 
   const [showReferralModal, setShowReferralModal] = useState(false)
 
- const checkAppointmentReports = async () => {
-  try {
-    const reportChecks: Record<string, boolean> = {}
+  const [showReferModal, setShowReferModal] = useState(false)
+  const [selectedAppointmentForReferral, setSelectedAppointmentForReferral] = useState<any>(null)
 
-    // Check each appointment for a report
-    for (const apt of appointments) {
-      const appointmentId = apt._id || apt.id
-      try {
-        const res = await fetch(`/api/appointment-reports?appointmentId=${appointmentId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          reportChecks[appointmentId] = data.reports && data.reports.length > 0
-        } else {
+  const checkAppointmentReports = async () => {
+    try {
+      const reportChecks: Record<string, boolean> = {}
+
+      // Check each appointment for a report
+      for (const apt of appointments) {
+        const appointmentId = apt._id || apt.id
+        try {
+          const res = await fetch(`/api/appointment-reports?appointmentId=${appointmentId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (res.ok) {
+            const data = await res.json()
+            reportChecks[appointmentId] = data.reports && data.reports.length > 0
+          } else {
+            reportChecks[appointmentId] = false
+          }
+        } catch (error) {
+          console.error(`Failed to check report for appointment ${appointmentId}:`, error)
           reportChecks[appointmentId] = false
         }
-      } catch (error) {
-        console.error(`Failed to check report for appointment ${appointmentId}:`, error)
-        reportChecks[appointmentId] = false
       }
-    }
 
-    setAppointmentReports(reportChecks)
-  } catch (error) {
-    console.error("Failed to check appointment reports:", error)
+      setAppointmentReports(reportChecks)
+    } catch (error) {
+      console.error("Failed to check appointment reports:", error)
+    }
   }
-}
 
   useEffect(() => {
     if (token) {
@@ -713,10 +748,10 @@ export default function AppointmentsTablePage() {
     return Object.keys(errors).length === 0
   }
   useEffect(() => {
-  if (appointments.length > 0 && token) {
-    checkAppointmentReports()
-  }
-}, [appointments, token])
+    if (appointments.length > 0 && token) {
+      checkAppointmentReports()
+    }
+  }, [appointments, token])
   const handleAddAppointment = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -896,80 +931,86 @@ export default function AppointmentsTablePage() {
   }
 
   const handleCreateReport = async (e: React.FormEvent) => {
-  e.preventDefault()
-  if (!selectedAppointment) return
+    e.preventDefault()
+    if (!selectedAppointment) return
 
-  if (!validateReportForm()) {
-    toast.error("Please fix the errors in the form")
-    return
-  }
-
-  setLoading((prev) => ({ ...prev, createReport: true }))
-  try {
-    const proceduresArray = Array.isArray(reportData.procedures)
-      ? reportData.procedures.filter((p) => p && p.trim())
-      : reportData.procedures
-          .split("\n")
-          .map((p) => p.trim())
-          .filter(Boolean)
-
-    const res = await fetch("/api/appointment-reports", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        appointmentId: selectedAppointment._id || selectedAppointment.id,
-        patientId: selectedAppointment.patientId,
-        procedures: proceduresArray,
-        findings: reportData.findings.trim(),
-        notes: reportData.notes.trim(),
-        nextVisit: reportData.nextVisit || null,
-        followUpDetails: reportData.followUpDetails || "",
-      }),
-    })
-
-    const responseData = await res.json()
-
-    if (res.ok) {
-      toast.success("Report created successfully")
-      
-      // Update the appointmentReports state immediately
-      const appointmentId = selectedAppointment._id || selectedAppointment.id
-      setAppointmentReports(prev => ({
-        ...prev,
-        [appointmentId]: true
-      }))
-      
-      // Also refresh the complete list
-      await checkAppointmentReports()
-      
-      setShowReportForm(false)
-      setReportErrors({})
-      setReportData({
-        procedures: [],
-        findings: "",
-        notes: "",
-        nextVisit: "",
-        followUpDetails: "",
-      })
-      setSelectedAppointment(null)
-    } else {
-      console.error("[v0] Report creation error:", responseData)
-      toast.error(responseData.error || "Failed to create report")
+    if (!validateReportForm()) {
+      toast.error("Please fix the errors in the form")
+      return
     }
-  } catch (error) {
-    console.error("[v0] Failed to create report:", error)
-    toast.error("Error creating report")
-  } finally {
-    setLoading((prev) => ({ ...prev, createReport: false }))
+
+    setLoading((prev) => ({ ...prev, createReport: true }))
+    try {
+      const proceduresArray = Array.isArray(reportData.procedures)
+        ? reportData.procedures.filter((p) => p && p.trim())
+        : reportData.procedures
+            .split("\n")
+            .map((p) => p.trim())
+            .filter(Boolean)
+
+      const res = await fetch("/api/appointment-reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          appointmentId: selectedAppointment._id || selectedAppointment.id,
+          patientId: selectedAppointment.patientId,
+          procedures: proceduresArray,
+          findings: reportData.findings.trim(),
+          notes: reportData.notes.trim(),
+          nextVisit: reportData.nextVisit || null,
+          followUpDetails: reportData.followUpDetails || "",
+        }),
+      })
+
+      const responseData = await res.json()
+
+      if (res.ok) {
+        toast.success("Report created successfully")
+
+        // Update the appointmentReports state immediately
+        const appointmentId = selectedAppointment._id || selectedAppointment.id
+        setAppointmentReports((prev) => ({
+          ...prev,
+          [appointmentId]: true,
+        }))
+
+        // Also refresh the complete list
+        await checkAppointmentReports()
+
+        setShowReportForm(false)
+        setReportErrors({})
+        setReportData({
+          procedures: [],
+          findings: "",
+          notes: "",
+          nextVisit: "",
+          followUpDetails: "",
+        })
+        setSelectedAppointment(null)
+      } else {
+        console.error("[v0] Report creation error:", responseData)
+        toast.error(responseData.error || "Failed to create report")
+      }
+    } catch (error) {
+      console.error("[v0] Failed to create report:", error)
+      toast.error("Error creating report")
+    } finally {
+      setLoading((prev) => ({ ...prev, createReport: false }))
+    }
   }
-}
 
   // Function to check if appointment can be closed
   const canCloseAppointment = (appointmentId: string) => {
     return appointmentReports[appointmentId] === true
+  }
+
+  // Handler to open the referral modal
+  const handleOpenReferModal = (appointment: any) => {
+    setSelectedAppointmentForReferral(appointment)
+    setShowReferModal(true)
   }
 
   const totalAppointments = appointments.length
@@ -1092,6 +1133,7 @@ export default function AppointmentsTablePage() {
                   })
                 }
                 canCloseAppointment={canCloseAppointment}
+                onReferAppointment={handleOpenReferModal}
               />
             </div>
 
@@ -1403,6 +1445,23 @@ export default function AppointmentsTablePage() {
                 }}
                 token={token}
                 doctoName={user?.name || ""}
+              />
+            )}
+
+            {/* Referral Modal JSX */}
+            {showReferModal && selectedAppointmentForReferral && (
+              <ReferAppointmentModal
+                isOpen={showReferModal}
+                onClose={() => {
+                  setShowReferModal(false)
+                  setSelectedAppointmentForReferral(null)
+                }}
+                onSuccess={() => {
+                  fetchAppointments()
+                }}
+                appointmentId={selectedAppointmentForReferral._id || selectedAppointmentForReferral.id}
+                patientName={selectedAppointmentForReferral.patientName}
+                token={token}
               />
             )}
 

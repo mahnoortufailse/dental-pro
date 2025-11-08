@@ -9,6 +9,7 @@ import { toast } from "react-hot-toast"
 import { AlertCircle, Loader2, Search } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { ReferRequestsTab } from "@/components/refer-requests-tab"
 
 interface PatientReferral {
   _id: string
@@ -42,6 +43,7 @@ export default function RequestStatusPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "in-progress" | "completed" | "rejected">("all")
   const [selectedReferral, setSelectedReferral] = useState<PatientReferral | null>(null)
+  const [activeTab, setActiveTab] = useState<"patient-referrals" | "appointment-referrals">("patient-referrals")
 
   useEffect(() => {
     if (token && user?.role === "doctor") {
@@ -115,158 +117,192 @@ export default function RequestStatusPage() {
             <div className="mb-8">
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Your Request Status</h1>
               <p className="text-muted-foreground text-sm mt-1">
-                Track and view the status of all your patient referral requests
+                Track and view the status of all your referral requests
               </p>
             </div>
 
-            {/* Filters and Search */}
-            <div className="bg-card rounded-lg shadow-md border border-border p-4 mb-6">
-              <div className="flex flex-col lg:flex-row gap-4">
-                {/* Search Input */}
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search requests..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
-                  />
-                </div>
-
-                {/* Status Filter */}
-                <div className="flex items-center gap-2">
-                  <label htmlFor="statusFilter" className="text-sm text-muted-foreground whitespace-nowrap">
-                    Status:
-                  </label>
-                  <select
-                    id="statusFilter"
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value as any)}
-                    className="px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-              </div>
+            {/* Tab Navigation */}
+            <div className="flex gap-2 mb-6 border-b border-border">
+              <button
+                onClick={() => setActiveTab("patient-referrals")}
+                className={`px-4 py-2 font-medium text-sm transition-colors ${
+                  activeTab === "patient-referrals"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Patient Referrals
+              </button>
+              <button
+                onClick={() => setActiveTab("appointment-referrals")}
+                className={`px-4 py-2 font-medium text-sm transition-colors ${
+                  activeTab === "appointment-referrals"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Refer Requests
+              </button>
             </div>
 
-            {/* Stats Cards */}
-            {!loading && referrals.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="bg-card rounded-lg shadow-md border border-border p-4">
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Total Requests</p>
-                  <p className="text-2xl font-bold text-foreground mt-2">{referrals.length}</p>
-                </div>
-                <div className="bg-card rounded-lg shadow-md border border-border p-4">
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Pending</p>
-                  <p className="text-2xl font-bold text-amber-600 mt-2">
-                    {referrals.filter((r) => r.status === "pending").length}
-                  </p>
-                </div>
-                <div className="bg-card rounded-lg shadow-md border border-border p-4">
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Completed</p>
-                  <p className="text-2xl font-bold text-green-600 mt-2">
-                    {referrals.filter((r) => r.status === "completed").length}
-                  </p>
-                </div>
-                <div className="bg-card rounded-lg shadow-md border border-border p-4">
-                  <p className="text-xs text-muted-foreground font-medium uppercase">Rejected</p>
-                  <p className="text-2xl font-bold text-red-600 mt-2">
-                    {referrals.filter((r) => r.status === "rejected").length}
-                  </p>
-                </div>
-              </div>
-            )}
+            {/* Tab Content */}
+            {activeTab === "patient-referrals" ? (
+              <>
+                {/* Filters and Search */}
+                <div className="bg-card rounded-lg shadow-md border border-border p-4 mb-6">
+                  <div className="flex flex-col lg:flex-row gap-4">
+                    {/* Search Input */}
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Search requests..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                      />
+                    </div>
 
-            {/* Content */}
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : sortedReferrals.length === 0 ? (
-              <div className="text-center py-12 bg-card rounded-lg border border-border">
-                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  {searchTerm || filterStatus !== "all"
-                    ? "No requests match your search criteria."
-                    : "No patient requests yet."}
-                </p>
-              </div>
-            ) : (
-              <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted border-b border-border">
-                      <tr>
-                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">
-                          Patient Name
-                        </th>
-                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden sm:table-cell">
-                          Phone
-                        </th>
-                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden md:table-cell">
-                          Reason
-                        </th>
-                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Status</th>
-                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden lg:table-cell">
-                          Submitted
-                        </th>
-                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Updated</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedReferrals.map((referral) => (
-                        <tr key={referral._id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                          <td className="px-4 sm:px-6 py-3 font-medium text-foreground">{referral.patientName}</td>
-                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell text-sm">
-                            {referral.patientPhone}
-                          </td>
-                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell text-sm truncate max-w-xs">
-                            {referral.referralReason}
-                          </td>
-                          <td className="px-4 sm:px-6 py-3">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`inline-block text-xs px-2 py-1 rounded-full font-medium ${getStatusBadgeColor(referral.status)}`}
-                              >
-                                {referral.status}
-                              </span>
-                              {referral.status === "rejected" && (
-                                <button
-                                  onClick={() => setSelectedReferral(referral)}
-                                  className="text-xs text-primary hover:underline cursor-pointer font-medium"
-                                  title="View rejection details"
-                                >
-                                  View Detail
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden lg:table-cell text-sm">
-                            {new Date(referral.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 sm:px-6 py-3 text-muted-foreground text-sm">
-                            {new Date(referral.updatedAt).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination Info */}
-                <div className="px-4 sm:px-6 py-4 border-t border-border flex items-center justify-between text-sm text-muted-foreground">
-                  <div>
-                    Showing <span className="font-medium">{sortedReferrals.length}</span> of{" "}
-                    <span className="font-medium">{referrals.length}</span> requests
+                    {/* Status Filter */}
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="statusFilter" className="text-sm text-muted-foreground whitespace-nowrap">
+                        Status:
+                      </label>
+                      <select
+                        id="statusFilter"
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value as any)}
+                        className="px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                      >
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
+
+                {/* Stats Cards */}
+                {!loading && referrals.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-card rounded-lg shadow-md border border-border p-4">
+                      <p className="text-xs text-muted-foreground font-medium uppercase">Total Requests</p>
+                      <p className="text-2xl font-bold text-foreground mt-2">{referrals.length}</p>
+                    </div>
+                    <div className="bg-card rounded-lg shadow-md border border-border p-4">
+                      <p className="text-xs text-muted-foreground font-medium uppercase">Pending</p>
+                      <p className="text-2xl font-bold text-amber-600 mt-2">
+                        {referrals.filter((r) => r.status === "pending").length}
+                      </p>
+                    </div>
+                    <div className="bg-card rounded-lg shadow-md border border-border p-4">
+                      <p className="text-xs text-muted-foreground font-medium uppercase">Completed</p>
+                      <p className="text-2xl font-bold text-green-600 mt-2">
+                        {referrals.filter((r) => r.status === "completed").length}
+                      </p>
+                    </div>
+                    <div className="bg-card rounded-lg shadow-md border border-border p-4">
+                      <p className="text-xs text-muted-foreground font-medium uppercase">Rejected</p>
+                      <p className="text-2xl font-bold text-red-600 mt-2">
+                        {referrals.filter((r) => r.status === "rejected").length}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Content */}
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : sortedReferrals.length === 0 ? (
+                  <div className="text-center py-12 bg-card rounded-lg border border-border">
+                    <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      {searchTerm || filterStatus !== "all"
+                        ? "No requests match your search criteria."
+                        : "No patient requests yet."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted border-b border-border">
+                          <tr>
+                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">
+                              Patient Name
+                            </th>
+                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden sm:table-cell">
+                              Phone
+                            </th>
+                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden md:table-cell">
+                              Reason
+                            </th>
+                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Status</th>
+                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden lg:table-cell">
+                              Submitted
+                            </th>
+                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Updated</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedReferrals.map((referral) => (
+                            <tr
+                              key={referral._id}
+                              className="border-b border-border hover:bg-muted/50 transition-colors"
+                            >
+                              <td className="px-4 sm:px-6 py-3 font-medium text-foreground">{referral.patientName}</td>
+                              <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell text-sm">
+                                {referral.patientPhone}
+                              </td>
+                              <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell text-sm truncate max-w-xs">
+                                {referral.referralReason}
+                              </td>
+                              <td className="px-4 sm:px-6 py-3">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`inline-block text-xs px-2 py-1 rounded-full font-medium ${getStatusBadgeColor(referral.status)}`}
+                                  >
+                                    {referral.status}
+                                  </span>
+                                  {referral.status === "rejected" && (
+                                    <button
+                                      onClick={() => setSelectedReferral(referral)}
+                                      className="text-xs text-primary hover:underline cursor-pointer font-medium"
+                                      title="View rejection details"
+                                    >
+                                      View Detail
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden lg:table-cell text-sm">
+                                {new Date(referral.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="px-4 sm:px-6 py-3 text-muted-foreground text-sm">
+                                {new Date(referral.updatedAt).toLocaleDateString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pagination Info */}
+                    <div className="px-4 sm:px-6 py-4 border-t border-border flex items-center justify-between text-sm text-muted-foreground">
+                      <div>
+                        Showing <span className="font-medium">{sortedReferrals.length}</span> of{" "}
+                        <span className="font-medium">{referrals.length}</span> requests
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <ReferRequestsTab token={token} />
             )}
           </div>
         </main>

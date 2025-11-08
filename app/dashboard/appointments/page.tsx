@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation"
 import { StatCard } from "@/components/appointment-stats-card"
 import { Calendar, Clock, CheckCircle2, XCircle } from "lucide-react"
 import { PatientReferralModal } from "@/components/patient-referral-modal"
+import { ReferAppointmentModal } from "@/components/refer-appointment-modal"
 
 export default function AppointmentsPage() {
   const { user, token } = useAuth()
@@ -38,8 +39,8 @@ export default function AppointmentsPage() {
   const [formData, setFormData] = useState({
     patientId: "",
     patientName: "",
-    doctorId: "", // Changed from user?.role === "doctor" ? user.userId : "" to ""
-    doctorName: "", // Changed from user?.role === "doctor" ? user.name : "" to ""
+    doctorId: "",
+    doctorName: "",
     date: "",
     time: "",
     type: "Consultation",
@@ -75,6 +76,9 @@ export default function AppointmentsPage() {
 
   const [showReferralModal, setShowReferralModal] = useState(false)
 
+  const [showReferModal, setShowReferModal] = useState(false)
+  const [selectedAppointmentForReferral, setSelectedAppointmentForReferral] = useState<any>(null)
+
   useEffect(() => {
     if (token) {
       fetchAppointments()
@@ -96,13 +100,13 @@ export default function AppointmentsPage() {
     try {
       const reportChecks: Record<string, boolean> = {}
 
-      // Check each appointment for a report
       for (const apt of appointments) {
         const res = await fetch(`/api/appointment-reports?appointmentId=${apt._id || apt.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (res.ok) {
           const data = await res.json()
+          // Report exists if there are any reports for this appointment, regardless of which doctor created it
           reportChecks[apt._id || apt.id] = data.reports && data.reports.length > 0
         }
       }
@@ -314,7 +318,7 @@ export default function AppointmentsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: "closed" }),
+        body: JSON.JSON.stringify({ status: "closed" }),
       })
 
       if (res.ok) {
@@ -337,8 +341,10 @@ export default function AppointmentsPage() {
     }
   }
 
+  const currentUserId = user?.userId || user?.id
+
   const handleEditAppointment = (appointment: any) => {
-    if (user?.role === "doctor" && appointment.doctorId !== user.userId) {
+    if (user?.role === "doctor" && String(appointment.doctorId) !== String(currentUserId)) {
       toast.error("You can only edit your own appointments")
       return
     }
@@ -669,6 +675,17 @@ export default function AppointmentsPage() {
   const completedAppointments = appointments.filter((apt) => apt.status === "completed").length
   const cancelledAppointments = appointments.filter((apt) => apt.status === "cancelled").length
 
+  // Added handler for referral modal
+  const handleOpenReferModal = (appointment: any) => {
+    if (appointment.isReferred && String(appointment.originalDoctorId) !== String(currentUserId)) {
+      toast.error("This appointment is currently referred to another doctor and cannot be referred again by you.")
+      return
+    }
+
+    setSelectedAppointmentForReferral(appointment)
+    setShowReferModal(true)
+  }
+
   return (
     <ProtectedRoute>
       <div className="flex h-screen bg-background">
@@ -834,13 +851,36 @@ export default function AppointmentsPage() {
                           const hasReport = appointmentReports[apt._id || apt.id]
                           const canClose = hasReport || apt.status === "closed"
 
+                          const isOriginalDoctorWithReferral =
+                            user?.role === "doctor" &&
+                            String(apt.originalDoctorId) === String(currentUserId) &&
+                            apt.isReferred === true
+
+                          const isReferredDoctor =
+                            user?.role === "doctor" &&
+                            String(apt.doctorId) === String(currentUserId) &&
+                            apt.isReferred === true
+
+                          const canReferAppointment =
+                            user?.role === "doctor" && !apt.isReferred && String(apt.doctorId) === String(currentUserId)
+
                           return (
                             <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
                               <div className="flex justify-between items-start gap-2 mb-2">
-                                <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
-                                <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
-                                  {apt.status}
-                                </span>
+                                <p className="font-medium text-foreground text-sm">{apt.patientName} <br/>
+                                {apt.isReferred && (
+                                    <span className="text-xs rounded bg-purple-100 text-purple-800">
+                                      {String(apt.originalDoctorId) === String(currentUserId)
+                                        ? `Referred to ${apt.doctorName}`
+                                        : "Referred In"}
+                                    </span>
+                                  )}</p>
+                                <div className="flex flex-col gap-1">
+                                  <span className={`text-xs px-2 py-1 rounded text-end ${getStatusColor(apt.status)}`}>
+                                    {apt.status}
+                                  </span>
+                                 
+                                </div>
                               </div>
                               <p className="text-xs text-muted-foreground">
                                 {apt.time} - {apt.type}
@@ -864,7 +904,8 @@ export default function AppointmentsPage() {
                               <div className="flex gap-2 mt-2 flex-wrap">
                                 {apt.status !== "completed" &&
                                   apt.status !== "closed" &&
-                                  (user?.role !== "doctor" && apt.doctorId !== user.userId) && (
+                                  user?.role !== "doctor" &&
+                                  apt.doctorId !== user.userId && (
                                     <button
                                       onClick={() => handleEditAppointment(apt)}
                                       disabled={
@@ -902,67 +943,91 @@ export default function AppointmentsPage() {
 
                                 {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
                                   <>
-                                    {hasReport ? (
+                                    {!isOriginalDoctorWithReferral && (
+                                      <>
+                                        {hasReport ? (
+                                          <button
+                                            onClick={() => router.push("/dashboard/medical-reports")}
+                                            disabled={loading.createReport}
+                                            className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                          >
+                                            <FileText className="w-3 h-3" />
+                                            View Report
+                                          </button>
+                                        ) : (
+                                          <button
+                                            onClick={() => {
+                                              setSelectedAppointment(apt)
+                                              setShowReportForm(true)
+                                              setReportErrors({})
+                                            }}
+                                            disabled={loading.createReport}
+                                            className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                          >
+                                            <FileText className="w-3 h-3" />
+                                            Create Report
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+
+                                    {canReferAppointment && (
                                       <button
-                                        onClick={() => router.push("/dashboard/medical-reports")}
-                                        disabled={loading.createReport}
-                                        className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                        onClick={() => handleOpenReferModal(apt)}
+                                        disabled={loading.completeAppointment}
+                                        className="text-xs text-accent hover:underline disabled:text-accent/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
                                       >
                                         <FileText className="w-3 h-3" />
-                                        View Report
-                                      </button>
-                                    ) : (
-                                      <button
-                                        onClick={() => {
-                                          setSelectedAppointment(apt)
-                                          setShowReportForm(true)
-                                          setReportErrors({})
-                                        }}
-                                        disabled={loading.createReport}
-                                        className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                      >
-                                        <FileText className="w-3 h-3" />
-                                        Create Report
+                                        Refer to Doctor
                                       </button>
                                     )}
 
-                                    <button
-                                      onClick={() => {
-                                        if (!canClose) {
-                                          toast.error(
-                                            "You cannot close this appointment. Please create a medical report first.",
-                                          )
-                                          return
-                                        }
-                                        setAppointmentActionModal({
-                                          isOpen: true,
-                                          action: "close",
-                                          appointmentId: apt._id || apt.id,
-                                        })
-                                      }}
-                                      disabled={loading.completeAppointment || !canClose}
-                                      className={`text-xs hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 ${
-                                        canClose ? "text-green-600 disabled:text-green-600/50" : "text-muted-foreground"
-                                      }`}
-                                      title={!canClose ? "Create a medical report before closing" : "Close appointment"}
-                                    >
-                                      <CheckCircle className="w-3 h-3" />
-                                      Close
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        setAppointmentActionModal({
-                                          isOpen: true,
-                                          action: "cancel",
-                                          appointmentId: apt._id || apt.id,
-                                        })
-                                      }
-                                      disabled={loading.cancelAppointment}
-                                      className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                    >
-                                      <X className="w-3 h-3" />
-                                      Cancel
-                                    </button>
+                                    {!isOriginalDoctorWithReferral && !isReferredDoctor && (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            if (!canClose) {
+                                              toast.error(
+                                                "You cannot close this appointment. Please create a medical report first.",
+                                              )
+                                              return
+                                            }
+                                            setAppointmentActionModal({
+                                              isOpen: true,
+                                              action: "close",
+                                              appointmentId: apt._id || apt.id,
+                                            })
+                                          }}
+                                          disabled={loading.completeAppointment || !canClose}
+                                          className={`text-xs hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 ${
+                                            canClose
+                                              ? "text-green-600 disabled:text-green-600/50"
+                                              : "text-muted-foreground"
+                                          }`}
+                                          title={
+                                            !canClose ? "Create a medical report before closing" : "Close appointment"
+                                          }
+                                        >
+                                          <CheckCircle className="w-3 h-3" />
+                                          Close
+                                        </button>
+
+                                        <button
+                                          onClick={() =>
+                                            setAppointmentActionModal({
+                                              isOpen: true,
+                                              action: "cancel",
+                                              appointmentId: apt._id || apt.id,
+                                            })
+                                          }
+                                          disabled={loading.cancelAppointment}
+                                          className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                        >
+                                          <X className="w-3 h-3" />
+                                          Cancel
+                                        </button>
+                                      </>
+                                    )}
                                   </>
                                 )}
                               </div>
@@ -988,13 +1053,36 @@ export default function AppointmentsPage() {
                         const hasReport = appointmentReports[apt._id || apt.id]
                         const canClose = hasReport || apt.status === "closed"
 
+                        const isOriginalDoctorWithReferral =
+                          user?.role === "doctor" &&
+                          String(apt.originalDoctorId) === String(currentUserId) &&
+                          apt.isReferred === true
+
+                        const isReferredDoctor =
+                          user?.role === "doctor" &&
+                          String(apt.doctorId) === String(currentUserId) &&
+                          apt.isReferred === true
+
+                        const canReferAppointment =
+                          user?.role === "doctor" && !apt.isReferred && String(apt.doctorId) === String(currentUserId)
+
                         return (
                           <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
                             <div className="flex justify-between items-start gap-2 mb-1">
-                              <p className="font-medium text-foreground text-sm">{apt.patientName}</p>
-                              <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
-                                {apt.status}
-                              </span>
+                              <p className="font-medium text-foreground text-sm">{apt.patientName} <br/>
+                                {apt.isReferred && (
+                                    <span className="text-xs rounded bg-purple-100 text-purple-800">
+                                      {String(apt.originalDoctorId) === String(currentUserId)
+                                        ? `Referred to ${apt.doctorName}`
+                                        : "Referred In"}
+                                    </span>
+                                  )}</p>
+                              <div className="flex flex-col gap-1">
+                                <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
+                                  {apt.status}
+                                </span>
+                               
+                              </div>
                             </div>
                             <p className="text-xs text-muted-foreground">
                               {apt.date} at {apt.time}
@@ -1016,14 +1104,11 @@ export default function AppointmentsPage() {
                               </div>
                             )}
                             <div className="flex gap-2 mt-2 flex-wrap">
-                              {apt.status !== "completed" && apt.status !== "closed" && (user?.role !== "doctor")&& (
+                              {apt.status !== "completed" && apt.status !== "closed" && user?.role !== "doctor" && (
                                 <button
                                   onClick={() => handleEditAppointment(apt)}
                                   disabled={
-                                    loading.addAppointment ||
-                                    loading.updateAppointment ||
-                                    loading.deleteAppointment 
-                                    
+                                    loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
                                   }
                                   className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer"
                                 >
@@ -1057,67 +1142,91 @@ export default function AppointmentsPage() {
                                 apt.status !== "completed" &&
                                 apt.status !== "closed" && (
                                   <>
-                                    {hasReport ? (
+                                    {!isOriginalDoctorWithReferral && (
+                                      <>
+                                        {hasReport ? (
+                                          <button
+                                            onClick={() => router.push("/dashboard/medical-reports")}
+                                            disabled={loading.createReport}
+                                            className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                          >
+                                            <FileText className="w-3 h-3" />
+                                            View Report
+                                          </button>
+                                        ) : (
+                                          <button
+                                            onClick={() => {
+                                              setSelectedAppointment(apt)
+                                              setShowReportForm(true)
+                                              setReportErrors({})
+                                            }}
+                                            disabled={loading.createReport}
+                                            className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                          >
+                                            <FileText className="w-3 h-3" />
+                                            Create Report
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+
+                                    {canReferAppointment && (
                                       <button
-                                        onClick={() => router.push("/dashboard/medical-reports")}
-                                        disabled={loading.createReport}
-                                        className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                        onClick={() => handleOpenReferModal(apt)}
+                                        disabled={loading.completeAppointment}
+                                        className="text-xs text-accent hover:underline disabled:text-accent/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
                                       >
                                         <FileText className="w-3 h-3" />
-                                        View Report
-                                      </button>
-                                    ) : (
-                                      <button
-                                        onClick={() => {
-                                          setSelectedAppointment(apt)
-                                          setShowReportForm(true)
-                                          setReportErrors({})
-                                        }}
-                                        disabled={loading.createReport}
-                                        className="text-xs text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                      >
-                                        <FileText className="w-3 h-3" />
-                                        Create Report
+                                        Refer to Doctor
                                       </button>
                                     )}
 
-                                    <button
-                                      onClick={() => {
-                                        if (!canClose) {
-                                          toast.error(
-                                            "You cannot close this appointment. Please create a medical report first.",
-                                          )
-                                          return
-                                        }
-                                        setAppointmentActionModal({
-                                          isOpen: true,
-                                          action: "close",
-                                          appointmentId: apt._id || apt.id,
-                                        })
-                                      }}
-                                      disabled={loading.completeAppointment || !canClose}
-                                      className={`text-xs hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 ${
-                                        canClose ? "text-green-600 disabled:text-green-600/50" : "text-muted-foreground"
-                                      }`}
-                                      title={!canClose ? "Create a medical report before closing" : "Close appointment"}
-                                    >
-                                      <CheckCircle className="w-3 h-3" />
-                                      Close
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        setAppointmentActionModal({
-                                          isOpen: true,
-                                          action: "cancel",
-                                          appointmentId: apt._id || apt.id,
-                                        })
-                                      }
-                                      disabled={loading.cancelAppointment}
-                                      className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                                    >
-                                      <X className="w-3 h-3" />
-                                      Cancel
-                                    </button>
+                                    {!isOriginalDoctorWithReferral && !isReferredDoctor && (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            if (!canClose) {
+                                              toast.error(
+                                                "You cannot close this appointment. Please create a medical report first.",
+                                              )
+                                              return
+                                            }
+                                            setAppointmentActionModal({
+                                              isOpen: true,
+                                              action: "close",
+                                              appointmentId: apt._id || apt.id,
+                                            })
+                                          }}
+                                          disabled={loading.completeAppointment || !canClose}
+                                          className={`text-xs hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 ${
+                                            canClose
+                                              ? "text-green-600 disabled:text-green-600/50"
+                                              : "text-muted-foreground"
+                                          }`}
+                                          title={
+                                            !canClose ? "Create a medical report before closing" : "Close appointment"
+                                          }
+                                        >
+                                          <CheckCircle className="w-3 h-3" />
+                                          Close
+                                        </button>
+
+                                        <button
+                                          onClick={() =>
+                                            setAppointmentActionModal({
+                                              isOpen: true,
+                                              action: "cancel",
+                                              appointmentId: apt._id || apt.id,
+                                            })
+                                          }
+                                          disabled={loading.cancelAppointment}
+                                          className="text-xs text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                                        >
+                                          <X className="w-3 h-3" />
+                                          Cancel
+                                        </button>
+                                      </>
+                                    )}
                                   </>
                                 )}
                             </div>
@@ -1491,6 +1600,24 @@ export default function AppointmentsPage() {
               token={token}
               doctoName={user?.name || ""}
             />
+
+            {/* Added Refer Appointment Modal JSX */}
+            {showReferModal && selectedAppointmentForReferral && (
+              <ReferAppointmentModal
+                isOpen={showReferModal}
+                onClose={() => {
+                  setShowReferModal(false)
+                  setSelectedAppointmentForReferral(null)
+                }}
+                onSuccess={() => {
+                  // Refresh appointments after successful referral
+                  fetchAppointments()
+                }}
+                appointmentId={selectedAppointmentForReferral._id || selectedAppointmentForReferral.id}
+                patientName={selectedAppointmentForReferral.patientName}
+                token={token}
+              />
+            )}
           </div>
         </main>
       </div>
