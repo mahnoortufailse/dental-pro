@@ -24,13 +24,13 @@ export async function GET(request: NextRequest) {
     // Doctors see only their own referrals
     if (role === "doctor") {
       query.doctorId = payload.userId
-    }
-    // Receptionist and admin see all pending/processing referrals
-    else if (role === "receptionist" || role === "admin") {
+    } else if (role === "receptionist" || role === "admin") {
+      // Only apply status filter if explicitly passed in query params
       const status = searchParams.get("status")
       if (status) {
         query.status = status
       }
+      // If no status filter provided, show all referrals
     } else {
       return NextResponse.json({ error: "Unauthorized role" }, { status: 403 })
     }

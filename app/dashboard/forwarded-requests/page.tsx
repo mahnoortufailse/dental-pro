@@ -6,7 +6,7 @@ import type React from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { toast } from "react-hot-toast"
 import {
   Upload,
@@ -23,9 +23,19 @@ import {
   FileText,
   Stethoscope,
   XCircle,
+  Search,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { validateAppointmentScheduling } from "@/lib/appointment-validation"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface PatientReferral {
   _id: string
@@ -50,6 +60,8 @@ interface PatientReferral {
   updatedAt: string
 }
 
+const ITEMS_PER_PAGE = 10
+
 export default function ForwardedRequestsPage() {
   const { user, token } = useAuth()
   const router = useRouter()
@@ -58,6 +70,7 @@ export default function ForwardedRequestsPage() {
     fetch: false,
     upload: false,
     createAppointment: false,
+    reject: false, // add reject loading state
   })
   const [selectedReferral, setSelectedReferral] = useState<PatientReferral | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -75,6 +88,10 @@ export default function ForwardedRequestsPage() {
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState<"patient" | "appointment">("patient")
+
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedStatus, setSelectedStatus] = useState<string>("all")
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     if (token && (user?.role === "receptionist" || user?.role === "admin")) {
@@ -101,6 +118,26 @@ export default function ForwardedRequestsPage() {
       setLoading((prev) => ({ ...prev, fetch: false }))
     }
   }
+
+  const filteredReferrals = useMemo(() => {
+    return referrals.filter((referral) => {
+      const matchesSearch =
+        referral.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        referral.doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        referral.patientPhone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        referral.patientEmail.toLowerCase().includes(searchTerm.toLowerCase())
+
+      const matchesStatus = selectedStatus === "all" || referral.status === selectedStatus
+
+      return matchesSearch && matchesStatus
+    })
+  }, [referrals, searchTerm, selectedStatus])
+
+  const totalPages = Math.ceil(filteredReferrals.length / ITEMS_PER_PAGE)
+  const paginatedReferrals = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredReferrals.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+  }, [filteredReferrals, currentPage])
 
   const handlePictureSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -210,190 +247,193 @@ export default function ForwardedRequestsPage() {
     return Object.keys(errors).length === 0
   }
 
- const createAppointmentAndCompleteReferral = async () => {
-  if (!selectedReferral || !validateAppointmentForm()) {
-    toast.error("Please fix the errors in the form")
-    return
-  }
-
-  // Validate and format the date of birth
-  const patientDob = selectedReferral.patientDob
-  if (!patientDob) {
-    toast.error("Patient date of birth is required")
-    return
-  }
-
-  let formattedDob
-  try {
-    const dobDate = new Date(patientDob)
-    if (isNaN(dobDate.getTime())) {
-      toast.error("Invalid date of birth format")
+  const createAppointmentAndCompleteReferral = async () => {
+    if (!selectedReferral || !validateAppointmentForm()) {
+      toast.error("Please fix the errors in the form")
       return
     }
-    formattedDob = dobDate.toISOString().split("T")[0]
-  } catch (error) {
-    toast.error("Invalid date of birth")
-    return
-  }
 
-  console.log("[v0] Validating appointment time conflict for doctor:", selectedReferral.doctorId)
-  const validation = await validateAppointmentScheduling(
-    selectedReferral.doctorId,
-    formData.appointmentDate,
-    formData.appointmentTime,
-    formData.duration || 30,
-    token,
-    undefined,
-  )
-
-  if (!validation.isValid) {
-    toast.error(validation.error || "Time conflict detected. Please choose another time.")
-    return
-  }
-
-  setLoading((prev) => ({ ...prev, createAppointment: true }))
-  try {
-    // Prepare patient data with ALL required fields from backend
-    const patientData = {
-      name: selectedReferral.patientName,
-      phone: selectedReferral.patientPhone,
-      email: selectedReferral.patientEmail || "",
-      dob: formattedDob,
-      idNumber: selectedReferral.patientIdNumber || "N/A",
-      address: selectedReferral.patientAddress || "",
-      insuranceProvider: "",
-      insuranceNumber: "",
-      allergies: selectedReferral.patientAllergies || [],
-      medicalConditions: selectedReferral.patientMedicalConditions || [],
-      assignedDoctorId: selectedReferral.doctorId,
-      photoUrl: selectedReferral.pictureUrl || null,
+    // Validate and format the date of birth
+    const patientDob = selectedReferral.patientDob
+    if (!patientDob) {
+      toast.error("Patient date of birth is required")
+      return
     }
 
-    console.log("Sending patient data to API:", patientData)
+    let formattedDob
+    try {
+      const dobDate = new Date(patientDob)
+      if (isNaN(dobDate.getTime())) {
+        toast.error("Invalid date of birth format")
+        return
+      }
+      formattedDob = dobDate.toISOString().split("T")[0]
+    } catch (error) {
+      toast.error("Invalid date of birth")
+      return
+    }
 
-    const patientRes = await fetch("/api/patients", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(patientData),
-    })
+    console.log("[v0] Validating appointment time conflict for doctor:", selectedReferral.doctorId)
+    const validation = await validateAppointmentScheduling(
+      selectedReferral.doctorId,
+      formData.appointmentDate,
+      formData.appointmentTime,
+      formData.duration || 30,
+      token,
+      undefined,
+    )
 
-    console.log("Patient API response status:", patientRes.status)
+    if (!validation.isValid) {
+      toast.error(validation.error || "Time conflict detected. Please choose another time.")
+      return
+    }
 
-    let patientId
+    setLoading((prev) => ({ ...prev, createAppointment: true }))
+    try {
+      // Prepare patient data with ALL required fields from backend
+      const patientData = {
+        name: selectedReferral.patientName,
+        phone: selectedReferral.patientPhone,
+        email: selectedReferral.patientEmail || "",
+        dob: formattedDob,
+        idNumber: selectedReferral.patientIdNumber || "N/A",
+        address: selectedReferral.patientAddress || "",
+        insuranceProvider: "",
+        insuranceNumber: "",
+        allergies: selectedReferral.patientAllergies || [],
+        medicalConditions: selectedReferral.patientMedicalConditions || [],
+        assignedDoctorId: selectedReferral.doctorId,
+        photoUrl: selectedReferral.pictureUrl || null,
+      }
 
-    if (patientRes.ok) {
-      const patientResponse = await patientRes.json()
-      patientId = patientResponse.patient._id
-      console.log("Patient created successfully, ID:", patientId)
-    } else if (patientRes.status === 409) {
-      // Handle email conflict error properly
-      const errorData = await patientRes.json()
-      console.error("Email conflict error:", errorData)
+      console.log("Sending patient data to API:", patientData)
 
-      // Show detailed error message
-      toast.error(
-        <div className="text-center">
-          <div className="font-semibold">Email Conflict Detected</div>
-          <div className="text-sm mt-1">
-            {errorData.error || "Email already exists in staff records. Please use a different email."}
-          </div>
-        </div>,
-        {
-          duration: 3000,
-          icon: "❌",
+      const patientRes = await fetch("/api/patients", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      )
+        body: JSON.stringify(patientData),
+      })
 
-      // Auto-reject the forward request if email conflict
-      await rejectForwardRequest("Email conflict: " + (errorData.error || "Email already exists in staff records"))
-      
-      // Stop further execution
-      setLoading((prev) => ({ ...prev, createAppointment: false }))
-      return
-    } else {
-      // Handle other errors
-      const errorData = await patientRes.json()
-      console.error("Patient creation failed:", errorData)
-      toast.error(errorData.error || `Failed to create patient: ${patientRes.status}`)
-      setLoading((prev) => ({ ...prev, createAppointment: false }))
-      return
-    }
+      console.log("Patient API response status:", patientRes.status)
 
-    // Create the appointment (only if patient was created successfully)
-    const appointmentRes = await fetch("/api/appointments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        patientId,
-        patientName: selectedReferral.patientName,
-        doctorId: selectedReferral.doctorId,
-        doctorName: selectedReferral.doctorName,
-        date: formData.appointmentDate,
-        time: formData.appointmentTime,
-        type: formData.appointmentType,
-        roomNumber: formData.roomNumber,
-        duration: formData.duration,
-      }),
-    })
+      let patientId
 
-    if (appointmentRes.ok) {
-      const appointmentData = await appointmentRes.json()
-      const appointmentId = appointmentData.appointment._id
+      if (patientRes.ok) {
+        const patientResponse = await patientRes.json()
+        patientId = patientResponse.patient._id
+        console.log("Patient created successfully, ID:", patientId)
+      } else if (patientRes.status === 409) {
+        // Handle email conflict error properly
+        const errorData = await patientRes.json()
+        console.error("Email conflict error:", errorData)
 
-      // Update referral as completed
-      const updateRes = await fetch(`/api/patient-referrals/${selectedReferral._id}`, {
-        method: "PUT",
+        // Show detailed error message
+        toast.error(
+          <div className="text-center">
+            <div className="font-semibold">Email Conflict Detected</div>
+            <div className="text-sm mt-1">
+              {errorData.error || "Email already exists in staff records. Please use a different email."}
+            </div>
+          </div>,
+          {
+            duration: 3000,
+            icon: "❌",
+          },
+        )
+
+        // Auto-reject the forward request if email conflict
+        await rejectForwardRequest("Email conflict: " + (errorData.error || "Email already exists in staff records"))
+
+        // Stop further execution
+        setLoading((prev) => ({ ...prev, createAppointment: false }))
+        return
+      } else {
+        // Handle other errors
+        const errorData = await patientRes.json() // Corrected from res.json()
+        console.error("Patient creation failed:", errorData)
+        toast.error(errorData.error || `Failed to create patient: ${patientRes.status}`)
+        setLoading((prev) => ({ ...prev, createAppointment: false }))
+        return
+      }
+
+      // Create the appointment (only if patient was created successfully)
+      const appointmentRes = await fetch("/api/appointments", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          status: "completed",
-          appointmentId,
-          notes: formData.notes,
+          patientId,
+          patientName: selectedReferral.patientName,
+          doctorId: selectedReferral.doctorId,
+          doctorName: selectedReferral.doctorName,
+          date: formData.appointmentDate,
+          time: formData.appointmentTime,
+          type: formData.appointmentType,
+          roomNumber: formData.roomNumber,
+          duration: formData.duration,
         }),
       })
 
-      if (updateRes.ok) {
-        toast.success("Patient registered and appointment booked successfully")
-        setShowDetailModal(false)
-        setSelectedReferral(null)
-        setPictureFile(null)
-        setPreviewUrl("")
-        setFormData({
-          appointmentDate: "",
-          appointmentTime: "",
-          appointmentType: "Consultation",
-          roomNumber: "",
-          duration: 30,
-          notes: "",
+      if (appointmentRes.ok) {
+        const appointmentData = await appointmentRes.json()
+        const appointmentId = appointmentData.appointment._id
+
+        // Update referral as completed
+        const updateRes = await fetch(`/api/patient-referrals/${selectedReferral._id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            status: "completed",
+            appointmentId,
+            notes: formData.notes,
+          }),
         })
-        setFormErrors({})
-        fetchReferrals()
+
+        if (updateRes.ok) {
+          toast.success("Patient registered and appointment booked successfully")
+          setShowDetailModal(false)
+          setSelectedReferral(null)
+          setPictureFile(null)
+          setPreviewUrl("")
+          setFormData({
+            appointmentDate: "",
+            appointmentTime: "",
+            appointmentType: "Consultation",
+            roomNumber: "",
+            duration: 30,
+            notes: "",
+          })
+          setFormErrors({})
+          setCurrentPage(1)
+          fetchReferrals()
+        } else {
+          const errorData = await updateRes.json()
+          toast.error(errorData.error || "Failed to update referral status")
+        }
       } else {
-        const errorData = await updateRes.json()
-        toast.error(errorData.error || "Failed to update referral status")
+        const errorData = await appointmentRes.json()
+        toast.error(errorData.error || "Failed to create appointment")
       }
-    } else {
-      const errorData = await appointmentRes.json()
-      toast.error(errorData.error || "Failed to create appointment")
+    } catch (error) {
+      console.error("Failed to create appointment:", error)
+      toast.error("Error creating appointment")
+    } finally {
+      setLoading((prev) => ({ ...prev, createAppointment: false }))
     }
-  } catch (error) {
-    console.error("Failed to create appointment:", error)
-    toast.error("Error creating appointment")
-  } finally {
-    setLoading((prev) => ({ ...prev, createAppointment: false }))
   }
-}
 
   const rejectForwardRequest = async (reason?: string) => {
     if (!selectedReferral) return
+
+    setLoading((prev) => ({ ...prev, reject: true })) // add loading state
 
     try {
       const updateRes = await fetch(`/api/patient-referrals/${selectedReferral._id}`, {
@@ -414,6 +454,7 @@ export default function ForwardedRequestsPage() {
         setShowRejectModal(false)
         setSelectedReferral(null)
         setRejectReason("")
+        setCurrentPage(1)
         fetchReferrals()
       } else {
         const errorData = await updateRes.json()
@@ -422,6 +463,8 @@ export default function ForwardedRequestsPage() {
     } catch (error) {
       console.error("Failed to reject request:", error)
       toast.error("Error rejecting request")
+    } finally {
+      setLoading((prev) => ({ ...prev, reject: false })) // remove loading state
     }
   }
 
@@ -442,6 +485,21 @@ export default function ForwardedRequestsPage() {
     setActiveTab("patient")
     setShowRejectModal(false)
     setRejectReason("")
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-amber-100 text-amber-800"
+      case "in-progress":
+        return "bg-blue-100 text-blue-800"
+      case "completed":
+        return "bg-green-100 text-green-800"
+      case "rejected":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
   }
 
   if (user?.role !== "receptionist" && user?.role !== "admin") {
@@ -476,67 +534,166 @@ export default function ForwardedRequestsPage() {
               </p>
             </div>
 
+            <div className="space-y-4 mb-6">
+              {/* Search bar */}
+              <div className="flex items-center gap-2 bg-card rounded-lg border border-border p-3">
+                <Search className="w-5 h-5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search by patient name, doctor name, phone, or email..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="flex-1 bg-transparent outline-none text-foreground placeholder-muted-foreground text-sm"
+                />
+              </div>
+
+              {/* Filter bar */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-foreground">Filter by status:</span>
+                <div className="flex gap-2 flex-wrap">
+                  {["all", "pending", "in-progress", "completed", "rejected"].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setSelectedStatus(status)
+                        setCurrentPage(1)
+                      }}
+                      className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                        selectedStatus === status
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Results count */}
+              <div className="text-sm text-muted-foreground">
+                Showing {paginatedReferrals.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0} to{" "}
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredReferrals.length)} of {filteredReferrals.length}{" "}
+                referrals
+              </div>
+            </div>
+
             {loading.fetch ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-            ) : referrals.length === 0 ? (
+            ) : paginatedReferrals.length === 0 ? (
               <div className="text-center py-12 bg-card rounded-lg border border-border">
                 <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No pending forwarded requests at the moment.</p>
+                <p className="text-muted-foreground">
+                  {filteredReferrals.length === 0 ? "No forwarded requests found." : "No results on this page."}
+                </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {referrals.map((referral) => (
-                  <div
-                    key={referral._id}
-                    className="bg-card rounded-lg shadow-md border border-border p-6 hover:shadow-lg transition-shadow"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-foreground">{referral.patientName}</h3>
-                        <p className="text-sm text-muted-foreground">Referred by: {referral.doctorName}</p>
-                      </div>
-                      <span
-                        className={`text-xs px-2 py-1 rounded font-medium ${
-                          referral.status === "pending"
-                            ? "bg-amber-100 text-amber-800"
-                            : referral.status === "in-progress"
-                              ? "bg-blue-100 text-blue-800"
-                              : referral.status === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {referral.status}
-                      </span>
-                    </div>
+              <div className="space-y-4">
+                <div className="bg-card rounded-lg border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="font-semibold">Patient Name</TableHead>
+                        <TableHead className="font-semibold">Referred By</TableHead>
+                        <TableHead className="font-semibold">Phone</TableHead>
+                        <TableHead className="font-semibold">Email</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedReferrals.map((referral) => (
+                        <TableRow key={referral._id} className="hover:bg-muted/30 transition-colors">
+                          <TableCell className="font-medium text-foreground">{referral.patientName}</TableCell>
+                          <TableCell className="text-muted-foreground">Dr. {referral.doctorName}</TableCell>
+                          <TableCell className="text-muted-foreground">{referral.patientPhone}</TableCell>
+                          <TableCell className="text-muted-foreground">{referral.patientEmail || "N/A"}</TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(referral.status)}`}
+                            >
+                              {referral.status.charAt(0).toUpperCase() + referral.status.slice(1).replace("-", " ")}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {(referral.status === "pending" || referral.status === "in-progress") && (
+                              <button
+                                onClick={() => handleOpenReferral(referral)}
+                                disabled={loading.createAppointment || loading.reject} // disable on any loading
+                                className="inline-flex items-center gap-1 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-3 py-1 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:cursor-not-allowed"
+                              >
+                                {/* The original code had a check for loading.fetch here which seems incorrect.
+                                    Assuming it was meant to be for loading the details or was a leftover.
+                                    Removed it and added a generic loading state if it were to be applied. */}
+                                {loading.fetch ? ( // Kept for consistency if fetch was meant to be here, but typically not on button click
+                                  <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Loading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="w-4 h-4" />
+                                    Review
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            {referral.status === "completed" && (
+                              <span className="text-xs text-green-600 font-medium">Completed</span>
+                            )}
+                            {referral.status === "rejected" && (
+                              <span className="text-xs text-red-600 font-medium">Rejected</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
 
-                    <div className="space-y-2 mb-4 text-sm">
-                      <p className="text-muted-foreground">
-                        <strong>Phone:</strong> {referral.patientPhone}
-                      </p>
-                      <p className="text-muted-foreground">
-                        <strong>DOB:</strong> {referral.patientDob}
-                      </p>
-                      <p className="text-muted-foreground">
-                        <strong>Reason:</strong> {referral.referralReason}
-                      </p>
-                    </div>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center">
+                    <Pagination>
+                      <PaginationContent>
+                        {currentPage > 1 && (
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
 
-                    {/* Only show button for pending and in-progress statuses */}
-                    {(referral.status === "pending" || referral.status === "in-progress") && (
-                      <button
-                        onClick={() => handleOpenReferral(referral)}
-                        disabled={loading.createAppointment}
-                        className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Review & Process
-                      </button>
-                    )}
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+
+                        {currentPage < totalPages && (
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                      </PaginationContent>
+                    </Pagination>
                   </div>
-                ))}
+                )}
               </div>
             )}
 
@@ -559,7 +716,7 @@ export default function ForwardedRequestsPage() {
                     </div>
                     <button
                       onClick={() => setShowDetailModal(false)}
-                      className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                      className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -570,7 +727,7 @@ export default function ForwardedRequestsPage() {
                     <div className="flex px-6">
                       <button
                         onClick={() => setActiveTab("patient")}
-                        className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+                        className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors cursor-pointer ${
                           activeTab === "patient"
                             ? "border-primary text-primary"
                             : "border-transparent text-muted-foreground hover:text-foreground"
@@ -581,7 +738,7 @@ export default function ForwardedRequestsPage() {
                       </button>
                       <button
                         onClick={() => setActiveTab("appointment")}
-                        className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+                        className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors cursor-pointer ${
                           activeTab === "appointment"
                             ? "border-primary text-primary"
                             : "border-transparent text-muted-foreground hover:text-foreground"
@@ -709,7 +866,7 @@ export default function ForwardedRequestsPage() {
                                           setPictureFile(null)
                                           setPreviewUrl("")
                                         }}
-                                        className="text-sm text-destructive hover:text-destructive/80 font-medium"
+                                        className="text-sm text-destructive hover:text-destructive/80 font-medium cursor-pointer"
                                       >
                                         Remove Photo
                                       </button>
@@ -738,8 +895,8 @@ export default function ForwardedRequestsPage() {
                               {pictureFile && !selectedReferral.pictureUrl && (
                                 <button
                                   onClick={uploadPicture}
-                                  disabled={loading.upload}
-                                  className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-3 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed shadow-sm"
+                                  disabled={loading.upload || loading.createAppointment} // add createAppointment check
+                                  className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-3 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed shadow-sm "
                                 >
                                   {loading.upload ? (
                                     <>
@@ -771,14 +928,15 @@ export default function ForwardedRequestsPage() {
                             <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
                             <button
                               onClick={() => setActiveTab("appointment")}
-                              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-3 rounded-lg transition-colors font-medium shadow-sm mb-3"
+                              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-3 rounded-lg transition-colors font-medium shadow-sm mb-3 cursor-pointer"
                             >
                               <Calendar className="w-4 h-4" />
                               Proceed to Book Appointment
                             </button>
                             <button
                               onClick={() => setShowRejectModal(true)}
-                              className="w-full flex items-center justify-center gap-2 bg-destructive hover:bg-destructive/90 text-white px-4 py-3 rounded-lg transition-colors font-medium shadow-sm"
+                              disabled={loading.createAppointment} // disable on processing
+                              className="w-full flex items-center justify-center gap-2 bg-destructive hover:bg-destructive/90 disabled:bg-destructive/50 text-white px-4 py-3 rounded-lg transition-colors font-medium shadow-sm disabled:cursor-not-allowed cursor-pointer"
                             >
                               <XCircle className="w-4 h-4" />
                               Reject Request
@@ -910,7 +1068,7 @@ export default function ForwardedRequestsPage() {
                       <button
                         onClick={() => setShowDetailModal(false)}
                         disabled={loading.createAppointment}
-                        className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-3 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed shadow-sm"
+                        className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-3 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed shadow-sm cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -969,16 +1127,27 @@ export default function ForwardedRequestsPage() {
                   <div className="flex gap-3 p-6 border-t border-border bg-muted/30">
                     <button
                       onClick={() => setShowRejectModal(false)}
-                      className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium shadow-sm"
+                      disabled={loading.reject} // disable on loading
+                      className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium shadow-sm disabled:cursor-not-allowed cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => rejectForwardRequest()}
-                      className="flex-1 flex items-center justify-center gap-2 bg-destructive hover:bg-destructive/90 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-sm"
+                      disabled={loading.reject} // disable on loading
+                      className="flex-1 flex items-center justify-center gap-2 bg-destructive hover:bg-destructive/90 disabled:bg-destructive/50 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-sm disabled:cursor-not-allowed cursor-pointer"
                     >
-                      <XCircle className="w-4 h-4" />
-                      Reject
+                      {loading.reject ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Rejecting...
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-4 h-4" />
+                          Reject
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

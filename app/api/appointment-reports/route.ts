@@ -29,8 +29,9 @@ export async function GET(request: NextRequest) {
       query.appointmentId = appointmentId
       // Don't filter by doctorId when checking specific appointment - any doctor's report counts
     } else if (payload?.role === "doctor") {
-      // Only filter by doctorId when fetching all reports for a doctor's dashboard
-      query.doctorId = payload.userId
+      // This allows doctors to see reports created by referred doctors on their appointments
+      console.log("[v0] Fetching all appointment reports for doctor view")
+      // No doctorId filter - doctor will see all reports and filter on frontend based on appointments they own
     } else if (payload?.role === "admin" || payload?.role === "receptionist") {
       // Admin and receptionist see all reports
     } else if (patientId) {

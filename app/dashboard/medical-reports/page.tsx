@@ -7,7 +7,7 @@ import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { generateReportPDF } from "@/lib/pdf-generator"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { FileText, Eye, Trash2, Download, X, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
+import { FileText, Eye, Trash2, Download, X, ChevronLeft, ChevronRight, RefreshCw, Edit2 } from "lucide-react"
 
 export default function MedicalReportsPage() {
   const { user, token } = useAuth()
@@ -26,6 +26,16 @@ export default function MedicalReportsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [patientSearch, setPatientSearch] = useState("")
   const [showPatientDropdown, setShowPatientDropdown] = useState(false)
+
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingReport, setEditingReport] = useState<any>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editFormData, setEditFormData] = useState({
+    findings: "",
+    notes: "",
+    followUpDetails: "",
+    nextVisit: "",
+  })
 
   // Search and pagination state
   const [searchTerm, setSearchTerm] = useState("")
@@ -195,6 +205,53 @@ export default function MedicalReportsPage() {
     }
   }
 
+  const handleEditReport = (report: any) => {
+    setEditingReport(report)
+    setEditFormData({
+      findings: report.findings || "",
+      notes: report.notes || "",
+      followUpDetails: report.followUpDetails || "",
+      nextVisit: report.nextVisit ? new Date(report.nextVisit).toISOString().split("T")[0] : "",
+    })
+    setShowEditModal(true)
+  }
+
+  const handleSaveEditReport = async () => {
+    if (!editingReport) return
+
+    setIsSaving(true)
+    try {
+      const res = await fetch(`/api/appointment-reports/${editingReport._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          findings: editFormData.findings,
+          notes: editFormData.notes,
+          followUpDetails: editFormData.followUpDetails,
+          nextVisit: editFormData.nextVisit ? new Date(editFormData.nextVisit) : null,
+        }),
+      })
+
+      if (res.ok) {
+        const updatedReport = await res.json()
+        setReports(reports.map((r) => (r._id === updatedReport._id ? updatedReport : r)))
+        toast.success("Report updated successfully")
+        setShowEditModal(false)
+        setEditingReport(null)
+      } else {
+        toast.error("Failed to update report")
+      }
+    } catch (error) {
+      console.error("Failed to update report:", error)
+      toast.error("Error updating report")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const handleDownloadReport = (report: any) => {
     try {
       generateReportPDF(report)
@@ -235,6 +292,7 @@ export default function MedicalReportsPage() {
           reportStatus: status,
           report: report,
           patientInfo: patientInfo,
+          appointmentStatus: appointment?.status,
         }
       })
     }
@@ -457,6 +515,15 @@ export default function MedicalReportsPage() {
                                     <Eye className="w-4 h-4" />
                                     <span className="hidden sm:inline">View</span>
                                   </button>
+                                  {appointment.appointmentStatus !== "completed" && (
+                                    <button
+                                      onClick={() => handleEditReport(appointment.report)}
+                                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                      <span className="hidden sm:inline">Edit</span>
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleDownloadReport(appointment.report)}
                                     className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
@@ -464,6 +531,18 @@ export default function MedicalReportsPage() {
                                     <Download className="w-4 h-4" />
                                     <span className="hidden sm:inline">Download</span>
                                   </button>
+                                  {appointment.appointmentStatus !== "completed" && (
+                                    <button
+                                      onClick={() => {
+                                        setReportToDelete(appointment.report)
+                                        setShowDeleteModal(true)
+                                      }}
+                                      className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer text-white"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      <span className="hidden sm:inline">Delete</span>
+                                    </button>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -747,6 +826,97 @@ export default function MedicalReportsPage() {
                       className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-3 rounded-lg transition-colors font-semibold cursor-pointer text-sm sm:text-base"
                     >
                       Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showEditModal && editingReport && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200">
+                <div className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-2xl max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+                  {/* Modal Header */}
+                  <div className="flex justify-between items-start p-6 sm:p-8 border-b border-border sticky top-0 bg-gradient-to-r from-card to-muted/30">
+                    <div className="min-w-0 pr-4">
+                      <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Edit Medical Report</h2>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Update report details for {editingReport.patientId?.name}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowEditModal(false)
+                        setEditingReport(null)
+                      }}
+                      className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-2 hover:bg-muted rounded-lg flex-shrink-0"
+                    >
+                      <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </button>
+                  </div>
+
+                  <div className="p-6 sm:p-8 space-y-6">
+                    {/* Findings */}
+                    <div>
+                      <label className="block text-sm font-semibold text-foreground mb-2">Clinical Findings</label>
+                      <textarea
+                        value={editFormData.findings}
+                        onChange={(e) => setEditFormData({ ...editFormData, findings: e.target.value })}
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm min-h-[120px]"
+                        placeholder="Enter clinical findings..."
+                      />
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="block text-sm font-semibold text-foreground mb-2">Additional Notes</label>
+                      <textarea
+                        value={editFormData.notes}
+                        onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm min-h-[120px]"
+                        placeholder="Enter additional notes..."
+                      />
+                    </div>
+
+                    {/* Follow-up Details */}
+                    <div>
+                      <label className="block text-sm font-semibold text-foreground mb-2">Follow-up Instructions</label>
+                      <textarea
+                        value={editFormData.followUpDetails}
+                        onChange={(e) => setEditFormData({ ...editFormData, followUpDetails: e.target.value })}
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm min-h-[100px]"
+                        placeholder="Enter follow-up instructions..."
+                      />
+                    </div>
+
+                    {/* Next Visit Date */}
+                    <div>
+                      <label className="block text-sm font-semibold text-foreground mb-2">Next Visit Date</label>
+                      <input
+                        type="date"
+                        value={editFormData.nextVisit}
+                        onChange={(e) => setEditFormData({ ...editFormData, nextVisit: e.target.value })}
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="flex flex-col xs:flex-row gap-3 p-6 sm:p-8 border-t border-border bg-muted/30">
+                    <button
+                      onClick={handleSaveEditReport}
+                      disabled={isSaving}
+                      className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-3 rounded-lg transition-colors font-semibold cursor-pointer text-sm sm:text-base disabled:opacity-50"
+                    >
+                      {isSaving ? "Saving..." : "Save Changes"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowEditModal(false)
+                        setEditingReport(null)
+                      }}
+                      className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-3 rounded-lg transition-colors font-semibold cursor-pointer text-sm sm:text-base"
+                    >
+                      Cancel
                     </button>
                   </div>
                 </div>

@@ -111,6 +111,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         )
       }
       console.log("🟢 [PUT] Medical report found, proceeding with closing appointment")
+
+      if (originalAppointment.currentReferralId) {
+        const { AppointmentReferral } = await import("@/lib/db-server")
+        await AppointmentReferral.findByIdAndUpdate(originalAppointment.currentReferralId, {
+          status: "completed",
+          notes: "Appointment closed by original doctor",
+          updatedAt: new Date(),
+        })
+        console.log("🟢 [PUT] Related referral closed:", originalAppointment.currentReferralId)
+      }
     }
 
     if (updateData.date || updateData.time) {
@@ -325,6 +335,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     console.log("🟢 [DELETE] Appointment deleted successfully:", deletedAppointment._id)
+
+    const { AppointmentReferral } = await import("@/lib/db-server")
+    const deletedReferrals = await AppointmentReferral.deleteMany({ appointmentId: id })
+    console.log("🟢 [DELETE] Deleted appointment referrals:", deletedReferrals.deletedCount)
 
     const patient = await User.findById(deletedAppointment.patientId)
     console.log("🟠 [DELETE] Patient found for notification:", patient ? patient.name : "❌ None")
