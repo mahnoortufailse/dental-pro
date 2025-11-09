@@ -6,7 +6,7 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
-import { AlertCircle, Loader2, Search } from "lucide-react"
+import { AlertCircle, Loader2, Search, Eye } from "lucide-react" // Added Eye icon
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { ReferRequestsTab } from "@/components/refer-requests-tab"
@@ -95,15 +95,15 @@ export default function RequestStatusPage() {
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-amber-100 text-amber-800"
+        return "bg-amber-100 text-amber-800 border border-amber-300"
       case "in-progress":
-        return "bg-blue-100 text-blue-800"
+        return "bg-blue-100 text-blue-800 border border-blue-300"
       case "completed":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800 border border-green-300"
       case "rejected":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800 border border-red-300"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800 border border-gray-300"
     }
   }
 
@@ -121,27 +121,33 @@ export default function RequestStatusPage() {
               </p>
             </div>
 
-            {/* Tab Navigation */}
+            {/* Tab Navigation - Fixed styling */}
             <div className="flex gap-2 mb-6 border-b border-border">
               <button
                 onClick={() => setActiveTab("patient-referrals")}
-                className={`px-4 py-2 font-medium text-sm transition-colors ${
+                className={`px-4 py-2 font-medium text-sm transition-colors relative ${
                   activeTab === "patient-referrals"
-                    ? "text-primary border-b-2 border-primary"
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Patient Referrals 
+                Patient Referrals
+                {activeTab === "patient-referrals" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
               </button>
               <button
                 onClick={() => setActiveTab("appointment-referrals")}
-                className={`px-4 py-2 font-medium text-sm transition-colors ${
+                className={`px-4 py-2 font-medium text-sm transition-colors relative ${
                   activeTab === "appointment-referrals"
-                    ? "text-primary border-b-2 border-primary"
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Refer Appointment Requests
+                {activeTab === "appointment-referrals" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
               </button>
             </div>
 
@@ -246,6 +252,7 @@ export default function RequestStatusPage() {
                               Submitted
                             </th>
                             <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Updated</th>
+                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Action</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -266,7 +273,7 @@ export default function RequestStatusPage() {
                                   <span
                                     className={`inline-block text-xs px-2 py-1 rounded-full font-medium ${getStatusBadgeColor(referral.status)}`}
                                   >
-                                    {referral.status}
+                                    {referral.status.charAt(0).toUpperCase() + referral.status.slice(1).replace("-", " ")}
                                   </span>
                                   {referral.status === "rejected" && (
                                     <button
@@ -284,6 +291,15 @@ export default function RequestStatusPage() {
                               </td>
                               <td className="px-4 sm:px-6 py-3 text-muted-foreground text-sm">
                                 {new Date(referral.updatedAt).toLocaleDateString()}
+                              </td>
+                              <td className="px-4 sm:px-6 py-3">
+                                <button
+                                  onClick={() => setSelectedReferral(referral)}
+                                  className="flex items-center gap-1 text-primary hover:text-primary/80 font-medium transition-colors text-xs cursor-pointer"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  View
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -306,6 +322,7 @@ export default function RequestStatusPage() {
           </div>
         </main>
 
+        {/* Patient Referral Details Modal */}
         <Dialog open={!!selectedReferral} onOpenChange={(open) => !open && setSelectedReferral(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -357,7 +374,7 @@ export default function RequestStatusPage() {
                           selectedReferral.status,
                         )}`}
                       >
-                        {selectedReferral.status}
+                        {selectedReferral.status.charAt(0).toUpperCase() + selectedReferral.status.slice(1).replace("-", " ")}
                       </span>
                     </div>
                     <div>
@@ -374,7 +391,7 @@ export default function RequestStatusPage() {
                 {/* Referral Reason */}
                 <div className="border-b border-border pb-4">
                   <h3 className="font-semibold text-foreground mb-2">Referral Reason</h3>
-                  <p className="text-foreground text-sm">{selectedReferral.referralReason}</p>
+                  <p className="text-foreground text-sm bg-muted p-3 rounded-lg">{selectedReferral.referralReason}</p>
                 </div>
 
                 {/* Medical Conditions and Allergies */}
@@ -414,10 +431,10 @@ export default function RequestStatusPage() {
                 </div>
 
                 {/* Rejection Reason */}
-                {selectedReferral.status === "rejected" && (
+                {selectedReferral.status === "rejected" && selectedReferral.rejectionReason && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <h3 className="font-semibold text-red-900 mb-2">Rejection Reason</h3>
-                    <p className="text-red-800 text-sm">{selectedReferral.rejectionReason || selectedReferral.notes}</p>
+                    <p className="text-red-800 text-sm">{selectedReferral.rejectionReason}</p>
                   </div>
                 )}
 
@@ -425,7 +442,7 @@ export default function RequestStatusPage() {
                 {selectedReferral.notes && (
                   <div className="border-t border-border pt-4">
                     <h3 className="font-semibold text-foreground mb-2">Notes</h3>
-                    <p className="text-foreground text-sm">{selectedReferral.notes}</p>
+                    <p className="text-foreground text-sm bg-muted p-3 rounded-lg">{selectedReferral.notes}</p>
                   </div>
                 )}
               </div>

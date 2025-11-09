@@ -37,11 +37,15 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
   const [selectedReferral, setSelectedReferral] = useState<AppointmentReferral | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionNotes, setActionNotes] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | AppointmentReferral["status"]>("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   useEffect(() => {
     fetchReferrals()
   }, [])
-  
+
   const fetchReferrals = async () => {
     setLoading(true)
     try {
@@ -62,52 +66,71 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
     }
   }
 
- // In your frontend component
-const handleAction = async (
-  referralId: string,
-  action: "accept" | "reject" | "refer_back" | "complete",
-  notes?: string,
-) => {
-  console.log(`[FRONTEND] Action triggered:`, { referralId, action, notes })
-  setActionLoading(true)
-  try {
-    const res = await fetch(`/api/appointment-referrals/${referralId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ action, notes }),
-    })
+  const filteredReferrals = referrals.filter((referral) => {
+    const matchesSearch =
+      referral.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      referral.fromDoctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      referral.toDoctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      referral.referralReason.toLowerCase().includes(searchQuery.toLowerCase())
 
-    console.log(`[FRONTEND] Response status:`, res.status)
-    const data = await res.json()
-    console.log(`[FRONTEND] Response data:`, data)
+    const matchesStatus = statusFilter === "all" || referral.status === statusFilter
 
-    if (res.ok) {
-      setReferrals(referrals.map((r) => (r._id === referralId ? data.referral : r)))
+    return matchesSearch && matchesStatus
+  })
 
-      const actionMessages = {
-        accept: "✓ Referral accepted! You can now proceed with the treatment.",
-        reject: "✗ Referral rejected.",
-        refer_back: "↶ Appointment referred back to the original doctor.",
-        complete: "✓ Treatment completed and referred back.",
+  const totalPages = Math.ceil(filteredReferrals.length / itemsPerPage)
+  const paginatedReferrals = filteredReferrals.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter])
+
+  // In your frontend component
+  const handleAction = async (
+    referralId: string,
+    action: "accept" | "reject" | "refer_back" | "complete",
+    notes?: string,
+  ) => {
+    console.log(`[FRONTEND] Action triggered:`, { referralId, action, notes })
+    setActionLoading(true)
+    try {
+      const res = await fetch(`/api/appointment-referrals/${referralId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action, notes }),
+      })
+
+      console.log(`[FRONTEND] Response status:`, res.status)
+      const data = await res.json()
+      console.log(`[FRONTEND] Response data:`, data)
+
+      if (res.ok) {
+        setReferrals(referrals.map((r) => (r._id === referralId ? data.referral : r)))
+
+        const actionMessages = {
+          accept: "✓ Referral accepted! You can now proceed with the treatment.",
+          reject: "✗ Referral rejected.",
+          refer_back: "↶ Appointment referred back to the original doctor.",
+          complete: "✓ Treatment completed and referred back.",
+        }
+
+        toast.success(actionMessages[action as keyof typeof actionMessages])
+        setSelectedReferral(null)
+        setActionNotes("")
+      } else {
+        console.error(`[FRONTEND] Failed to ${action} referral:`, data.error)
+        toast.error(data.error || `Failed to ${action} referral`)
       }
-
-      toast.success(actionMessages[action as keyof typeof actionMessages])
-      setSelectedReferral(null)
-      setActionNotes("")
-    } else {
-      console.error(`[FRONTEND] Failed to ${action} referral:`, data.error)
-      toast.error(data.error || `Failed to ${action} referral`)
+    } catch (error) {
+      console.error("[FRONTEND] Failed to update referral:", error)
+      toast.error("Network error updating referral")
+    } finally {
+      setActionLoading(false)
     }
-  } catch (error) {
-    console.error("[FRONTEND] Failed to update referral:", error)
-    toast.error("Network error updating referral")
-  } finally {
-    setActionLoading(false)
   }
-}
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -161,8 +184,6 @@ const handleAction = async (
   const referredBackReferrals = referrals.filter((r) => r.status === "referred_back")
   const rejectedReferrals = referrals.filter((r) => r.status === "rejected")
 
-
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -213,11 +234,93 @@ const handleAction = async (
         </div>
       </div>
 
+      <div className="bg-card rounded-lg shadow-md border border-border p-4 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            placeholder="Search by patient name, doctor, or reason..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setStatusFilter("all")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === "all"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setStatusFilter("pending")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === "pending"
+                ? "bg-amber-600 text-white"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            Pending
+          </button>
+          <button
+            onClick={() => setStatusFilter("accepted")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === "accepted"
+                ? "bg-blue-600 text-white"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            Accepted
+          </button>
+          <button
+            onClick={() => setStatusFilter("completed")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === "completed"
+                ? "bg-green-600 text-white"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            Completed
+          </button>
+          <button
+            onClick={() => setStatusFilter("referred_back")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === "referred_back"
+                ? "bg-purple-600 text-white"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            Referred Back
+          </button>
+          <button
+            onClick={() => setStatusFilter("rejected")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === "rejected" ? "bg-red-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            Rejected
+          </button>
+        </div>
+
+        <div className="text-sm text-muted-foreground">
+          Showing {paginatedReferrals.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to{" "}
+          {Math.min(currentPage * itemsPerPage, filteredReferrals.length)} of {filteredReferrals.length} referrals
+        </div>
+      </div>
+
       {/* List */}
-      {referrals.length === 0 ? (
+      {filteredReferrals.length === 0 ? (
         <div className="text-center py-12 bg-card rounded-lg border border-border">
           <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">No referral requests</p>
+          <p className="text-muted-foreground">
+            {searchQuery || statusFilter !== "all"
+              ? "No referral requests match your search or filter"
+              : "No referral requests"}
+          </p>
         </div>
       ) : (
         <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
@@ -240,7 +343,7 @@ const handleAction = async (
                 </tr>
               </thead>
               <tbody>
-                {referrals.map((referral) => (
+                {paginatedReferrals.map((referral) => (
                   <tr key={referral._id} className="border-b border-border hover:bg-muted/50 transition-colors">
                     <td className="px-4 sm:px-6 py-3 font-medium text-foreground">{referral.patientName}</td>
                     <td className="px-4 sm:px-6 py-3 hidden lg:table-cell">
@@ -284,6 +387,42 @@ const handleAction = async (
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-muted border-t border-border">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-2 rounded-lg text-sm font-medium bg-card text-foreground border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+
+              <div className="flex items-center gap-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      currentPage === page
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card text-foreground border border-border hover:bg-muted"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 rounded-lg text-sm font-medium bg-card text-foreground border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
 
