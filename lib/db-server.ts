@@ -134,6 +134,26 @@ const billingSchema = new mongoose.Schema({
   ],
   totalAmount: { type: Number, required: true },
   paidAmount: { type: Number, default: 0 },
+  paymentSplits: [
+    {
+      paymentType: { type: String, required: true }, // "MasterCard", "Cash", "Insurance", etc.
+      amount: { type: Number, required: true },
+      _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+    },
+  ],
+  extraChargesRequested: [
+    {
+      _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+      amount: { type: Number, required: true },
+      reason: String,
+      treatment: String,
+      status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+      requestedBy: String,
+      requestedAt: { type: Date, default: Date.now },
+      approvedBy: String,
+      approvedAt: Date,
+    },
+  ],
   paymentStatus: { type: String, enum: ["Pending", "Paid", "Partially Paid"], default: "Pending" },
   paymentDate: Date,
   notes: String,
@@ -257,10 +277,10 @@ const appointmentReferralSchema = new mongoose.Schema({
   toDoctorId: { type: String, required: true },
   toDoctorName: { type: String, required: true },
   referralReason: { type: String, required: true },
-  status: { 
-    type: String, 
+  status: {
+    type: String,
     enum: ["pending", "accepted", "completed", "referred_back", "rejected"], // ← ADD "rejected" HERE
-    default: "pending" 
+    default: "pending",
   },
   notes: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },

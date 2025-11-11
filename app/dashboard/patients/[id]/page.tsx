@@ -8,9 +8,10 @@ import { Sidebar } from "@/components/sidebar"
 import { ToothChart } from "@/components/tooth-chart"
 import { PatientImagesSection } from "@/components/patient-images-section"
 import { MedicalHistorySection } from "@/components/medical-history-section"
+import { AddBillingRequestModal } from "@/components/add-billing-request-modal"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Plus } from "lucide-react"
 import Link from "next/link"
 
 export default function PatientDetailPage() {
@@ -20,6 +21,7 @@ export default function PatientDetailPage() {
   const [patient, setPatient] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("overview")
+  const [showBillingRequestModal, setShowBillingRequestModal] = useState(false)
 
   useEffect(() => {
     if (token && patientId) {
@@ -78,14 +80,25 @@ export default function PatientDetailPage() {
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
           <div className="p-4 sm:p-6 lg:p-8">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-8">
-              <Link href="/dashboard/patients" className="text-primary hover:text-primary/80 transition-colors">
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{patient.name}</h1>
-                <p className="text-muted-foreground text-sm mt-1">Patient ID: {patient._id}</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+              <div className="flex items-center gap-4">
+                <Link href="/dashboard/patients" className="text-primary hover:text-primary/80 transition-colors">
+                  <ArrowLeft className="w-5 h-5" />
+                </Link>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{patient.name}</h1>
+                  <p className="text-muted-foreground text-sm mt-1">Patient ID: {patient._id}</p>
+                </div>
               </div>
+              {user?.role === "doctor" && (
+                <button
+                  onClick={() => setShowBillingRequestModal(true)}
+                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Billing Request
+                </button>
+              )}
             </div>
 
             {/* Patient Info Cards */}
@@ -196,6 +209,16 @@ export default function PatientDetailPage() {
                 )}
               </div>
             </div>
+
+            {/* Add Billing Request Modal */}
+            <AddBillingRequestModal
+              isOpen={showBillingRequestModal}
+              onClose={() => setShowBillingRequestModal(false)}
+              patientId={patientId}
+              patientName={patient.name}
+              token={token!}
+              onSuccess={fetchPatient}
+            />
           </div>
         </main>
       </div>

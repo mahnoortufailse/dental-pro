@@ -20,11 +20,13 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 
 export function Sidebar() {
-  const { user, logout } = useAuth()
+  const { user, logout, token } = useAuth() // Make sure token is available from auth context
   const router = useRouter()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [pendingBillingCount, setPendingBillingCount] = useState(0)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const handleResize = () => {
@@ -38,6 +40,54 @@ export function Sidebar() {
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
+
+  useEffect(() => {
+    if (user?.role === "admin" || user?.role === "receptionist") {
+      fetchPendingCount()
+    }
+  }, [user?.role, token]) // Add token as dependency
+
+  const fetchPendingCount = async () => {
+    if (!token) {
+      console.log("No token available")
+      return
+    }
+
+    setLoading(true)
+    try {
+      console.log("Fetching pending count...")
+      const res = await fetch("/api/billing/pending-count", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      
+      console.log("Response status:", res.status)
+      
+      if (res.ok) {
+        const data = await res.json()
+        console.log("Pending count data:", data)
+        setPendingBillingCount(data.pendingCount || 0)
+      } else {
+        const errorText = await res.text()
+        console.error("Failed to fetch pending count:", res.status, errorText)
+        setPendingBillingCount(0)
+      }
+    } catch (error) {
+      console.error("Failed to fetch pending count:", error)
+      setPendingBillingCount(0)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Optional: Set up polling for real-time updates
+  useEffect(() => {
+    if (user?.role === "admin" || user?.role === "receptionist") {
+      const interval = setInterval(fetchPendingCount, 30000) // Every 30 seconds
+      return () => clearInterval(interval)
+    }
+  }, [user?.role, token])
 
   const handleLogout = () => {
     logout()
@@ -56,6 +106,12 @@ export function Sidebar() {
         { label: "Forwarded Requests", href: "/dashboard/forwarded-requests", icon: FileText },
         { label: "Medical Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Billing", href: "/dashboard/billing", icon: FileText },
+        { 
+          label: "Billing Requests", 
+          href: "/dashboard/billing-requests", 
+          icon: FileText, 
+          badge: pendingBillingCount 
+        },
         { label: "Inventory", href: "/dashboard/inventory", icon: Package },
         { label: "Staff", href: "/dashboard/staff", icon: Users2 },
       ]
@@ -69,6 +125,7 @@ export function Sidebar() {
         { label: "Appointments Table", href: "/dashboard/appointments-table", icon: Table },
         { label: "Patients Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Request Status", href: "/dashboard/request-status", icon: FileText },
+        { label: "Billing Requests", href: "/dashboard/billing-requests", icon: FileText },
         { label: "Clinical Tools", href: "/dashboard/clinical-tools", icon: Stethoscope },
       ]
     }
@@ -82,6 +139,12 @@ export function Sidebar() {
         { label: "Forwarded Requests", href: "/dashboard/forwarded-requests", icon: FileText },
         { label: "Medical Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Billing", href: "/dashboard/billing", icon: FileText },
+        { 
+          label: "Billing Requests", 
+          href: "/dashboard/billing-requests", 
+          icon: FileText, 
+          badge: pendingBillingCount 
+        },
       ]
     }
 
@@ -110,7 +173,6 @@ export function Sidebar() {
         >
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
-        {/* Logo with Image */}
         <div className="text-center ">
           <div className="inline-flex items-center justify-center ml-2">
             <Image
@@ -132,7 +194,6 @@ export function Sidebar() {
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        {/* Desktop Header */}
         <div className="hidden md:block p-6 border-b border-sidebar-border">
           <div className=" mb-8 sm:mb-4">
             <div className="inline-flex items-center justify-center ">
@@ -149,11 +210,10 @@ export function Sidebar() {
           <p className="text-xs font-semibold text-sidebar-accent uppercase tracking-wider">{user?.role}</p>
         </div>
 
-        {/* Mobile Header Spacing */}
         <div className="md:hidden h-16" />
 
         <nav className="flex-1 p-2 space-y-1 overflow-y-auto scrollbar-thin">
-          {menuItems.map((item) => {
+          {menuItems.map((item: any) => {
             const Icon = item.icon
             const active = isActive(item.href)
             return (
@@ -168,13 +228,22 @@ export function Sidebar() {
                 }`}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </span>
+                )}
+                {loading && item.badge !== undefined && (
+                  <span className="ml-auto w-5 h-5 flex items-center justify-center">
+                    <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  </span>
+                )}
               </Link>
             )
           })}
         </nav>
 
-        {/* User Info & Logout */}
         <div className="p-4 border-t border-sidebar-border space-y-4">
           <div className="text-sm">
             <p className="text-xs text-sidebar-foreground/60 uppercase tracking-wider">Logged in as</p>
