@@ -594,7 +594,7 @@ export default function PatientsPage() {
               </div>
               <div className="flex gap-2">
                 {/* ADDED billing request button for doctors only */}
-                {user?.role === "doctor" && (
+                {/* {user?.role === "doctor" && (
                   <button
                     onClick={() => setShowExtraChargesModal(true)}
                     disabled={loading.patients || loading.doctors || loading.addPatient || loading.updatePatient}
@@ -607,7 +607,7 @@ export default function PatientsPage() {
                     )}
                     Add Billing Request
                   </button>
-                )}
+                )} */}
                 {user?.role !== "doctor" && (
                   <button
                     onClick={() => {

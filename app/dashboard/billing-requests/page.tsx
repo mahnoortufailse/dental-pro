@@ -6,7 +6,7 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect, useMemo } from "react"
 import { toast } from "react-hot-toast"
-import { Check, X, Loader2, Search, ChevronLeft, ChevronRight, Clock, CheckCircle, XCircle, Eye, FileText } from "lucide-react"
+import { Check, X, Loader2, Search, ChevronLeft, ChevronRight, Clock, CheckCircle, XCircle, Eye, FileText, Plus, CreditCard } from "lucide-react"
 
 export default function BillingRequestsPage() {
   const { user, token } = useAuth()
@@ -18,17 +18,33 @@ export default function BillingRequestsPage() {
     requests: false,
     approve: false,
     reject: false,
+    patients: false,
+    extraCharges: false,
   })
   const [selectedRequest, setSelectedRequest] = useState(null)
   const [processingId, setProcessingId] = useState(null)
   const [statusFilter, setStatusFilter] = useState("all")
   const [isModalOpen, setIsModalOpen] = useState(false)
+  
+  // New state for add billing request functionality
+  const [showExtraChargesModal, setShowExtraChargesModal] = useState(false)
+  const [extraChargesForm, setExtraChargesForm] = useState({
+    amount: "",
+    treatment: "",
+    reason: "",
+    patientId: "",
+  })
+  const [patients, setPatients] = useState([])
+  const [selectedPatient, setSelectedPatient] = useState(null)
 
   useEffect(() => {
     if (token) {
       fetchBillingRequests()
+      if (user?.role === "doctor") {
+        fetchPatients()
+      }
     }
-  }, [token, statusFilter])
+  }, [token, statusFilter, user?.role])
 
   const fetchBillingRequests = async () => {
     setLoading((prev) => ({ ...prev, requests: true }))
@@ -54,6 +70,26 @@ export default function BillingRequestsPage() {
       toast.error("Error fetching billing requests")
     } finally {
       setLoading((prev) => ({ ...prev, requests: false }))
+    }
+  }
+
+  const fetchPatients = async () => {
+    setLoading((prev) => ({ ...prev, patients: true }))
+    try {
+      const res = await fetch("/api/patients", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPatients(data.patients || [])
+      } else {
+        const error = await res.json().catch(() => ({}))
+        toast.error(error.error || "Failed to fetch patients")
+      }
+    } catch (error) {
+      toast.error("Error fetching patients")
+    } finally {
+      setLoading((prev) => ({ ...prev, patients: false }))
     }
   }
 
@@ -112,6 +148,55 @@ export default function BillingRequestsPage() {
     } finally {
       setProcessingId(null)
       setLoading((prev) => ({ ...prev, reject: false }))
+    }
+  }
+
+  // New function to handle billing request submission
+  const handleExtraChargesRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!extraChargesForm.patientId || !extraChargesForm.amount || !extraChargesForm.treatment) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    setLoading((prev) => ({ ...prev, extraCharges: true }))
+    try {
+      const selectedPatient = patients.find(p => p._id === extraChargesForm.patientId)
+      
+      const res = await fetch(`/api/billing/${extraChargesForm.patientId}/extra-charges`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount: Number.parseFloat(extraChargesForm.amount),
+          treatment: extraChargesForm.treatment,
+          reason: extraChargesForm.reason,
+          patientId: extraChargesForm.patientId,
+          patientName: selectedPatient?.name,
+        }),
+      })
+
+      if (res.ok) {
+        toast.success("Extra charges request sent to admin for approval")
+        setShowExtraChargesModal(false)
+        setExtraChargesForm({
+          amount: "",
+          treatment: "",
+          reason: "",
+          patientId: "",
+        })
+        fetchBillingRequests() // Refresh the requests list
+      } else {
+        const error = await res.json()
+        toast.error(error.error || "Failed to send charges request")
+      }
+    } catch (error) {
+      toast.error("Error sending charges request")
+    } finally {
+      setLoading((prev) => ({ ...prev, extraCharges: false }))
     }
   }
 
@@ -214,13 +299,31 @@ export default function BillingRequestsPage() {
         <Sidebar />
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
           <div className="p-4 sm:p-6 lg:p-8">
-            <div className="mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Billing Requests</h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                {user?.role === "doctor"
-                  ? "View the status of your billing requests"
-                  : "Review and approve/reject extra charge requests from doctors"}
-              </p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Billing Requests</h1>
+                <p className="text-muted-foreground text-sm mt-1">
+                  {user?.role === "doctor"
+                    ? "View the status of your billing requests"
+                    : "Review and approve/reject extra charge requests from doctors"}
+                </p>
+              </div>
+              
+              {/* Add Billing Request Button - Only for doctors */}
+              {user?.role === "doctor" && (
+                <button
+                  onClick={() => setShowExtraChargesModal(true)}
+                  disabled={loading.requests || loading.patients}
+                  className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {loading.extraCharges ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  Add Extra Charges Request
+                </button>
+              )}
             </div>
 
             {/* Filters and Search */}
@@ -492,7 +595,6 @@ export default function BillingRequestsPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Amount</label>
                     <p className="text-primary font-bold">${selectedRequest.extraChargesRequested?.amount || 0}</p>
@@ -553,6 +655,124 @@ export default function BillingRequestsPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Billing Request Modal - For Doctors Only */}
+      {showExtraChargesModal && user?.role === "doctor" && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-xl shadow-2xl border border-border p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold text-foreground mb-4">Add Billing Request</h2>
+            <p className="text-sm text-muted-foreground mb-6">Select a patient and add a billing request</p>
+
+            <form onSubmit={handleExtraChargesRequest} className="space-y-4">
+              {/* Patient selection dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Patient *</label>
+                <select
+                  value={extraChargesForm.patientId}
+                  onChange={(e) => {
+                    setExtraChargesForm({
+                      ...extraChargesForm,
+                      patientId: e.target.value
+                    })
+                  }}
+                  className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer"
+                  required
+                  disabled={loading.extraCharges || loading.patients}
+                >
+                  <option value="">Select a patient...</option>
+                  {patients.map((patient) => (
+                    <option key={patient._id} value={patient._id}>
+                      {patient.name} ({patient.phone})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Treatment/Service *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Root Canal, Special Procedure"
+                  value={extraChargesForm.treatment}
+                  onChange={(e) =>
+                    setExtraChargesForm({
+                      ...extraChargesForm,
+                      treatment: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                  required
+                  disabled={loading.extraCharges}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Amount ($) *</label>
+                <input
+                  type="number"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  value={extraChargesForm.amount}
+                  onChange={(e) =>
+                    setExtraChargesForm({
+                      ...extraChargesForm,
+                      amount: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                  required
+                  disabled={loading.extraCharges}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Reason for Charges</label>
+                <textarea
+                  placeholder="Explain why these additional charges are needed..."
+                  value={extraChargesForm.reason}
+                  onChange={(e) =>
+                    setExtraChargesForm({
+                      ...extraChargesForm,
+                      reason: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                  rows={3}
+                  disabled={loading.extraCharges}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExtraChargesModal(false)
+                    setExtraChargesForm({
+                      amount: "",
+                      treatment: "",
+                      reason: "",
+                      patientId: "",
+                    })
+                  }}
+                  disabled={loading.extraCharges}
+                  className="flex-1 px-4 py-2 bg-muted hover:bg-muted/80 text-muted-foreground rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading.extraCharges || !extraChargesForm.patientId}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {loading.extraCharges && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Send Request
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
