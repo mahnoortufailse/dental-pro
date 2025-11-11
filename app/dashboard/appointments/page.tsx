@@ -309,36 +309,36 @@ export default function AppointmentsPage() {
     }
   }
 
-   const handleCompleteAppointment = async (appointmentId: string) => {
-      setLoading((prev) => ({ ...prev, completeAppointment: true }))
-      try {
-        const res = await fetch(`/api/appointments/${appointmentId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ status: "completed" }),
-        })
-  
-        if (res.ok) {
-          const data = await res.json()
-          setAppointments(
-            appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
-          )
-          toast.success("Appointment marked as completed")
-          setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
-        } else {
-          const errorData = await res.json()
-          toast.error(errorData.error || "Failed to complete appointment")
-        }
-      } catch (error) {
-        console.error("Failed to complete appointment:", error)
-        toast.error("Error completing appointment")
-      } finally {
-        setLoading((prev) => ({ ...prev, completeAppointment: false }))
+  const handleCompleteAppointment = async (appointmentId: string) => {
+    setLoading((prev) => ({ ...prev, completeAppointment: true }))
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "completed" }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setAppointments(
+          appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
+        )
+        toast.success("Appointment marked as completed")
+        setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
+      } else {
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to complete appointment")
       }
+    } catch (error) {
+      console.error("Failed to complete appointment:", error)
+      toast.error("Error completing appointment")
+    } finally {
+      setLoading((prev) => ({ ...prev, completeAppointment: false }))
     }
+  }
 
   const currentUserId = user?.userId || user?.id
 
@@ -866,19 +866,23 @@ export default function AppointmentsPage() {
                           return (
                             <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
                               <div className="flex justify-between items-start gap-2 mb-2">
-                                <p className="font-medium text-foreground text-sm">{apt.patientName} <br/>
-                                {apt.isReferred && (
-                                    <span className="text-xs rounded bg-purple-100 text-purple-800">
+                                <p className="font-medium text-foreground text-sm">
+                                  {apt.patientName}
+                                  {user?.role !== "doctor" && (
+                                    <span className="text-xs text-muted-foreground block">Dr. {apt.doctorName}</span>
+                                  )}
+                                  {apt.isReferred && (
+                                    <span className="text-xs rounded bg-purple-100 text-purple-800 inline-block mt-1">
                                       {String(apt.originalDoctorId) === String(currentUserId)
                                         ? `Referred to ${apt.doctorName}`
                                         : "Referred In"}
                                     </span>
-                                  )}</p>
+                                  )}
+                                </p>
                                 <div className="flex flex-col gap-1">
                                   <span className={`text-xs px-2 py-1 rounded text-end ${getStatusColor(apt.status)}`}>
                                     {apt.status}
                                   </span>
-                                 
                                 </div>
                               </div>
                               <p className="text-xs text-muted-foreground">
@@ -1068,19 +1072,23 @@ export default function AppointmentsPage() {
                         return (
                           <div key={apt._id || apt.id} className="p-3 bg-muted rounded-lg">
                             <div className="flex justify-between items-start gap-2 mb-1">
-                              <p className="font-medium text-foreground text-sm">{apt.patientName} <br/>
+                              <p className="font-medium text-foreground text-sm">
+                                {apt.patientName}
+                                {user?.role !== "doctor" && (
+                                  <span className="text-xs text-muted-foreground block">Dr. {apt.doctorName}</span>
+                                )}
                                 {apt.isReferred && (
-                                    <span className="text-xs rounded bg-purple-100 text-purple-800">
-                                      {String(apt.originalDoctorId) === String(currentUserId)
-                                        ? `Referred to ${apt.doctorName}`
-                                        : "Referred In"}
-                                    </span>
-                                  )}</p>
+                                  <span className="text-xs rounded bg-purple-100 text-purple-800 inline-block mt-1">
+                                    {String(apt.originalDoctorId) === String(currentUserId)
+                                      ? `Referred to ${apt.doctorName}`
+                                      : "Referred In"}
+                                  </span>
+                                )}
+                              </p>
                               <div className="flex flex-col gap-1">
                                 <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
                                   {apt.status}
                                 </span>
-                               
                               </div>
                             </div>
                             <p className="text-xs text-muted-foreground">

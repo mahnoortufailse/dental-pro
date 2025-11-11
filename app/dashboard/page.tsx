@@ -79,6 +79,14 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
+  const [showExtraChargesModal, setShowExtraChargesModal] = useState(false)
+  const [selectedBillingForCharges, setSelectedBillingForCharges] = useState<any>(null)
+  const [extraChargesForm, setExtraChargesForm] = useState({
+    amount: "",
+    reason: "",
+  })
+  const [extraChargesLoading, setExtraChargesLoading] = useState(false)
+
   const isToday = (dateString: string) => {
     const appointmentDate = new Date(dateString)
     const today = new Date()
@@ -89,7 +97,6 @@ export default function DashboardPage() {
     )
   }
 
- 
   useEffect(() => {
     if (token) {
       fetchDashboardData()
@@ -225,16 +232,16 @@ export default function DashboardPage() {
       ) {
         const data = await patientReferralsForAdminRes.value.json()
         console.log("[v0] Patient referrals API response:", data)
-        
+
         if (data.referrals && Array.isArray(data.referrals)) {
           const allPatientReferrals = data.referrals
           console.log("[v0] Total patient referrals found:", allPatientReferrals.length)
           console.log("[v0] Patient referrals data:", allPatientReferrals)
-          
+
           const recent = allPatientReferrals
             .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, 5)
-          
+
           console.log("[v0] Setting recent patient referrals:", recent)
           setRecentPatientReferrals(recent)
         } else {
@@ -258,6 +265,42 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
       setRefreshing(false)
+    }
+  }
+
+  const requestExtraCharges = async () => {
+    if (!selectedBillingForCharges || !extraChargesForm.amount || !extraChargesForm.reason) {
+      toast.error("Please fill in all fields")
+      return
+    }
+
+    setExtraChargesLoading(true)
+    try {
+      const res = await fetch(`/api/billing/${selectedBillingForCharges._id}/extra-charges`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount: Number(extraChargesForm.amount),
+          reason: extraChargesForm.reason,
+        }),
+      })
+
+      if (res.ok) {
+        toast.success("Extra charges request sent to admin and receptionist for approval")
+        setShowExtraChargesModal(false)
+        setExtraChargesForm({ amount: "", reason: "" })
+      } else {
+        const data = await res.json()
+        toast.error(data.error || "Failed to request extra charges")
+      }
+    } catch (error) {
+      console.error("Failed to request extra charges:", error)
+      toast.error("Error requesting extra charges")
+    } finally {
+      setExtraChargesLoading(false)
     }
   }
 
@@ -1201,6 +1244,75 @@ export default function DashboardPage() {
               >
                 Close
               </button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* add modal dialog for extra charges at the end before closing ProtectedRoute */}
+      <Dialog open={showExtraChargesModal} onOpenChange={setShowExtraChargesModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Extra Charges</DialogTitle>
+            <DialogDescription>
+              Request additional charges for this billing record. Requires approval from admin or receptionist.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedBillingForCharges && (
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground">Current Bill Amount:</p>
+                <p className="text-xl font-bold text-foreground">${selectedBillingForCharges.totalAmount.toFixed(2)}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Additional Amount ($)</label>
+                <input
+                  type="number"
+                  value={extraChargesForm.amount}
+                  onChange={(e) => setExtraChargesForm({ ...extraChargesForm, amount: e.target.value })}
+                  placeholder="Enter amount"
+                  step="0.01"
+                  className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Reason for Extra Charges</label>
+                <textarea
+                  value={extraChargesForm.reason}
+                  onChange={(e) => setExtraChargesForm({ ...extraChargesForm, reason: e.target.value })}
+                  placeholder="Explain why additional charges are needed..."
+                  className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text resize-none"
+                  rows={3}
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
+                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <p className="text-sm text-blue-800">
+                  This request will be sent to admin and receptionist for review and approval.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={requestExtraCharges}
+                  disabled={extraChargesLoading}
+                  className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {extraChargesLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Send Request
+                </button>
+                <button
+                  onClick={() => setShowExtraChargesModal(false)}
+                  disabled={extraChargesLoading}
+                  className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </DialogContent>

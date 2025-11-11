@@ -7,9 +7,22 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { Plus, Edit2, Trash2, DollarSign, Clock, FileText, Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  DollarSign,
+  Clock,
+  FileText,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  X,
+} from "lucide-react"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { SearchableDropdown } from "@/components/searchable-dropdown"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 export default function BillingPage() {
   const { user, token } = useAuth()
@@ -32,6 +45,12 @@ export default function BillingPage() {
   })
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [billingToDelete, setBillingToDelete] = useState<any>(null)
+  const [showSplitModal, setShowSplitModal] = useState(false)
+  const [selectedBillingForSplit, setSelectedBillingForSplit] = useState<any>(null)
+  const [splits, setSplits] = useState<any[]>([])
+  const [splitLoading, setSplitLoading] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [selectedBillingForDetails, setSelectedBillingForDetails] = useState<any>(null)
 
   // Loading states
   const [loading, setLoading] = useState({
@@ -190,7 +209,7 @@ export default function BillingPage() {
   // Filter billing records based on search term
   const filteredBilling = billing.filter((bill) => {
     if (!searchTerm) return true
-    
+
     const patientName = patients.find((p) => p._id === bill.patientId)?.name || "Unknown"
     return patientName.toLowerCase().includes(searchTerm.toLowerCase())
   })
@@ -205,6 +224,77 @@ export default function BillingPage() {
   useEffect(() => {
     setCurrentPage(1)
   }, [searchTerm, itemsPerPage])
+
+  const openSplitModal = (bill: any) => {
+    setSelectedBillingForSplit(bill)
+    setSplits(bill.paymentSplits || [])
+    setShowSplitModal(true)
+  }
+
+  const addSplit = () => {
+    setSplits([
+      ...splits,
+      {
+        paymentType: "",
+        amount: "",
+        _id: Date.now().toString(),
+      },
+    ])
+  }
+
+  const updateSplit = (index: number, field: string, value: any) => {
+    const newSplits = [...splits]
+    newSplits[index] = { ...newSplits[index], [field]: value }
+    setSplits(newSplits)
+  }
+
+  const removeSplit = (index: number) => {
+    setSplits(splits.filter((_, i) => i !== index))
+  }
+
+  const saveSplits = async () => {
+    if (!selectedBillingForSplit) return
+
+    setSplitLoading(true)
+    try {
+      const totalSplit = splits.reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
+      if (totalSplit !== Number(selectedBillingForSplit.totalAmount)) {
+        toast.error(
+          `Total split amount ($${totalSplit.toFixed(2)}) must equal bill amount ($${selectedBillingForSplit.totalAmount.toFixed(2)})`,
+        )
+        setSplitLoading(false)
+        return
+      }
+
+      const res = await fetch(`/api/billing/${selectedBillingForSplit._id}/splits`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ splits }),
+      })
+
+      if (res.ok) {
+        toast.success("Payment splits saved successfully")
+        setShowSplitModal(false)
+        fetchBilling()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || "Failed to save payment splits")
+      }
+    } catch (error) {
+      console.error("Failed to save splits:", error)
+      toast.error("Error saving payment splits")
+    } finally {
+      setSplitLoading(false)
+    }
+  }
+
+  const openDetailsModal = (bill: any) => {
+    setSelectedBillingForDetails(bill)
+    setShowDetailsModal(true)
+  }
 
   return (
     <ProtectedRoute allowedRoles={["admin", "receptionist"]}>
@@ -236,11 +326,7 @@ export default function BillingPage() {
                 disabled={loading.billing || loading.patients || loading.submit}
                 className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed"
               >
-                {loading.submit ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Plus className="w-4 h-4" />
-                )}
+                {loading.submit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 {showForm ? "Cancel" : "Add Billing"}
               </button>
             </div>
@@ -297,12 +383,12 @@ export default function BillingPage() {
                       disabled={loading.submit}
                     />
 
-                     <input
+                    <input
                       type="number"
                       placeholder="Total Amount"
                       value={formData.totalAmount}
                       onChange={(e) => setFormData({ ...formData, totalAmount: e.target.value })}
-                      className="px-4 !py-0 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text disabled:cursor-not-allowed"
                       required
                       disabled={loading.submit}
                     />
@@ -383,7 +469,7 @@ export default function BillingPage() {
                     className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
                   />
                 </div>
-                
+
                 <div className="flex items-center gap-4 w-full sm:w-auto">
                   <div className="flex items-center gap-2">
                     <label htmlFor="itemsPerPage" className="text-sm text-muted-foreground whitespace-nowrap">
@@ -401,13 +487,13 @@ export default function BillingPage() {
                       <option value="50">50</option>
                     </select>
                   </div>
-                  
+
                   <button
                     onClick={fetchBilling}
                     disabled={loading.billing}
                     className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 cursor-pointer"
                   >
-                    <Loader2 className={`w-4 h-4 ${loading.billing ? 'animate-spin' : ''}`} />
+                    <Loader2 className={`w-4 h-4 ${loading.billing ? "animate-spin" : ""}`} />
                     {loading.billing ? "Loading..." : "Refresh"}
                   </button>
                 </div>
@@ -462,14 +548,14 @@ export default function BillingPage() {
                           </td>
                           <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell">
                             <div>
-                              <div className="md:hidden text-xs text-muted-foreground mb-1">Total</div>
-                              ${bill.totalAmount.toFixed(2)}
+                              <div className="md:hidden text-xs text-muted-foreground mb-1">Total</div>$
+                              {bill.totalAmount.toFixed(2)}
                             </div>
                           </td>
                           <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell">
                             <div>
-                              <div className="lg:hidden text-xs text-muted-foreground mb-1">Paid</div>
-                              ${bill.paidAmount.toFixed(2)}
+                              <div className="lg:hidden text-xs text-muted-foreground mb-1">Paid</div>$
+                              {bill.paidAmount.toFixed(2)}
                             </div>
                           </td>
                           <td className="px-4 sm:px-6 py-3">
@@ -480,8 +566,8 @@ export default function BillingPage() {
                                   bill.paymentStatus === "Paid"
                                     ? "bg-accent/20 text-accent"
                                     : bill.paymentStatus === "Partially Paid"
-                                    ? "bg-secondary/20 text-secondary"
-                                    : "bg-destructive/20 text-destructive"
+                                      ? "bg-secondary/20 text-secondary"
+                                      : "bg-destructive/20 text-destructive"
                                 }`}
                               >
                                 {bill.paymentStatus}
@@ -497,8 +583,16 @@ export default function BillingPage() {
                           <td className="px-4 sm:px-6 py-3">
                             <div className="flex gap-2">
                               <button
+                                onClick={() => openDetailsModal(bill)}
+                                disabled={loading.submit || loading.delete || splitLoading}
+                                className="text-secondary hover:text-secondary/80 disabled:text-secondary/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                                title="View Details"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </button>
+                              <button
                                 onClick={() => handleEditBilling(bill)}
-                                disabled={loading.submit || loading.delete}
+                                disabled={loading.submit || loading.delete || splitLoading}
                                 className="text-primary hover:text-primary/80 disabled:text-primary/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                                 title="Edit"
                               >
@@ -509,11 +603,19 @@ export default function BillingPage() {
                                   setBillingToDelete(bill)
                                   setShowDeleteModal(true)
                                 }}
-                                disabled={loading.submit || loading.delete}
+                                disabled={loading.submit || loading.delete || splitLoading}
                                 className="text-destructive hover:text-destructive/80 disabled:text-destructive/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
                                 title="Delete"
                               >
                                 <Trash2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => openSplitModal(bill)}
+                                disabled={loading.submit || loading.delete || splitLoading}
+                                className="text-accent hover:text-accent/80 disabled:text-accent/50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                                title="Add Payment Splits"
+                              >
+                                <DollarSign className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -538,25 +640,21 @@ export default function BillingPage() {
                     <span className="font-medium">{Math.min(endIndex, filteredBilling.length)}</span> of{" "}
                     <span className="font-medium">{filteredBilling.length}</span> results
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
                       className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    
+
                     <div className="flex items-center gap-1">
                       {Array.from({ length: totalPages }, (_, i) => i + 1)
-                        .filter(page => 
-                          page === 1 || 
-                          page === totalPages ||
-                          Math.abs(page - currentPage) <= 1
-                        )
+                        .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                         .map((page, index, array) => {
-                          const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+                          const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1
                           return (
                             <div key={page} className="flex items-center">
                               <button
@@ -569,16 +667,14 @@ export default function BillingPage() {
                               >
                                 {page}
                               </button>
-                              {showEllipsis && (
-                                <span className="px-1 text-muted-foreground">...</span>
-                              )}
+                              {showEllipsis && <span className="px-1 text-muted-foreground">...</span>}
                             </div>
-                          );
+                          )
                         })}
                     </div>
-                    
+
                     <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages || totalPages === 0}
                       className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
@@ -589,6 +685,299 @@ export default function BillingPage() {
               )}
             </div>
 
+            {/* Bill Split Modal */}
+            <Dialog open={showSplitModal} onOpenChange={setShowSplitModal}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add Payment Splits</DialogTitle>
+                  <DialogDescription>
+                    Split the bill amount into multiple payment methods. Total split must equal the bill amount.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {selectedBillingForSplit && (
+                  <div className="space-y-4">
+                    <div className="bg-muted p-4 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-muted-foreground">Total Bill Amount:</span>
+                        <span className="text-lg font-bold text-foreground">
+                          ${selectedBillingForSplit.totalAmount.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-sm font-medium text-muted-foreground">Total Split Amount:</span>
+                        <span
+                          className={`text-lg font-bold ${
+                            splits.reduce((sum, s) => sum + (Number(s.amount) || 0), 0) ===
+                            Number(selectedBillingForSplit.totalAmount)
+                              ? "text-accent"
+                              : "text-destructive"
+                          }`}
+                        >
+                          ${splits.reduce((sum, s) => sum + (Number(s.amount) || 0), 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {splits.map((split, index) => (
+                        <div key={split._id} className="flex gap-2 items-end">
+                          <select
+                            value={split.paymentType}
+                            onChange={(e) => updateSplit(index, "paymentType", e.target.value)}
+                            placeholder="Payment Type"
+                            className="flex-1 px-4 py-2 bg-input border border-border  rounded-lg focus:outline-none focus:ring-0 focus:ring-primary text-foreground text-sm cursor-pointer"
+                            required
+                          >
+                            <option value="">Select Payment Type</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Debit Card">Debit Card</option>
+                            <option value="Insurance">Insurance</option>
+                            <option value="Check">Check</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          <input
+                            type="number"
+                            value={split.amount}
+                            onChange={(e) => updateSplit(index, "amount", e.target.value)}
+                            placeholder="Amount"
+                            step="0.01"
+                            className="flex-1 px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-0 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-text"
+                            required
+                          />
+                          <button
+                            onClick={() => removeSplit(index)}
+                            className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={addSplit}
+                      disabled={splitLoading}
+                      className="w-full flex items-center justify-center gap-2 border border-dashed  border-primary text-primary px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Another Split
+                    </button>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={saveSplits}
+                        disabled={splitLoading || splits.length === 0}
+                        className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        {splitLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                        Save Splits
+                      </button>
+                      <button
+                        onClick={() => setShowSplitModal(false)}
+                        disabled={splitLoading}
+                        className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+              <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Billing Details</DialogTitle>
+                  <DialogDescription>Complete billing information including payments and charges</DialogDescription>
+                </DialogHeader>
+
+                {selectedBillingForDetails && (
+                  <div className="space-y-6  flex-1 pr-4">
+                    {/* Patient and Bill Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-muted p-4 rounded-lg">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">
+                          Patient Name
+                        </p>
+                        <p className="text-lg font-bold text-foreground">
+                          {patients.find((p) => p._id === selectedBillingForDetails.patientId)?.name || "Unknown"}
+                        </p>
+                      </div>
+
+                      <div className="bg-muted p-4 rounded-lg">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">
+                          Bill Date
+                        </p>
+                        <p className="text-lg font-bold text-foreground">
+                          {new Date(selectedBillingForDetails.createdAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Amount Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-accent/10 border border-accent/20 p-4 rounded-lg">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-2">
+                          Total Amount
+                        </p>
+                        <p className="text-2xl font-bold text-accent">
+                          ${selectedBillingForDetails.totalAmount.toFixed(2)}
+                        </p>
+                      </div>
+
+                      <div className="bg-secondary/10 border border-secondary/20 p-4 rounded-lg">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-2">
+                          Total Paid
+                        </p>
+                        <p className="text-2xl font-bold text-secondary">
+                          ${selectedBillingForDetails.paidAmount.toFixed(2)}
+                        </p>
+                      </div>
+
+                      <div
+                        className={`${
+                          selectedBillingForDetails.totalAmount - selectedBillingForDetails.paidAmount > 0
+                            ? "bg-destructive/10 border border-destructive/20"
+                            : "bg-accent/10 border border-accent/20"
+                        } p-4 rounded-lg`}
+                      >
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-2">
+                          Remaining
+                        </p>
+                        <p
+                          className={`text-2xl font-bold ${
+                            selectedBillingForDetails.totalAmount - selectedBillingForDetails.paidAmount > 0
+                              ? "text-destructive"
+                              : "text-accent"
+                          }`}
+                        >
+                          ${(selectedBillingForDetails.totalAmount - selectedBillingForDetails.paidAmount).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Payment Status */}
+                    <div className="bg-muted p-4 rounded-lg">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-2">
+                        Payment Status
+                      </p>
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                          selectedBillingForDetails.paymentStatus === "Paid"
+                            ? "bg-accent/20 text-accent"
+                            : selectedBillingForDetails.paymentStatus === "Partially Paid"
+                              ? "bg-secondary/20 text-secondary"
+                              : "bg-destructive/20 text-destructive"
+                        }`}
+                      >
+                        {selectedBillingForDetails.paymentStatus}
+                      </span>
+                    </div>
+
+                    {/* Treatments */}
+                    {selectedBillingForDetails.treatments && selectedBillingForDetails.treatments.length > 0 && (
+                      <div className="bg-muted p-4 rounded-lg">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-3">
+                          Treatments
+                        </p>
+                        <ul className="space-y-2">
+                          {selectedBillingForDetails.treatments.map((treatment: any, index: number) => (
+                            <li key={index} className="flex items-center gap-2 text-foreground">
+                              <span className="inline-block w-2 h-2 bg-primary rounded-full"></span>
+                              {treatment.name || "Treatment"} {treatment.cost > 0 && `- $${treatment.cost.toFixed(2)}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Payment Splits */}
+                    {selectedBillingForDetails.paymentSplits && selectedBillingForDetails.paymentSplits.length > 0 && (
+                      <div className="bg-muted p-4 rounded-lg">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-3">
+                          Payment Splits
+                        </p>
+                        <div className="space-y-2">
+                          {selectedBillingForDetails.paymentSplits.map((split: any, index: number) => (
+                            <div
+                              key={split._id || index}
+                              className="flex justify-between items-center bg-background p-3 rounded"
+                            >
+                              <span className="font-medium text-foreground">{split.paymentType}</span>
+                              <span className="text-accent font-bold">${Number(split.amount).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Extra Charges */}
+                    {selectedBillingForDetails.extraChargesRequested &&
+                      selectedBillingForDetails.extraChargesRequested.length > 0 && (
+                        <div className="bg-muted p-4 rounded-lg">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-3">
+                            Extra Charges Requests
+                          </p>
+                          <div className="space-y-3">
+                            {selectedBillingForDetails.extraChargesRequested.map((charge: any, index: number) => (
+                              <div key={index} className="bg-background p-3 rounded border border-border">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div>
+                                    <p className="font-medium text-foreground">${Number(charge.amount).toFixed(2)}</p>
+                                    <p className="text-sm text-muted-foreground">{charge.reason}</p>
+                                  </div>
+                                  <span
+                                    className={`px-2 py-1 rounded text-xs font-semibold ${
+                                      charge.status === "approved"
+                                        ? "bg-accent/20 text-accent"
+                                        : charge.status === "rejected"
+                                          ? "bg-destructive/20 text-destructive"
+                                          : "bg-secondary/20 text-secondary"
+                                    }`}
+                                  >
+                                    {charge.status}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Requested: {new Date(charge.requestedAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Notes */}
+                    {selectedBillingForDetails.notes && (
+                      <div className="bg-muted p-4 rounded-lg">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-2">
+                          Notes
+                        </p>
+                        <p className="text-foreground text-sm">{selectedBillingForDetails.notes}</p>
+                      </div>
+                    )}
+
+                    {/* Close Button */}
+                    {/* <button
+                      onClick={() => setShowDetailsModal(false)}
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer sticky bottom-0"
+                    >
+                      Close
+                    </button> */}
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Modal */}
             <ConfirmDeleteModal
               isOpen={showDeleteModal}
               title="Delete Billing Record"
