@@ -6,7 +6,7 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
-import { AlertCircle, Loader2, Search, Eye } from "lucide-react" // Added Eye icon
+import { AlertCircle, Loader2, Search, Eye, Menu } from "lucide-react" // Added Menu icon for mobile
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { ReferRequestsTab } from "@/components/refer-requests-tab"
@@ -44,6 +44,7 @@ export default function RequestStatusPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "in-progress" | "completed" | "rejected">("all")
   const [selectedReferral, setSelectedReferral] = useState<PatientReferral | null>(null)
   const [activeTab, setActiveTab] = useState<"patient-referrals" | "appointment-referrals">("patient-referrals")
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (token && user?.role === "doctor") {
@@ -110,22 +111,22 @@ export default function RequestStatusPage() {
   return (
     <ProtectedRoute>
       <div className="flex h-screen bg-background">
-        <Sidebar />
-        <main className="flex-1 overflow-auto md:pt-0 pt-16">
-          <div className="p-4 sm:p-6 lg:p-8">
+          <Sidebar />
+        <main className="flex-1 overflow-auto md:pt-0 pt-16 lg:pt-0">
+          <div className="p-3 sm:p-4 md:p-6 lg:p-8">
             {/* Header */}
-            <div className="mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Your Request Status</h1>
-              <p className="text-muted-foreground text-sm mt-1">
+            <div className="mb-6 sm:mb-8">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Your Request Status</h1>
+              <p className="text-muted-foreground text-sm mt-1 sm:mt-2">
                 Track and view the status of all your referral requests
               </p>
             </div>
 
-            {/* Tab Navigation - Fixed styling */}
-            <div className="flex gap-2 mb-6 border-b border-border">
+            {/* Tab Navigation - Responsive */}
+            <div className="flex gap-1 sm:gap-2 mb-4 sm:mb-6 border-b border-border overflow-x-auto">
               <button
                 onClick={() => setActiveTab("patient-referrals")}
-                className={`px-4 py-2 font-medium text-sm transition-colors relative ${
+                className={`px-3 sm:px-4 py-2 font-medium text-xs sm:text-sm transition-colors relative whitespace-nowrap ${
                   activeTab === "patient-referrals"
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -138,7 +139,7 @@ export default function RequestStatusPage() {
               </button>
               <button
                 onClick={() => setActiveTab("appointment-referrals")}
-                className={`px-4 py-2 font-medium text-sm transition-colors relative ${
+                className={`px-3 sm:px-4 py-2 font-medium text-xs sm:text-sm transition-colors relative whitespace-nowrap ${
                   activeTab === "appointment-referrals"
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -154,9 +155,9 @@ export default function RequestStatusPage() {
             {/* Tab Content */}
             {activeTab === "patient-referrals" ? (
               <>
-                {/* Filters and Search */}
-                <div className="bg-card rounded-lg shadow-md border border-border p-4 mb-6">
-                  <div className="flex flex-col lg:flex-row gap-4">
+                {/* Filters and Search - Responsive */}
+                <div className="bg-card rounded-lg shadow-sm border border-border p-3 sm:p-4 mb-4 sm:mb-6">
+                  <div className="flex flex-col gap-3 sm:gap-4">
                     {/* Search Input */}
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -178,7 +179,7 @@ export default function RequestStatusPage() {
                         id="statusFilter"
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value as any)}
-                        className="px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                        className="flex-1 sm:flex-none px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
                       >
                         <option value="all">All Status</option>
                         <option value="pending">Pending</option>
@@ -190,28 +191,28 @@ export default function RequestStatusPage() {
                   </div>
                 </div>
 
-                {/* Stats Cards */}
+                {/* Stats Cards - Responsive Grid */}
                 {!loading && referrals.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-card rounded-lg shadow-md border border-border p-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
+                    <div className="bg-card rounded-lg shadow-sm border border-border p-3 sm:p-4">
                       <p className="text-xs text-muted-foreground font-medium uppercase">Total Requests</p>
-                      <p className="text-2xl font-bold text-foreground mt-2">{referrals.length}</p>
+                      <p className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mt-1 sm:mt-2">{referrals.length}</p>
                     </div>
-                    <div className="bg-card rounded-lg shadow-md border border-border p-4">
+                    <div className="bg-card rounded-lg shadow-sm border border-border p-3 sm:p-4">
                       <p className="text-xs text-muted-foreground font-medium uppercase">Pending</p>
-                      <p className="text-2xl font-bold text-amber-600 mt-2">
+                      <p className="text-lg sm:text-xl md:text-2xl font-bold text-amber-600 mt-1 sm:mt-2">
                         {referrals.filter((r) => r.status === "pending").length}
                       </p>
                     </div>
-                    <div className="bg-card rounded-lg shadow-md border border-border p-4">
+                    <div className="bg-card rounded-lg shadow-sm border border-border p-3 sm:p-4">
                       <p className="text-xs text-muted-foreground font-medium uppercase">Completed</p>
-                      <p className="text-2xl font-bold text-green-600 mt-2">
+                      <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600 mt-1 sm:mt-2">
                         {referrals.filter((r) => r.status === "completed").length}
                       </p>
                     </div>
-                    <div className="bg-card rounded-lg shadow-md border border-border p-4">
+                    <div className="bg-card rounded-lg shadow-sm border border-border p-3 sm:p-4">
                       <p className="text-xs text-muted-foreground font-medium uppercase">Rejected</p>
-                      <p className="text-2xl font-bold text-red-600 mt-2">
+                      <p className="text-lg sm:text-xl md:text-2xl font-bold text-red-600 mt-1 sm:mt-2">
                         {referrals.filter((r) => r.status === "rejected").length}
                       </p>
                     </div>
@@ -220,39 +221,45 @@ export default function RequestStatusPage() {
 
                 {/* Content */}
                 {loading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <div className="flex items-center justify-center py-8 sm:py-12">
+                    <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-primary" />
                   </div>
                 ) : sortedReferrals.length === 0 ? (
-                  <div className="text-center py-12 bg-card rounded-lg border border-border">
-                    <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
+                  <div className="text-center py-8 sm:py-12 bg-card rounded-lg border border-border">
+                    <AlertCircle className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                    <p className="text-muted-foreground text-sm sm:text-base">
                       {searchTerm || filterStatus !== "all"
                         ? "No requests match your search criteria."
                         : "No patient requests yet."}
                     </p>
                   </div>
                 ) : (
-                  <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
+                  <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-muted border-b border-border">
                           <tr>
-                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">
+                            <th className="text-left px-3 sm:px-4 md:px-6 py-3 font-semibold text-muted-foreground text-xs sm:text-sm">
                               Patient Name
                             </th>
-                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden sm:table-cell">
+                            <th className="text-left px-3 sm:px-4 md:px-6 py-3 font-semibold text-muted-foreground text-xs sm:text-sm hidden xs:table-cell">
                               Phone
                             </th>
-                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden md:table-cell">
+                            <th className="text-left px-3 sm:px-4 md:px-6 py-3 font-semibold text-muted-foreground text-xs sm:text-sm hidden md:table-cell">
                               Reason
                             </th>
-                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Status</th>
-                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden lg:table-cell">
+                            <th className="text-left px-3 sm:px-4 md:px-6 py-3 font-semibold text-muted-foreground text-xs sm:text-sm">
+                              Status
+                            </th>
+                            <th className="text-left px-3 sm:px-4 md:px-6 py-3 font-semibold text-muted-foreground text-xs sm:text-sm hidden lg:table-cell">
                               Submitted
                             </th>
-                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Updated</th>
-                            <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Action</th>
+                            <th className="text-left px-3 sm:px-4 md:px-6 py-3 font-semibold text-muted-foreground text-xs sm:text-sm">
+                              Updated
+                            </th>
+                            <th className="text-left px-3 sm:px-4 md:px-6 py-3 font-semibold text-muted-foreground text-xs sm:text-sm">
+                              Action
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -261,15 +268,17 @@ export default function RequestStatusPage() {
                               key={referral._id}
                               className="border-b border-border hover:bg-muted/50 transition-colors"
                             >
-                              <td className="px-4 sm:px-6 py-3 font-medium text-foreground">{referral.patientName}</td>
-                              <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell text-sm">
+                              <td className="px-3 sm:px-4 md:px-6 py-3 font-medium text-foreground text-xs sm:text-sm">
+                                {referral.patientName}
+                              </td>
+                              <td className="px-3 sm:px-4 md:px-6 py-3 text-muted-foreground hidden xs:table-cell text-xs sm:text-sm">
                                 {referral.patientPhone}
                               </td>
-                              <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell text-sm truncate max-w-xs">
+                              <td className="px-3 sm:px-4 md:px-6 py-3 text-muted-foreground hidden md:table-cell text-xs sm:text-sm truncate max-w-[120px] md:max-w-xs">
                                 {referral.referralReason}
                               </td>
-                              <td className="px-4 sm:px-6 py-3">
-                                <div className="flex items-center gap-2">
+                              <td className="px-3 sm:px-4 md:px-6 py-3">
+                                <div className="flex flex-col gap-1">
                                   <span
                                     className={`inline-block text-xs px-2 py-1 rounded-full font-medium ${getStatusBadgeColor(referral.status)}`}
                                   >
@@ -278,7 +287,7 @@ export default function RequestStatusPage() {
                                   {referral.status === "rejected" && (
                                     <button
                                       onClick={() => setSelectedReferral(referral)}
-                                      className="text-xs text-primary hover:underline cursor-pointer font-medium"
+                                      className="text-xs text-primary hover:underline cursor-pointer font-medium text-left"
                                       title="View rejection details"
                                     >
                                       View Detail
@@ -286,19 +295,19 @@ export default function RequestStatusPage() {
                                   )}
                                 </div>
                               </td>
-                              <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden lg:table-cell text-sm">
+                              <td className="px-3 sm:px-4 md:px-6 py-3 text-muted-foreground hidden lg:table-cell text-xs sm:text-sm">
                                 {new Date(referral.createdAt).toLocaleDateString()}
                               </td>
-                              <td className="px-4 sm:px-6 py-3 text-muted-foreground text-sm">
+                              <td className="px-3 sm:px-4 md:px-6 py-3 text-muted-foreground text-xs sm:text-sm">
                                 {new Date(referral.updatedAt).toLocaleDateString()}
                               </td>
-                              <td className="px-4 sm:px-6 py-3">
+                              <td className="px-3 sm:px-4 md:px-6 py-3">
                                 <button
                                   onClick={() => setSelectedReferral(referral)}
                                   className="flex items-center gap-1 text-primary hover:text-primary/80 font-medium transition-colors text-xs cursor-pointer"
                                 >
                                   <Eye className="w-3 h-3" />
-                                  View
+                                  <span className="hidden xs:inline">View</span>
                                 </button>
                               </td>
                             </tr>
@@ -307,7 +316,7 @@ export default function RequestStatusPage() {
                       </table>
                     </div>
                   
-                    <div className="px-4 sm:px-6 py-4 border-t border-border flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="px-3 sm:px-4 md:px-6 py-3 border-t border-border flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
                       <div>
                         Showing <span className="font-medium">{sortedReferrals.length}</span> of{" "}
                         <span className="font-medium">{referrals.length}</span> requests
@@ -324,49 +333,51 @@ export default function RequestStatusPage() {
 
         {/* Patient Referral Details Modal */}
         <Dialog open={!!selectedReferral} onOpenChange={(open) => !open && setSelectedReferral(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-xl">Request Details</DialogTitle>
-              <DialogDescription>View complete details of the patient referral request</DialogDescription>
+              <DialogTitle className="text-lg sm:text-xl">Request Details</DialogTitle>
+              <DialogDescription className="text-sm sm:text-base">
+                View complete details of the patient referral request
+              </DialogDescription>
             </DialogHeader>
 
             {selectedReferral && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Patient Information */}
-                <div className="border-b border-border pb-4">
-                  <h3 className="font-semibold text-foreground mb-3">Patient Information</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="border-b border-border pb-3 sm:pb-4">
+                  <h3 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm sm:text-base">Patient Information</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Patient Name</p>
-                      <p className="text-foreground">{selectedReferral.patientName}</p>
+                      <p className="text-foreground text-sm sm:text-base">{selectedReferral.patientName}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Phone</p>
-                      <p className="text-foreground">{selectedReferral.patientPhone}</p>
+                      <p className="text-foreground text-sm sm:text-base">{selectedReferral.patientPhone}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Email</p>
-                      <p className="text-foreground">{selectedReferral.patientEmail}</p>
+                      <p className="text-foreground text-sm sm:text-base">{selectedReferral.patientEmail}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Date of Birth</p>
-                      <p className="text-foreground">{selectedReferral.patientDob}</p>
+                      <p className="text-foreground text-sm sm:text-base">{selectedReferral.patientDob}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground uppercase font-medium mb-1">ID Number</p>
-                      <p className="text-foreground">{selectedReferral.patientIdNumber}</p>
+                      <p className="text-foreground text-sm sm:text-base">{selectedReferral.patientIdNumber}</p>
                     </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Address</p>
-                      <p className="text-foreground">{selectedReferral.patientAddress}</p>
+                      <p className="text-foreground text-sm sm:text-base">{selectedReferral.patientAddress}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Request Information */}
-                <div className="border-b border-border pb-4">
-                  <h3 className="font-semibold text-foreground mb-3">Request Information</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="border-b border-border pb-3 sm:pb-4">
+                  <h3 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm sm:text-base">Request Information</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Status</p>
                       <span
@@ -379,25 +390,25 @@ export default function RequestStatusPage() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Submitted Date</p>
-                      <p className="text-foreground">{new Date(selectedReferral.createdAt).toLocaleDateString()}</p>
+                      <p className="text-foreground text-sm sm:text-base">{new Date(selectedReferral.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Updated Date</p>
-                      <p className="text-foreground">{new Date(selectedReferral.updatedAt).toLocaleDateString()}</p>
+                      <p className="text-foreground text-sm sm:text-base">{new Date(selectedReferral.updatedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Referral Reason */}
-                <div className="border-b border-border pb-4">
-                  <h3 className="font-semibold text-foreground mb-2">Referral Reason</h3>
-                  <p className="text-foreground text-sm bg-muted p-3 rounded-lg">{selectedReferral.referralReason}</p>
+                <div className="border-b border-border pb-3 sm:pb-4">
+                  <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Referral Reason</h3>
+                  <p className="text-foreground text-sm bg-muted p-2 sm:p-3 rounded-lg">{selectedReferral.referralReason}</p>
                 </div>
 
                 {/* Medical Conditions and Allergies */}
-                <div className="border-b border-border pb-4">
-                  <h3 className="font-semibold text-foreground mb-3">Medical Details</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="border-b border-border pb-3 sm:pb-4">
+                  <h3 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm sm:text-base">Medical Details</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground uppercase font-medium mb-2">Medical Conditions</p>
                       <div className="space-y-1">
@@ -432,17 +443,17 @@ export default function RequestStatusPage() {
 
                 {/* Rejection Reason */}
                 {selectedReferral.status === "rejected" && selectedReferral.rejectionReason && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-red-900 mb-2">Rejection Reason</h3>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+                    <h3 className="font-semibold text-red-900 mb-2 text-sm sm:text-base">Rejection Reason</h3>
                     <p className="text-red-800 text-sm">{selectedReferral.rejectionReason}</p>
                   </div>
                 )}
 
                 {/* Notes */}
                 {selectedReferral.notes && (
-                  <div className="border-t border-border pt-4">
-                    <h3 className="font-semibold text-foreground mb-2">Notes</h3>
-                    <p className="text-foreground text-sm bg-muted p-3 rounded-lg">{selectedReferral.notes}</p>
+                  <div className="border-t border-border pt-3 sm:pt-4">
+                    <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Notes</h3>
+                    <p className="text-foreground text-sm bg-muted p-2 sm:p-3 rounded-lg">{selectedReferral.notes}</p>
                   </div>
                 )}
               </div>

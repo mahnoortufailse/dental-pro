@@ -586,13 +586,15 @@ export default function PatientsPage() {
       <div className="flex h-screen bg-background">
         <Sidebar />
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
-          <div className="p-4 sm:p-6 lg:p-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div className="p-3 sm:p-4 md:p-6 lg:p-8">
+            <div className="flex flex-col gap-3 sm:gap-4 mb-6 sm:mb-8">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Patients</h1>
-                <p className="text-muted-foreground text-sm mt-1">Manage patient records and medical information</p>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Patients</h1>
+                <p className="text-muted-foreground text-xs sm:text-sm mt-1">
+                  Manage patient records and medical information
+                </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-col xs:flex-row">
                 {/* ADDED billing request button for doctors only */}
                 {/* {user?.role === "doctor" && (
                   <button
@@ -1163,441 +1165,439 @@ export default function PatientsPage() {
               </div>
             )}
 
-            {selectedPatient && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <div className="bg-card rounded-xl shadow-2xl border border-border p-6 max-w-2xl w-full max-h-[95vh] overflow-y-auto">
-                  {/* Compact Header */}
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-start gap-4">
-                      {selectedPatient.photoUrl ? (
-                        <img
-                          src={selectedPatient.photoUrl || "/placeholder.svg"}
-                          alt={selectedPatient.name}
-                          className="w-16 h-16 rounded-xl object-cover border-2 border-primary/20"
-                        />
-                      ) : (
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-primary/20 flex items-center justify-center">
-                          <span className="text-xl font-bold text-primary">
-                            {selectedPatient.name?.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        <h2 className="text-xl font-bold text-foreground leading-tight">{selectedPatient.name}</h2>
-                        <div className="flex flex-wrap gap-2">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                              selectedPatient.credentialStatus === "complete"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                            }`}
-                          >
-                            {selectedPatient.credentialStatus === "complete" ? (
-                              <>
-                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                Complete
-                              </>
-                            ) : (
-                              <>
-                                <AlertCircle className="w-3 h-3" />
-                                Incomplete
-                              </>
-                            )}
-                          </span>
-                          {selectedPatient.assignedDoctorId && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs font-medium">
-                              <User className="w-3 h-3" />
-                              {selectedPatient.assignedDoctorId.name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+           {selectedPatient && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50">
+    <div className="bg-card rounded-xl shadow-2xl border border-border p-4 sm:p-6 max-w-4xl w-full max-h-[95vh] overflow-y-auto mx-auto">
+      {/* Compact Header */}
+      <div className="flex items-start justify-between mb-4 sm:mb-6">
+        <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+          {selectedPatient.photoUrl ? (
+            <img
+              src={selectedPatient.photoUrl || "/placeholder.svg"}
+              alt={selectedPatient.name}
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl object-cover border-2 border-primary/20 flex-shrink-0"
+            />
+          ) : (
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-primary/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-lg sm:text-xl font-bold text-primary">
+                {selectedPatient.name?.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
+          <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
+            <h2 className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate">{selectedPatient.name}</h2>
+            <div className="flex flex-wrap gap-1 sm:gap-2">
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                  selectedPatient.credentialStatus === "complete"
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                    : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                }`}
+              >
+                {selectedPatient.credentialStatus === "complete" ? (
+                  <>
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    Complete
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-3 h-3" />
+                    Incomplete
+                  </>
+                )}
+              </span>
+              {selectedPatient.assignedDoctorId && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs font-medium truncate max-w-[120px] sm:max-w-none">
+                  <User className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{selectedPatient.assignedDoctorId.name}</span>
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
 
-                    <button
-                      onClick={() => {
-                        setSelectedPatient(null)
-                        setMedicalHistoryEntries([])
-                      }}
-                      className="text-muted-foreground hover:text-foreground hover:bg-muted p-2 rounded-lg transition-all cursor-pointer"
+        <button
+          onClick={() => {
+            setSelectedPatient(null)
+            setMedicalHistoryEntries([])
+          }}
+          className="text-muted-foreground hover:text-foreground hover:bg-muted p-1 sm:p-2 rounded-lg transition-all cursor-pointer flex-shrink-0 ml-2"
+        >
+          <X className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+      </div>
+
+      {/* Compact Stats Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 sm:p-3 text-center">
+          <div className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">
+            {medicalHistoryEntries.length}
+          </div>
+          <div className="text-xs text-blue-600/80 dark:text-blue-400/80 font-medium">Visits</div>
+        </div>
+
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2 sm:p-3 text-center">
+          <div className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400">
+            {selectedPatient.allergies?.length || 0}
+          </div>
+          <div className="text-xs text-green-600/80 dark:text-green-400/80 font-medium">Allergies</div>
+        </div>
+
+        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-2 sm:p-3 text-center">
+          <div className="text-base sm:text-lg font-bold text-purple-600 dark:text-purple-400">
+            {selectedPatient.medicalConditions?.length || 0}
+          </div>
+          <div className="text-xs text-purple-600/80 dark:text-purple-400/80 font-medium">Conditions</div>
+        </div>
+
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2 sm:p-3 text-center">
+          <div className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400">
+            {selectedPatient.insuranceProvider ? "✓" : "✗"}
+          </div>
+          <div className="text-xs text-amber-600/80 dark:text-amber-400/80 font-medium">Insurance</div>
+        </div>
+      </div>
+
+      {/* Single Column Layout */}
+      <div className="space-y-3 sm:space-y-4">
+        {/* Contact Information */}
+        <div className="bg-muted/30 rounded-lg p-3 sm:p-4 border border-border">
+          <h3 className="font-semibold text-foreground mb-2 sm:mb-3 flex items-center gap-2 text-sm">
+            <User className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            Contact Information
+          </h3>
+          <div className="space-y-2 sm:space-y-3 text-sm">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 py-1">
+              <span className="text-muted-foreground font-medium text-xs sm:text-sm">Phone:</span>
+              <span className="text-foreground font-semibold text-sm sm:text-base">
+                {formatPhoneForDisplay(selectedPatient.phone)}
+              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 py-1">
+              <span className="text-muted-foreground font-medium text-xs sm:text-sm">Email:</span>
+              <span className="text-foreground font-semibold truncate text-sm sm:text-base max-w-[200px] sm:max-w-[250px]">
+                {selectedPatient.email || "Not provided"}
+              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 py-1">
+              <span className="text-muted-foreground font-medium text-xs sm:text-sm">Address:</span>
+              <span className="text-foreground font-semibold text-right text-sm sm:text-base max-w-[200px] sm:max-w-[250px] break-words">
+                {selectedPatient.address || "Not provided"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Personal Details */}
+        <div className="bg-muted/30 rounded-lg p-3 sm:p-4 border border-border">
+          <h3 className="font-semibold text-foreground mb-2 sm:mb-3 flex items-center gap-2 text-sm">
+            <CreditCard className="w-4 h-4 text-green-600 flex-shrink-0" />
+            Personal Details
+          </h3>
+          <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-3 text-sm">
+            <div>
+              <p className="text-muted-foreground font-medium mb-1 text-xs sm:text-sm">Date of Birth</p>
+              <p className="text-foreground font-semibold text-sm sm:text-base">{selectedPatient.dob || "Not provided"}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground font-medium mb-1 text-xs sm:text-sm">ID Number</p>
+              <p className="text-foreground font-semibold text-sm sm:text-base">{selectedPatient.idNumber || "Not provided"}</p>
+            </div>
+            <div className="xs:col-span-2 sm:col-span-1">
+              <p className="text-muted-foreground font-medium mb-1 text-xs sm:text-sm">Insurance Provider</p>
+              <p className="text-foreground font-semibold text-sm sm:text-base truncate">
+                {selectedPatient.insuranceProvider || "Not provided"}
+              </p>
+            </div>
+            <div className="xs:col-span-2 sm:col-span-1">
+              <p className="text-muted-foreground font-medium mb-1 text-xs sm:text-sm">Insurance Number</p>
+              <p className="text-foreground font-semibold text-sm sm:text-base truncate">
+                {selectedPatient.insuranceNumber || "Not provided"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Medical Overview */}
+        <div className="bg-muted/30 rounded-lg p-3 sm:p-4 border border-border">
+          <h3 className="font-semibold text-foreground mb-2 sm:mb-3 flex items-center gap-2 text-sm">
+            <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
+            Medical Overview
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <p className="text-muted-foreground font-medium mb-2 text-xs sm:text-sm">Allergies</p>
+              <div className="flex flex-wrap gap-1">
+                {selectedPatient.allergies?.length > 0 ? (
+                  selectedPatient.allergies.map((allergy: string, index: number) => (
+                    <span
+                      key={index}
+                      className="inline-block bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 px-2 py-1 rounded text-xs font-medium break-words max-w-full"
                     >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
+                      {allergy}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-muted-foreground text-sm">None reported</span>
+                )}
+              </div>
+            </div>
 
-                  {/* Compact Stats Bar */}
-                  <div className="grid grid-cols-4 gap-3 mb-6">
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-center">
-                      <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                        {medicalHistoryEntries.length}
-                      </div>
-                      <div className="text-xs text-blue-600/80 dark:text-blue-400/80 font-medium">Visits</div>
-                    </div>
+            <div>
+              <p className="text-muted-foreground font-medium mb-2 text-xs sm:text-sm">Conditions</p>
+              <div className="flex flex-wrap gap-1">
+                {selectedPatient.medicalConditions?.length > 0 ? (
+                  selectedPatient.medicalConditions.map((condition: string, index: number) => (
+                    <span
+                      key={index}
+                      className="inline-block bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium break-words max-w-full"
+                    >
+                      {condition}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-muted-foreground text-sm">None reported</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
-                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-center">
-                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                        {selectedPatient.allergies?.length || 0}
-                      </div>
-                      <div className="text-xs text-green-600/80 dark:text-green-400/80 font-medium">Allergies</div>
-                    </div>
+        {/* Medical History */}
+        <div className="bg-muted/30 rounded-lg p-3 sm:p-4 border border-border">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
+              <FileText className="w-4 h-4 text-purple-600 flex-shrink-0" />
+              Medical History
+            </h3>
+            <button
+              onClick={() => fetchMedicalHistory(selectedPatient._id)}
+              disabled={loadingMedicalHistory}
+              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${loadingMedicalHistory ? "animate-spin" : ""}`} />
+              <span className="hidden xs:inline">Refresh</span>
+            </button>
+          </div>
 
-                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3 text-center">
-                      <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                        {selectedPatient.medicalConditions?.length || 0}
-                      </div>
-                      <div className="text-xs text-purple-600/80 dark:text-purple-400/80 font-medium">Conditions</div>
-                    </div>
-
-                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-center">
-                      <div className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                        {selectedPatient.insuranceProvider ? "✓" : "✗"}
-                      </div>
-                      <div className="text-xs text-amber-600/80 dark:text-amber-400/80 font-medium">Insurance</div>
-                    </div>
-                  </div>
-
-                  {/* Single Column Layout */}
-                  <div className="space-y-4">
-                    {/* Contact Information */}
-                    <div className="bg-muted/30 rounded-lg p-4 border border-border">
-                      <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2 text-sm">
-                        <User className="w-4 h-4 text-blue-600" />
-                        Contact Information
-                      </h3>
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between items-center py-1">
-                          <span className="text-muted-foreground font-medium">Phone:</span>
-                          <span className="text-foreground font-semibold">
-                            {formatPhoneForDisplay(selectedPatient.phone)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center py-1">
-                          <span className="text-muted-foreground font-medium">Email:</span>
-                          <span className="text-foreground font-semibold truncate max-w-[160px]">
-                            {selectedPatient.email || "Not provided"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-start py-1">
-                          <span className="text-muted-foreground font-medium">Address:</span>
-                          <span className="text-foreground font-semibold text-right max-w-[160px]">
-                            {selectedPatient.address || "Not provided"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Personal Details */}
-                    <div className="bg-muted/30 rounded-lg p-4 border border-border">
-                      <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2 text-sm">
-                        <CreditCard className="w-4 h-4 text-green-600" />
-                        Personal Details
-                      </h3>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <p className="text-muted-foreground font-medium mb-1">Date of Birth</p>
-                          <p className="text-foreground font-semibold">{selectedPatient.dob || "Not provided"}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground font-medium mb-1">ID Number</p>
-                          <p className="text-foreground font-semibold">{selectedPatient.idNumber || "Not provided"}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground font-medium mb-1">Insurance Provider</p>
-                          <p className="text-foreground font-semibold">
-                            {selectedPatient.insuranceProvider || "Not provided"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground font-medium mb-1">Insurance Number</p>
-                          <p className="text-foreground font-semibold">
-                            {selectedPatient.insuranceNumber || "Not provided"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Medical Overview */}
-                    <div className="bg-muted/30 rounded-lg p-4 border border-border">
-                      <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2 text-sm">
-                        <AlertTriangle className="w-4 h-4 text-red-600" />
-                        Medical Overview
-                      </h3>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-muted-foreground font-medium mb-2 text-sm">Allergies</p>
-                          <div className="flex flex-wrap gap-1">
-                            {selectedPatient.allergies?.length > 0 ? (
-                              selectedPatient.allergies.map((allergy: string, index: number) => (
-                                <span
-                                  key={index}
-                                  className="inline-block bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 px-2 py-1 rounded text-xs font-medium"
-                                >
-                                  {allergy}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground text-sm">None reported</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="text-muted-foreground font-medium mb-2 text-sm">Conditions</p>
-                          <div className="flex flex-wrap gap-1">
-                            {selectedPatient.medicalConditions?.length > 0 ? (
-                              selectedPatient.medicalConditions.map((condition: string, index: number) => (
-                                <span
-                                  key={index}
-                                  className="inline-block bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium"
-                                >
-                                  {condition}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground text-sm">None reported</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Medical History */}
-                    <div className="bg-muted/30 rounded-lg p-4 border border-border">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
-                          <FileText className="w-4 h-4 text-purple-600" />
-                          Medical History
-                        </h3>
-                        <button
-                          onClick={() => fetchMedicalHistory(selectedPatient._id)}
-                          disabled={loadingMedicalHistory}
-                          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <RefreshCw className={`w-3 h-3 ${loadingMedicalHistory ? "animate-spin" : ""}`} />
-                          Refresh
-                        </button>
-                      </div>
-
-                      {loadingMedicalHistory ? (
-                        <div className="flex justify-center items-center py-6">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                            <div
-                              className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                              style={{ animationDelay: "0.1s" }}
-                            ></div>
-                            <div
-                              className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                              style={{ animationDelay: "0.2s" }}
-                            ></div>
-                          </div>
-                        </div>
-                      ) : medicalHistoryEntries.length > 0 ? (
-                        <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                          {medicalHistoryEntries.map((entry: any, index: number) => (
-                            <div key={index} className="bg-background rounded-lg p-3 border border-border">
-                              <div className="flex items-start justify-between mb-2">
-                                <div>
-                                  <p className="font-medium text-foreground text-sm">
-                                    {entry.date ? new Date(entry.date).toLocaleDateString() : "N/A"}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">By {entry.createdByName || "Unknown"}</p>
-                                </div>
-                                <span className="inline-flex items-center px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                                  #{medicalHistoryEntries.length - index}
-                                </span>
-                              </div>
-
-                              <div className="space-y-2 text-sm">
-                                {entry.findings && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-muted-foreground">Findings</p>
-                                    <p className="text-foreground">{entry.findings}</p>
-                                  </div>
-                                )}
-                                {entry.treatment && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-muted-foreground">Treatment</p>
-                                    <p className="text-foreground">{entry.treatment}</p>
-                                  </div>
-                                )}
-                                {entry.medications && entry.medications.length > 0 && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-muted-foreground">Medications</p>
-                                    <p className="text-foreground text-xs">{entry.medications.join(", ")}</p>
-                                  </div>
-                                )}
-                                {entry.notes && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-muted-foreground">Notes</p>
-                                    <p className="text-foreground text-xs">{entry.notes}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-6">
-                          <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-muted-foreground text-sm">No medical history entries</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Compact Action Footer */}
-                  <div className="flex flex-col gap-3 mt-6 pt-6 border-t border-border">
-                    <div className="flex gap-2 justify-between">
-                      {user?.role !== "doctor" && (
-                        <button
-                          onClick={() => {
-                            handleEditPatient(selectedPatient)
-                            setSelectedPatient(null)
-                          }}
-                          className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer flex-1 justify-center"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                          Edit Patient
-                        </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setSelectedPatient(null)
-                          setMedicalHistoryEntries([])
-                        }}
-                        className="flex items-center gap-2 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer flex-1 justify-center"
-                      >
-                        Close
-                      </button>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">
-                        Patient ID: {selectedPatient.idNumber || "Not assigned"} • Last updated:{" "}
-                        {new Date(selectedPatient.updatedAt || selectedPatient.createdAt).toLocaleDateString()}
+          {loadingMedicalHistory ? (
+            <div className="flex justify-center items-center py-4 sm:py-6">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                <div
+                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                  style={{ animationDelay: "0.1s" }}
+                ></div>
+                <div
+                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
+              </div>
+            </div>
+          ) : medicalHistoryEntries.length > 0 ? (
+            <div className="space-y-2 sm:space-y-3 max-h-48 sm:max-h-64 overflow-y-auto pr-1 sm:pr-2">
+              {medicalHistoryEntries.map((entry: any, index: number) => (
+                <div key={index} className="bg-background rounded-lg p-2 sm:p-3 border border-border">
+                  <div className="flex items-start justify-between mb-1 sm:mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground text-sm truncate">
+                        {entry.date ? new Date(entry.date).toLocaleDateString() : "N/A"}
                       </p>
+                      <p className="text-xs text-muted-foreground truncate">By {entry.createdByName || "Unknown"}</p>
                     </div>
+                    <span className="inline-flex items-center px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium flex-shrink-0 ml-2">
+                      #{medicalHistoryEntries.length - index}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
+                    {entry.findings && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground">Findings</p>
+                        <p className="text-foreground line-clamp-2">{entry.findings}</p>
+                      </div>
+                    )}
+                    {entry.treatment && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground">Treatment</p>
+                        <p className="text-foreground line-clamp-2">{entry.treatment}</p>
+                      </div>
+                    )}
+                    {entry.medications && entry.medications.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground">Medications</p>
+                        <p className="text-foreground text-xs line-clamp-1">{entry.medications.join(", ")}</p>
+                      </div>
+                    )}
+                    {entry.notes && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground">Notes</p>
+                        <p className="text-foreground text-xs line-clamp-2">{entry.notes}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 sm:py-6">
+              <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground text-sm">No medical history entries</p>
+            </div>
+          )}
+        </div>
+      </div>
 
-               
+      {/* Compact Action Footer */}
+      <div className="flex flex-col gap-2 sm:gap-3 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-border">
+        <div className="flex flex-col xs:flex-row gap-2 justify-between">
+          {user?.role !== "doctor" && (
+            <button
+              onClick={() => {
+                handleEditPatient(selectedPatient)
+                setSelectedPatient(null)
+              }}
+              className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer flex-1 justify-center order-2 xs:order-1"
+            >
+              <Edit2 className="w-4 h-4" />
+              Edit Patient
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setSelectedPatient(null)
+              setMedicalHistoryEntries([])
+            }}
+            className="flex items-center gap-2 bg-muted hover:bg-muted/80 text-muted-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer flex-1 justify-center order-1 xs:order-2"
+          >
+            Close
+          </button>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground break-words">
+            Patient ID: {selectedPatient.idNumber || "Not assigned"} • Last updated:{" "}
+            {new Date(selectedPatient.updatedAt || selectedPatient.createdAt).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+            {/* Modal for adding billing request */}
+            {showExtraChargesModal && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-card rounded-xl shadow-2xl border border-border p-6 max-w-md w-full">
+                  <h2 className="text-xl font-bold text-foreground mb-4">Add Billing Request</h2>
+                  <p className="text-sm text-muted-foreground mb-6">Select a patient and add a billing request</p>
+
+                  <form onSubmit={handleExtraChargesRequest} className="space-y-4">
+                    {/* Patient selection dropdown */}
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Patient *</label>
+                      <select
+                        value={selectedPatient?._id || ""}
+                        onChange={(e) => {
+                          const patient = patients.find((p) => p._id === e.target.value)
+                          setSelectedPatient(patient || null)
+                        }}
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer"
+                        required
+                        disabled={loadingExtraCharges}
+                      >
+                        <option value="">Select a patient...</option>
+                        {patients.map((patient) => (
+                          <option key={patient._id} value={patient._id}>
+                            {patient.name} ({formatPhoneForDisplay(patient.phone)})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Treatment/Service *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Root Canal, Special Procedure"
+                        value={extraChargesForm.treatment}
+                        onChange={(e) =>
+                          setExtraChargesForm({
+                            ...extraChargesForm,
+                            treatment: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                        required
+                        disabled={loadingExtraCharges}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Amount ($) *</label>
+                      <input
+                        type="number"
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0"
+                        value={extraChargesForm.amount}
+                        onChange={(e) =>
+                          setExtraChargesForm({
+                            ...extraChargesForm,
+                            amount: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                        required
+                        disabled={loadingExtraCharges}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Reason for Charges</label>
+                      <textarea
+                        placeholder="Explain why these additional charges are needed..."
+                        value={extraChargesForm.reason}
+                        onChange={(e) =>
+                          setExtraChargesForm({
+                            ...extraChargesForm,
+                            reason: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                        rows={3}
+                        disabled={loadingExtraCharges}
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowExtraChargesModal(false)
+                          setExtraChargesForm({
+                            amount: "",
+                            treatment: "",
+                            reason: "",
+                          })
+                          setSelectedPatient(null)
+                        }}
+                        disabled={loadingExtraCharges}
+                        className="flex-1 px-4 py-2 bg-muted hover:bg-muted/80 text-muted-foreground rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loadingExtraCharges || !selectedPatient}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        {loadingExtraCharges && <Loader2 className="w-4 h-4 animate-spin" />}
+                        Send Request
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             )}
-             {/* Modal for adding billing request */}
-                {showExtraChargesModal && (
-                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-card rounded-xl shadow-2xl border border-border p-6 max-w-md w-full">
-                      <h2 className="text-xl font-bold text-foreground mb-4">Add Billing Request</h2>
-                      <p className="text-sm text-muted-foreground mb-6">Select a patient and add a billing request</p>
-
-                      <form onSubmit={handleExtraChargesRequest} className="space-y-4">
-                        {/* Patient selection dropdown */}
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">Patient *</label>
-                          <select
-                            value={selectedPatient?._id || ""}
-                            onChange={(e) => {
-                              const patient = patients.find((p) => p._id === e.target.value)
-                              setSelectedPatient(patient || null)
-                            }}
-                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer"
-                            required
-                            disabled={loadingExtraCharges}
-                          >
-                            <option value="">Select a patient...</option>
-                            {patients.map((patient) => (
-                              <option key={patient._id} value={patient._id}>
-                                {patient.name} ({formatPhoneForDisplay(patient.phone)})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">Treatment/Service *</label>
-                          <input
-                            type="text"
-                            placeholder="e.g., Root Canal, Special Procedure"
-                            value={extraChargesForm.treatment}
-                            onChange={(e) =>
-                              setExtraChargesForm({
-                                ...extraChargesForm,
-                                treatment: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
-                            required
-                            disabled={loadingExtraCharges}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">Amount ($) *</label>
-                          <input
-                            type="number"
-                            placeholder="0.00"
-                            step="0.01"
-                            min="0"
-                            value={extraChargesForm.amount}
-                            onChange={(e) =>
-                              setExtraChargesForm({
-                                ...extraChargesForm,
-                                amount: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
-                            required
-                            disabled={loadingExtraCharges}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">Reason for Charges</label>
-                          <textarea
-                            placeholder="Explain why these additional charges are needed..."
-                            value={extraChargesForm.reason}
-                            onChange={(e) =>
-                              setExtraChargesForm({
-                                ...extraChargesForm,
-                                reason: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
-                            rows={3}
-                            disabled={loadingExtraCharges}
-                          />
-                        </div>
-
-                        <div className="flex gap-3 pt-4">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowExtraChargesModal(false)
-                              setExtraChargesForm({
-                                amount: "",
-                                treatment: "",
-                                reason: "",
-                              })
-                              setSelectedPatient(null)
-                            }}
-                            disabled={loadingExtraCharges}
-                            className="flex-1 px-4 py-2 bg-muted hover:bg-muted/80 text-muted-foreground rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:opacity-50"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            disabled={loadingExtraCharges || !selectedPatient}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
-                          >
-                            {loadingExtraCharges && <Loader2 className="w-4 h-4 animate-spin" />}
-                            Send Request
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                )}
             <ConfirmDeleteModal
               isOpen={showDeleteModal}
               title="Delete Patient"

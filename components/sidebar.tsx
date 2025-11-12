@@ -61,9 +61,9 @@ export function Sidebar() {
           Authorization: `Bearer ${token}`,
         },
       })
-      
+
       console.log("Response status:", res.status)
-      
+
       if (res.ok) {
         const data = await res.json()
         console.log("Pending count data:", data)
@@ -106,11 +106,11 @@ export function Sidebar() {
         { label: "Forwarded Requests", href: "/dashboard/forwarded-requests", icon: FileText },
         { label: "Medical Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Billing", href: "/dashboard/billing", icon: FileText },
-        { 
-          label: "Billing Requests", 
-          href: "/dashboard/billing-requests", 
-          icon: FileText, 
-          badge: pendingBillingCount 
+        {
+          label: "Billing Requests",
+          href: "/dashboard/billing-requests",
+          icon: FileText,
+          badge: pendingBillingCount,
         },
         { label: "Inventory", href: "/dashboard/inventory", icon: Package },
         { label: "Staff", href: "/dashboard/staff", icon: Users2 },
@@ -139,11 +139,11 @@ export function Sidebar() {
         { label: "Forwarded Requests", href: "/dashboard/forwarded-requests", icon: FileText },
         { label: "Medical Reports", href: "/dashboard/medical-reports", icon: FileText },
         { label: "Billing", href: "/dashboard/billing", icon: FileText },
-        { 
-          label: "Billing Requests", 
-          href: "/dashboard/billing-requests", 
-          icon: FileText, 
-          badge: pendingBillingCount 
+        {
+          label: "Billing Requests",
+          href: "/dashboard/billing-requests",
+          icon: FileText,
+          badge: pendingBillingCount,
         },
       ]
     }
@@ -194,15 +194,15 @@ export function Sidebar() {
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <div className="hidden md:block p-6 border-b border-sidebar-border">
-          <div className=" mb-8 sm:mb-4">
-            <div className="inline-flex items-center justify-center ">
+        <div className="hidden md:block p-4 sm:p-6 border-b border-sidebar-border">
+          <div className="mb-4 sm:mb-8">
+            <div className="inline-flex items-center justify-center">
               <Image
                 src="/logo.jpeg"
                 alt="DR. MOHAMMAD ALSHEIKH DENTAL CENTER"
-                width={180}
-                height={70}
-                className="object-contain"
+                width={140}
+                height={55}
+                className="object-contain w-auto"
                 priority
               />
             </div>
@@ -212,7 +212,7 @@ export function Sidebar() {
 
         <div className="md:hidden h-16" />
 
-        <nav className="flex-1 p-2 space-y-1 overflow-y-auto scrollbar-thin">
+        <nav className="flex-1 p-1 sm:p-2 space-y-0.5 sm:space-y-1 overflow-y-auto scrollbar-thin">
           {menuItems.map((item: any) => {
             const Icon = item.icon
             const active = isActive(item.href)
@@ -221,16 +221,16 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   active
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground hover:bg-sidebar-accent/20 hover:text-sidebar-accent-foreground"
                 }`}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                <span className="flex-1">{item.label}</span>
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span className="flex-1 truncate">{item.label}</span>
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center flex-shrink-0 text-[0.6rem] sm:text-xs">
                     {item.badge > 99 ? "99+" : item.badge}
                   </span>
                 )}
@@ -244,17 +244,17 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-sidebar-border space-y-4">
-          <div className="text-sm">
+        <div className="p-2 sm:p-4 border-t border-sidebar-border space-y-2 sm:space-y-4">
+          <div className="text-xs sm:text-sm">
             <p className="text-xs text-sidebar-foreground/60 uppercase tracking-wider">Logged in as</p>
-            <p className="font-semibold text-sidebar-foreground truncate">{user?.name}</p>
+            <p className="font-semibold text-sidebar-foreground truncate text-xs sm:text-sm">{user?.name}</p>
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors text-sm font-medium cursor-pointer"
+            className="w-full flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors text-xs sm:text-sm font-medium cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
-            Logout
+            <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Logout</span>
           </button>
         </div>
       </aside>

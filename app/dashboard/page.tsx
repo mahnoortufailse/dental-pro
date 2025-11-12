@@ -419,28 +419,29 @@ export default function DashboardPage() {
     <ProtectedRoute>
       <div className="flex h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 overflow-auto lg:ml-0">
-          <div className="p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-auto lg:ml-0 mt-12 sm:mt-3">
+          <div className="p-6 sm:p-4 md:p-6 lg:p-8">
             {/* Dashboard Header with Refresh Button */}
-            <div className="dashboard-header flex justify-between items-center mb-6">
-              <div>
-                <h1 className="dashboard-title">Welcome back, {user?.name}!</h1>
-                <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+            <div className="dashboard-header flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-start sm:items-center mb-4 sm:mb-6 lg:mb-8 ">
+              <div className="flex-1">
+                <h1 className="dashboard-title text-xl sm:text-2xl lg:text-3xl">Welcome back, {user?.name}!</h1>
+                <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
                   Here's what's happening at your clinic today
                 </p>
               </div>
               <button
                 onClick={() => fetchDashboardData(true)}
                 disabled={refreshing}
-                className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer"
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
               >
                 {refreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                {refreshing ? "Refreshing..." : "Refresh"}
+                <span className="hidden xs:inline">{refreshing ? "Refreshing..." : "Refresh"}</span>
+                <span className="inline xs:hidden">{refreshing ? "..." : "Refresh"}</span>
               </button>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6 lg:mb-8">
               {refreshing ? (
                 // Loading state for stats
                 Array.from({ length: 4 }).map((_, index) => (
@@ -524,7 +525,7 @@ export default function DashboardPage() {
             </div>
 
             {(user?.role === "admin" || user?.role === "receptionist") && recentPatientReferrals.length > 0 && (
-              <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden mb-6 sm:mb-8">
+              <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden mb-4 sm:mb-6 lg:mb-8">
                 <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border">
                   <h2 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
                     <UserPlus className="w-5 h-5 text-emerald-600" />
@@ -620,7 +621,7 @@ export default function DashboardPage() {
 
             {/* Recent Patient Requests */}
             {user?.role === "doctor" && (
-              <div className="stat-card mb-6 sm:mb-8">
+              <div className="stat-card mb-4 sm:mb-6 lg:mb-8">
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h2 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
                     <UserPlus className="w-5 h-5 text-emerald-600" />
@@ -714,7 +715,7 @@ export default function DashboardPage() {
 
             {/* Recent Appointment Forwards */}
             {user?.role === "doctor" && (
-              <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden mb-6 sm:mb-8">
+              <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden mb-4 sm:mb-6 lg:mb-8">
                 <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border">
                   <h2 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
                     <ArrowRightLeft className="w-5 h-5 text-indigo-600" />
@@ -804,7 +805,7 @@ export default function DashboardPage() {
             )}
 
             {/* Today's Schedule */}
-            <div className="stat-card mb-6 sm:mb-8">
+            <div className="stat-card mb-4 sm:mb-6 lg:mb-8">
               <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-foreground">Today's Schedule</h2>
               {refreshing ? (
                 <div className="flex items-center justify-center py-8">

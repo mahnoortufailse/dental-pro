@@ -1,12 +1,26 @@
 //@ts-nocheck
 "use client"
 
+import type React from "react"
+
 import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect, useMemo } from "react"
 import { toast } from "react-hot-toast"
-import { Check, X, Loader2, Search, ChevronLeft, ChevronRight, Clock, CheckCircle, XCircle, Eye, FileText, Plus, CreditCard } from "lucide-react"
+import {
+  Check,
+  X,
+  Loader2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Plus,
+} from "lucide-react"
 
 export default function BillingRequestsPage() {
   const { user, token } = useAuth()
@@ -25,7 +39,7 @@ export default function BillingRequestsPage() {
   const [processingId, setProcessingId] = useState(null)
   const [statusFilter, setStatusFilter] = useState("all")
   const [isModalOpen, setIsModalOpen] = useState(false)
-  
+
   // New state for add billing request functionality
   const [showExtraChargesModal, setShowExtraChargesModal] = useState(false)
   const [extraChargesForm, setExtraChargesForm] = useState({
@@ -59,7 +73,7 @@ export default function BillingRequestsPage() {
         const requestsWithUniqueKeys = (data.requests || []).map((request, index) => ({
           ...request,
           // Create a truly unique key by combining multiple identifiers
-          uniqueKey: `${request._id || 'no-id'}-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          uniqueKey: `${request._id || "no-id"}-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         }))
         setRequests(requestsWithUniqueKeys)
       } else {
@@ -162,8 +176,8 @@ export default function BillingRequestsPage() {
 
     setLoading((prev) => ({ ...prev, extraCharges: true }))
     try {
-      const selectedPatient = patients.find(p => p._id === extraChargesForm.patientId)
-      
+      const selectedPatient = patients.find((p) => p._id === extraChargesForm.patientId)
+
       const res = await fetch(`/api/billing/${extraChargesForm.patientId}/extra-charges`, {
         method: "POST",
         headers: {
@@ -228,12 +242,12 @@ export default function BillingRequestsPage() {
     const endIndex = startIndex + itemsPerPage
     const current = filtered.slice(startIndex, endIndex)
 
-    return { 
-      filteredRequests: filtered, 
-      currentRequests: current, 
+    return {
+      filteredRequests: filtered,
+      currentRequests: current,
       startIndex,
       endIndex,
-      totalPages 
+      totalPages,
     }
   }, [requests, searchTerm, currentPage, itemsPerPage])
 
@@ -272,25 +286,25 @@ export default function BillingRequestsPage() {
   // Generate stable keys for table rows
   const generateStableKey = (request) => {
     if (!request) return `request-${Date.now()}-${Math.random()}`
-    
+
     const content = JSON.stringify({
       id: request._id,
       patient: request.patientName,
       doctor: request.doctorName,
       amount: request.extraChargesRequested?.amount,
       reason: request.extraChargesRequested?.reason,
-      status: request.extraChargesRequested?.status
+      status: request.extraChargesRequested?.status,
     })
-    
+
     // Simple hash function
-    let hash = 0;
+    let hash = 0
     for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
+      const char = content.charCodeAt(i)
+      hash = (hash << 5) - hash + char
+      hash = hash & hash // Convert to 32bit integer
     }
-    
-    return `request-${request._id || 'no-id'}-${hash}`
+
+    return `request-${request._id || "no-id"}-${hash}`
   }
 
   return (
@@ -298,39 +312,32 @@ export default function BillingRequestsPage() {
       <div className="flex h-screen bg-background">
         <Sidebar />
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
-          <div className="p-4 sm:p-6 lg:p-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div className="p-3 sm:p-4 md:p-6 lg:p-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-6 md:mb-8">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Billing Requests</h1>
-                <p className="text-muted-foreground text-sm mt-1">
+                <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-foreground">Billing Requests</h1>
+                <p className="text-muted-foreground text-xs sm:text-sm mt-1">
                   {user?.role === "doctor"
                     ? "View the status of your billing requests"
                     : "Review and approve/reject extra charge requests from doctors"}
                 </p>
               </div>
-              
-              {/* Add Billing Request Button - Only for doctors */}
+
               {user?.role === "doctor" && (
                 <button
                   onClick={() => setShowExtraChargesModal(true)}
                   disabled={loading.requests || loading.patients}
-                  className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors text-xs sm:text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
                 >
-                  {loading.extraCharges ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4" />
-                  )}
+                  {loading.extraCharges ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   Add Extra Charges Request
                 </button>
               )}
             </div>
 
-            {/* Filters and Search */}
-            <div className="bg-card rounded-lg shadow-md border border-border p-4 mb-6">
-              <div className="flex flex-col lg:flex-row gap-4">
-                {/* Search */}
-                <div className="relative flex-1">
+            <div className="bg-card rounded-lg shadow-md border border-border p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
+              <div className="flex flex-col gap-3 sm:gap-4">
+                <div className="relative w-full">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <input
                     type="text"
@@ -341,17 +348,16 @@ export default function BillingRequestsPage() {
                     }
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                    className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm"
                   />
                 </div>
 
-                {/* Status Filter */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {["all", "pending", "approved", "rejected"].map((status) => (
                     <button
                       key={status}
                       onClick={() => setStatusFilter(status)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                      className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                         statusFilter === status
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted hover:bg-muted/80 text-muted-foreground"
@@ -362,11 +368,10 @@ export default function BillingRequestsPage() {
                   ))}
                 </div>
 
-                {/* Refresh */}
                 <button
                   onClick={fetchBillingRequests}
                   disabled={loading.requests}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 cursor-pointer"
+                  className="w-full sm:w-fit flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 cursor-pointer"
                 >
                   <Loader2 className={`w-4 h-4 ${loading.requests ? "animate-spin" : ""}`} />
                   {loading.requests ? "Loading..." : "Refresh"}
@@ -374,32 +379,40 @@ export default function BillingRequestsPage() {
               </div>
             </div>
 
-            {/* Requests Table */}
             <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-xs sm:text-sm">
                   <thead className="bg-muted border-b border-border">
                     <tr>
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Patient</th>
+                      <th className="text-left px-2 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-muted-foreground">
+                        Patient
+                      </th>
                       {user?.role !== "doctor" && (
-                        <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden sm:table-cell">
+                        <th className="text-left px-2 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-muted-foreground hidden sm:table-cell">
                           Doctor
                         </th>
                       )}
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden md:table-cell">
+                      <th className="text-left px-2 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-muted-foreground hidden md:table-cell">
                         Amount
                       </th>
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground hidden lg:table-cell">
+                      <th className="text-left px-2 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-muted-foreground hidden lg:table-cell">
                         Reason
                       </th>
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Status</th>
-                      <th className="text-left px-4 sm:px-6 py-3 font-semibold text-muted-foreground">Actions</th>
+                      <th className="text-left px-2 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-muted-foreground">
+                        Status
+                      </th>
+                      <th className="text-left px-2 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-muted-foreground">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading.requests ? (
                       <tr>
-                        <td colSpan={user?.role === "doctor" ? 5 : 6} className="px-4 sm:px-6 py-8 text-center">
+                        <td
+                          colSpan={user?.role === "doctor" ? 5 : 6}
+                          className="px-2 sm:px-4 md:px-6 py-6 sm:py-8 text-center"
+                        >
                           <div className="flex flex-col items-center justify-center gap-3">
                             <div className="flex justify-center items-center gap-2">
                               <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
@@ -412,46 +425,48 @@ export default function BillingRequestsPage() {
                                 style={{ animationDelay: "0.2s" }}
                               ></div>
                             </div>
-                            <span className="text-muted-foreground text-sm">Loading requests...</span>
+                            <span className="text-muted-foreground text-xs sm:text-sm">Loading requests...</span>
                           </div>
                         </td>
                       </tr>
                     ) : currentRequests.length > 0 ? (
                       currentRequests.map((request, index) => (
-                        <tr 
-                          key={generateStableKey(request)} 
+                        <tr
+                          key={generateStableKey(request)}
                           className="border-b border-border hover:bg-muted/50 transition-colors"
                         >
-                          <td className="px-4 sm:px-6 py-3 font-medium text-foreground">
+                          <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 font-medium text-foreground">
                             <div>
                               <div className="sm:hidden text-xs text-muted-foreground mb-1">Patient</div>
-                              {request.patientName}
+                              <p className="text-xs sm:text-sm truncate">{request.patientName}</p>
                             </div>
                           </td>
                           {user?.role !== "doctor" && (
-                            <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell">
+                            <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 text-muted-foreground hidden sm:table-cell">
                               <div>
                                 <div className="md:hidden text-xs text-muted-foreground mb-1">Doctor</div>
-                                {request.doctorName}
+                                <p className="text-xs sm:text-sm truncate">{request.doctorName}</p>
                               </div>
                             </td>
                           )}
-                          <td className="px-4 sm:px-6 py-3 font-semibold text-primary hidden md:table-cell">
+                          <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-primary hidden md:table-cell">
                             <div>
-                              <div className="lg:hidden text-xs text-muted-foreground mb-1">Amount</div>$
-                              {request.extraChargesRequested?.amount || 0}
+                              <div className="lg:hidden text-xs text-muted-foreground mb-1">Amount</div>
+                              <p className="text-xs sm:text-sm">${request.extraChargesRequested?.amount || 0}</p>
                             </div>
                           </td>
-                          <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden lg:table-cell max-w-xs truncate">
-                            {request.extraChargesRequested?.reason || "No reason provided"}
+                          <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 text-muted-foreground hidden lg:table-cell max-w-xs truncate">
+                            <p className="text-xs sm:text-sm">
+                              {request.extraChargesRequested?.reason || "No reason provided"}
+                            </p>
                           </td>
-                          <td className="px-4 sm:px-6 py-3">
+                          <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">
                             <div>
                               <div className="sm:hidden text-xs text-muted-foreground mb-1">Status</div>
                               {getStatusBadge(request.extraChargesRequested?.status)}
                             </div>
                           </td>
-                          <td className="px-4 sm:px-6 py-3">
+                          <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">
                             <div className="flex gap-2">
                               {/* View Details Button - Available for all roles */}
                               <button
@@ -499,7 +514,7 @@ export default function BillingRequestsPage() {
                       <tr>
                         <td
                           colSpan={user?.role === "doctor" ? 5 : 6}
-                          className="px-4 sm:px-6 py-8 text-center text-muted-foreground"
+                          className="px-2 sm:px-4 md:px-6 py-6 sm:py-8 text-center text-muted-foreground text-xs sm:text-sm"
                         >
                           {searchTerm ? "No requests found matching your search" : "No billing requests"}
                         </td>
@@ -509,25 +524,24 @@ export default function BillingRequestsPage() {
                 </table>
               </div>
 
-              {/* Pagination */}
               {filteredRequests.length > 0 && (
-                <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="text-sm text-muted-foreground">
+                <div className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                  <div className="text-xs sm:text-sm text-muted-foreground">
                     Showing <span className="font-medium">{filteredRequests.length === 0 ? 0 : startIndex + 1}</span> to{" "}
                     <span className="font-medium">{Math.min(endIndex, filteredRequests.length)}</span> of{" "}
                     <span className="font-medium">{filteredRequests.length}</span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 flex-wrap justify-center">
                     <button
                       onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="p-1.5 sm:p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5 sm:gap-1">
                       {Array.from({ length: totalPages }, (_, i) => i + 1)
                         .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                         .map((page, index, array) => {
@@ -536,7 +550,7 @@ export default function BillingRequestsPage() {
                             <div key={`page-${page}`} className="flex items-center">
                               <button
                                 onClick={() => setCurrentPage(page)}
-                                className={`min-w-[2rem] h-8 px-2 rounded text-sm font-medium transition-colors ${
+                                className={`min-w-[1.75rem] sm:min-w-[2rem] h-7 sm:h-8 px-1.5 sm:px-2 rounded text-xs sm:text-sm font-medium transition-colors ${
                                   currentPage === page
                                     ? "bg-primary text-primary-foreground"
                                     : "bg-background text-foreground hover:bg-muted border border-border"
@@ -544,7 +558,9 @@ export default function BillingRequestsPage() {
                               >
                                 {page}
                               </button>
-                              {showEllipsis && <span className="px-1 text-muted-foreground">...</span>}
+                              {showEllipsis && (
+                                <span className="px-0.5 sm:px-1 text-muted-foreground text-xs">...</span>
+                              )}
                             </div>
                           )
                         })}
@@ -553,7 +569,7 @@ export default function BillingRequestsPage() {
                     <button
                       onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages || totalPages === 0}
-                      className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="p-1.5 sm:p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -565,13 +581,12 @@ export default function BillingRequestsPage() {
         </main>
       </div>
 
-      {/* View Details Modal */}
       {isModalOpen && selectedRequest && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50">
           <div className="bg-card rounded-lg shadow-lg border border-border max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-foreground">Request Details</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-foreground">Request Details</h2>
                 <button
                   onClick={closeModal}
                   className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -610,9 +625,7 @@ export default function BillingRequestsPage() {
 
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Status</label>
-                  <div className="mt-1">
-                    {getStatusBadge(selectedRequest.extraChargesRequested?.status)}
-                  </div>
+                  <div className="mt-1">{getStatusBadge(selectedRequest.extraChargesRequested?.status)}</div>
                 </div>
 
                 {selectedRequest.extraChargesRequested?.notes && (
@@ -659,14 +672,15 @@ export default function BillingRequestsPage() {
         </div>
       )}
 
-      {/* Add Billing Request Modal - For Doctors Only */}
       {showExtraChargesModal && user?.role === "doctor" && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card rounded-xl shadow-2xl border border-border p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold text-foreground mb-4">Add Billing Request</h2>
-            <p className="text-sm text-muted-foreground mb-6">Select a patient and add a billing request</p>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-card rounded-xl shadow-2xl border border-border p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg sm:text-xl font-bold text-foreground mb-2 sm:mb-4">Add Billing Request</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">
+              Select a patient and add a billing request
+            </p>
 
-            <form onSubmit={handleExtraChargesRequest} className="space-y-4">
+            <form onSubmit={handleExtraChargesRequest} className="space-y-3 sm:space-y-4">
               {/* Patient selection dropdown */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Patient *</label>
@@ -675,7 +689,7 @@ export default function BillingRequestsPage() {
                   onChange={(e) => {
                     setExtraChargesForm({
                       ...extraChargesForm,
-                      patientId: e.target.value
+                      patientId: e.target.value,
                     })
                   }}
                   className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm cursor-pointer"

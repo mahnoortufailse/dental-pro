@@ -698,98 +698,106 @@ export default function ForwardedRequestsPage() {
             )}
 
             {showDetailModal && selectedReferral && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-                <div className="bg-card rounded-xl shadow-2xl border border-border max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50 backdrop-blur-sm">
+                <div className="bg-card rounded-lg sm:rounded-xl shadow-2xl border border-border max-w-2xl sm:max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
                   {/* Header */}
-                  <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/5 to-primary/10">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <User className="w-6 h-6 text-primary" />
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 md:p-6 border-b border-border bg-gradient-to-r from-primary/5 to-primary/10 gap-2">
+                    <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0">
+                      <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                        <User className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
                       </div>
-                      <div>
-                        <h2 className="text-2xl font-bold text-foreground">{selectedReferral.patientName}</h2>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Stethoscope className="w-4 h-4" />
-                          Referred by Dr. {selectedReferral.doctorName}
+                      <div className="min-w-0">
+                        <h2 className="text-lg sm:text-2xl font-bold text-foreground truncate">
+                          {selectedReferral.patientName}
+                        </h2>
+                        <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
+                          <Stethoscope className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                          <span className="truncate">Dr. {selectedReferral.doctorName}</span>
                         </p>
                       </div>
                     </div>
                     <button
                       onClick={() => setShowDetailModal(false)}
-                      className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
+                      className="p-1.5 sm:p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   </div>
 
                   {/* Tabs */}
-                  <div className="border-b border-border bg-muted/30">
-                    <div className="flex px-6">
+                  <div className="border-b border-border bg-muted/30 flex overflow-x-auto">
+                    <div className="flex w-full">
                       <button
                         onClick={() => setActiveTab("patient")}
-                        className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors cursor-pointer ${
+                        className={`flex-1 px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs sm:text-sm border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
                           activeTab === "patient"
                             ? "border-primary text-primary"
                             : "border-transparent text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        <User className="w-4 h-4 inline mr-2" />
-                        Patient Information
+                        <User className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Patient Info</span>
+                        <span className="sm:hidden">Patient</span>
                       </button>
                       <button
                         onClick={() => setActiveTab("appointment")}
-                        className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors cursor-pointer ${
+                        className={`flex-1 px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs sm:text-sm border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
                           activeTab === "appointment"
                             ? "border-primary text-primary"
                             : "border-transparent text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        <Calendar className="w-4 h-4 inline mr-2" />
-                        Book Appointment
+                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Book Appointment</span>
+                        <span className="sm:hidden">Appointment</span>
                       </button>
                     </div>
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 overflow-y-auto p-6">
+                  <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
                     {activeTab === "patient" && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                         {/* Patient Details */}
-                        <div className="space-y-6">
-                          <div className="bg-muted/30 rounded-lg p-4">
-                            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                              <User className="w-5 h-5 text-primary" />
-                              Personal Information
+                        <div className="space-y-3 sm:space-y-6">
+                          <div className="bg-muted/30 rounded-lg p-3 sm:p-4">
+                            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                              <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                              Personal Info
                             </h3>
-                            <div className="grid grid-cols-1 gap-4">
-                              <div className="flex items-center gap-3">
-                                <Phone className="w-4 h-4 text-muted-foreground" />
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Phone</p>
-                                  <p className="text-foreground font-medium">{selectedReferral.patientPhone}</p>
+                            <div className="grid grid-cols-1 gap-2 sm:gap-4">
+                              <div className="flex items-start gap-2 sm:gap-3">
+                                <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground mt-1 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-xs sm:text-sm text-muted-foreground">Phone</p>
+                                  <p className="text-foreground font-medium text-xs sm:text-sm truncate">
+                                    {selectedReferral.patientPhone}
+                                  </p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <Mail className="w-4 h-4 text-muted-foreground" />
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Email</p>
-                                  <p className="text-foreground font-medium">
+                              <div className="flex items-start gap-2 sm:gap-3">
+                                <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground mt-1 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-xs sm:text-sm text-muted-foreground">Email</p>
+                                  <p className="text-foreground font-medium text-xs sm:text-sm truncate">
                                     {selectedReferral.patientEmail || "N/A"}
                                   </p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                              <div className="flex items-start gap-2 sm:gap-3">
+                                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground mt-1 flex-shrink-0" />
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Date of Birth</p>
-                                  <p className="text-foreground font-medium">{selectedReferral.patientDob}</p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground">Date of Birth</p>
+                                  <p className="text-foreground font-medium text-xs sm:text-sm">
+                                    {selectedReferral.patientDob}
+                                  </p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <MapPin className="w-4 h-4 text-muted-foreground" />
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Address</p>
-                                  <p className="text-foreground font-medium">
+                              <div className="flex items-start gap-2 sm:gap-3">
+                                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground mt-1 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-xs sm:text-sm text-muted-foreground">Address</p>
+                                  <p className="text-foreground font-medium text-xs sm:text-sm truncate">
                                     {selectedReferral.patientAddress || "N/A"}
                                   </p>
                                 </div>
@@ -798,20 +806,22 @@ export default function ForwardedRequestsPage() {
                           </div>
 
                           {/* Medical Information */}
-                          <div className="bg-muted/30 rounded-lg p-4">
-                            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                              <FileText className="w-5 h-5 text-primary" />
-                              Medical Information
+                          <div className="bg-muted/30 rounded-lg p-3 sm:p-4">
+                            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                              Medical Info
                             </h3>
-                            <div className="space-y-4">
+                            <div className="space-y-3 sm:space-y-4">
                               {selectedReferral.patientAllergies.length > 0 && (
                                 <div>
-                                  <p className="text-sm text-muted-foreground font-medium mb-1">Allergies</p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-1.5 sm:mb-2">
+                                    Allergies
+                                  </p>
                                   <div className="flex flex-wrap gap-1">
                                     {selectedReferral.patientAllergies.map((allergy, index) => (
                                       <span
                                         key={index}
-                                        className="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full font-medium"
+                                        className="px-2 py-0.5 sm:py-1 bg-amber-100 text-amber-800 text-xs rounded-full font-medium"
                                       >
                                         {allergy}
                                       </span>
@@ -821,12 +831,14 @@ export default function ForwardedRequestsPage() {
                               )}
                               {selectedReferral.patientMedicalConditions.length > 0 && (
                                 <div>
-                                  <p className="text-sm text-muted-foreground font-medium mb-1">Medical Conditions</p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-1.5 sm:mb-2">
+                                    Medical Conditions
+                                  </p>
                                   <div className="flex flex-wrap gap-1">
                                     {selectedReferral.patientMedicalConditions.map((condition, index) => (
                                       <span
                                         key={index}
-                                        className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium"
+                                        className="px-2 py-0.5 sm:py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium"
                                       >
                                         {condition}
                                       </span>
@@ -835,8 +847,10 @@ export default function ForwardedRequestsPage() {
                                 </div>
                               )}
                               <div>
-                                <p className="text-sm text-muted-foreground font-medium mb-1">Referral Reason</p>
-                                <p className="text-foreground bg-primary/10 rounded-lg p-3 text-sm">
+                                <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-1 sm:mb-2">
+                                  Referral Reason
+                                </p>
+                                <p className="text-foreground bg-primary/10 rounded-lg p-2 sm:p-3 text-xs sm:text-sm">
                                   {selectedReferral.referralReason}
                                 </p>
                               </div>
@@ -845,20 +859,20 @@ export default function ForwardedRequestsPage() {
                         </div>
 
                         {/* Picture Upload */}
-                        <div className="space-y-6">
-                          <div className="bg-muted/30 rounded-lg p-4">
-                            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                              <Camera className="w-5 h-5 text-primary" />
+                        <div className="space-y-3 sm:space-y-6">
+                          <div className="bg-muted/30 rounded-lg p-3 sm:p-4">
+                            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                              <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                               Patient Photo
                             </h3>
-                            <div className="space-y-4">
-                              <div className="border-2 border-dashed border-border rounded-xl p-6 transition-colors hover:border-primary/50">
+                            <div className="space-y-3 sm:space-y-4">
+                              <div className="border-2 border-dashed border-border rounded-lg p-4 sm:p-6 transition-colors hover:border-primary/50">
                                 {previewUrl ? (
                                   <div className="text-center">
                                     <img
                                       src={previewUrl || "/placeholder.svg"}
                                       alt="Patient"
-                                      className="w-48 h-48 object-cover rounded-lg mx-auto mb-4 shadow-md"
+                                      className="w-32 h-32 sm:w-48 sm:h-48 object-cover rounded-lg mx-auto mb-3 sm:mb-4 shadow-md"
                                     />
                                     {!selectedReferral.pictureUrl && (
                                       <button
@@ -866,18 +880,18 @@ export default function ForwardedRequestsPage() {
                                           setPictureFile(null)
                                           setPreviewUrl("")
                                         }}
-                                        className="text-sm text-destructive hover:text-destructive/80 font-medium cursor-pointer"
+                                        className="text-xs sm:text-sm text-destructive hover:text-destructive/80 font-medium cursor-pointer"
                                       >
                                         Remove Photo
                                       </button>
                                     )}
                                   </div>
                                 ) : (
-                                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                                    <Camera className="w-12 h-12 text-muted-foreground mb-4" />
+                                  <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+                                    <Camera className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground mb-2 sm:mb-4" />
                                     <label className="cursor-pointer">
-                                      <span className="text-primary hover:underline font-medium text-lg">
-                                        Click to upload photo
+                                      <span className="text-primary hover:underline font-medium text-sm sm:text-base">
+                                        Click to upload
                                       </span>
                                       <input
                                         type="file"
@@ -887,7 +901,7 @@ export default function ForwardedRequestsPage() {
                                         disabled={loading.upload || selectedReferral.pictureUrl ? true : false}
                                       />
                                     </label>
-                                    <p className="text-sm text-muted-foreground mt-2">JPG, PNG, or WebP • Max 5MB</p>
+                                    <p className="text-xs text-muted-foreground mt-1.5 sm:mt-2">Max 5MB</p>
                                   </div>
                                 )}
                               </div>
@@ -895,28 +909,29 @@ export default function ForwardedRequestsPage() {
                               {pictureFile && !selectedReferral.pictureUrl && (
                                 <button
                                   onClick={uploadPicture}
-                                  disabled={loading.upload || loading.createAppointment} // add createAppointment check
-                                  className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-3 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed shadow-sm "
+                                  disabled={loading.upload || loading.createAppointment}
+                                  className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors font-medium text-xs sm:text-sm cursor-pointer disabled:cursor-not-allowed"
                                 >
                                   {loading.upload ? (
                                     <>
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                      Uploading...
+                                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
+                                      <span className="hidden sm:inline">Uploading...</span>
+                                      <span className="sm:hidden">Upload...</span>
                                     </>
                                   ) : (
                                     <>
-                                      <Upload className="w-4 h-4" />
-                                      Upload Patient Photo
+                                      <Upload className="w-3 h-3 sm:w-4 sm:h-4" />
+                                      Upload Photo
                                     </>
                                   )}
                                 </button>
                               )}
 
                               {selectedReferral.pictureUrl && (
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                  <p className="text-sm text-green-800 font-medium flex items-center gap-2">
-                                    <CheckCircle className="w-4 h-4" />
-                                    Photo uploaded by {selectedReferral.pictureSavedBy}
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-2 sm:p-4">
+                                  <p className="text-xs sm:text-sm text-green-800 font-medium flex items-center gap-2">
+                                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                                    <span>Uploaded by {selectedReferral.pictureSavedBy}</span>
                                   </p>
                                 </div>
                               )}
@@ -924,22 +939,24 @@ export default function ForwardedRequestsPage() {
                           </div>
 
                           {/* Quick Actions */}
-                          <div className="bg-muted/30 rounded-lg p-4">
-                            <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
+                          <div className="bg-muted/30 rounded-lg p-3 sm:p-4">
+                            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
+                              Quick Actions
+                            </h3>
                             <button
                               onClick={() => setActiveTab("appointment")}
-                              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-3 rounded-lg transition-colors font-medium shadow-sm mb-3 cursor-pointer"
+                              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors font-medium text-xs sm:text-sm mb-2 sm:mb-3 cursor-pointer"
                             >
-                              <Calendar className="w-4 h-4" />
-                              Proceed to Book Appointment
+                              <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                              Book Appointment
                             </button>
                             <button
                               onClick={() => setShowRejectModal(true)}
-                              disabled={loading.createAppointment} // disable on processing
-                              className="w-full flex items-center justify-center gap-2 bg-destructive hover:bg-destructive/90 disabled:bg-destructive/50 text-white px-4 py-3 rounded-lg transition-colors font-medium shadow-sm disabled:cursor-not-allowed cursor-pointer"
+                              disabled={loading.createAppointment}
+                              className="w-full flex items-center justify-center gap-2 bg-destructive hover:bg-destructive/90 disabled:bg-destructive/50 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:cursor-not-allowed cursor-pointer"
                             >
-                              <XCircle className="w-4 h-4" />
-                              Reject Request
+                              <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                              Reject
                             </button>
                           </div>
                         </div>
@@ -947,16 +964,16 @@ export default function ForwardedRequestsPage() {
                     )}
 
                     {activeTab === "appointment" && (
-                      <div className="space-y-6">
-                        <div className="bg-muted/30 rounded-lg p-6">
-                          <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-                            <Calendar className="w-5 h-5 text-primary" />
+                      <div className="space-y-4 sm:space-y-6">
+                        <div className="bg-muted/30 rounded-lg p-3 sm:p-6">
+                          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 sm:mb-6 flex items-center gap-2">
+                            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                             Schedule Appointment
                           </h3>
 
-                          <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <form className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                             <div className="space-y-2">
-                              <label className="block text-sm font-medium text-foreground">Appointment Date *</label>
+                              <label className="block text-xs sm:text-sm font-medium text-foreground">Date *</label>
                               <input
                                 type="date"
                                 value={formData.appointmentDate}
@@ -965,7 +982,7 @@ export default function ForwardedRequestsPage() {
                                   setFormErrors({ ...formErrors, appointmentDate: "" })
                                 }}
                                 disabled={loading.createAppointment}
-                                className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm transition-colors ${
+                                className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm transition-colors ${
                                   formErrors.appointmentDate ? "border-destructive" : "border-border"
                                 }`}
                               />
@@ -975,7 +992,7 @@ export default function ForwardedRequestsPage() {
                             </div>
 
                             <div className="space-y-2">
-                              <label className="block text-sm font-medium text-foreground">Appointment Time *</label>
+                              <label className="block text-xs sm:text-sm font-medium text-foreground">Time *</label>
                               <input
                                 type="time"
                                 value={formData.appointmentTime}
@@ -984,7 +1001,7 @@ export default function ForwardedRequestsPage() {
                                   setFormErrors({ ...formErrors, appointmentTime: "" })
                                 }}
                                 disabled={loading.createAppointment}
-                                className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm transition-colors ${
+                                className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm transition-colors ${
                                   formErrors.appointmentTime ? "border-destructive" : "border-border"
                                 }`}
                               />
@@ -994,12 +1011,12 @@ export default function ForwardedRequestsPage() {
                             </div>
 
                             <div className="space-y-2">
-                              <label className="block text-sm font-medium text-foreground">Appointment Type</label>
+                              <label className="block text-xs sm:text-sm font-medium text-foreground">Type</label>
                               <select
                                 value={formData.appointmentType}
                                 onChange={(e) => setFormData({ ...formData, appointmentType: e.target.value })}
                                 disabled={loading.createAppointment}
-                                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm transition-colors"
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm transition-colors"
                               >
                                 <option value="Consultation">Consultation</option>
                                 <option value="Cleaning">Cleaning</option>
@@ -1009,7 +1026,9 @@ export default function ForwardedRequestsPage() {
                             </div>
 
                             <div className="space-y-2">
-                              <label className="block text-sm font-medium text-foreground">Duration (minutes)</label>
+                              <label className="block text-xs sm:text-sm font-medium text-foreground">
+                                Duration (min)
+                              </label>
                               <input
                                 type="number"
                                 min="1"
@@ -1021,22 +1040,24 @@ export default function ForwardedRequestsPage() {
                                   })
                                 }
                                 disabled={loading.createAppointment}
-                                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm transition-colors"
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm transition-colors"
                               />
                             </div>
 
                             <div className="md:col-span-2 space-y-2">
-                              <label className="block text-sm font-medium text-foreground">Room Number *</label>
+                              <label className="block text-xs sm:text-sm font-medium text-foreground">
+                                Room Number *
+                              </label>
                               <input
                                 type="text"
-                                placeholder="e.g., Room 1, Suite A, etc."
+                                placeholder="e.g., Room 1"
                                 value={formData.roomNumber}
                                 onChange={(e) => {
                                   setFormData({ ...formData, roomNumber: e.target.value })
                                   setFormErrors({ ...formErrors, roomNumber: "" })
                                 }}
                                 disabled={loading.createAppointment}
-                                className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm transition-colors ${
+                                className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm transition-colors ${
                                   formErrors.roomNumber ? "border-destructive" : "border-border"
                                 }`}
                               />
@@ -1046,13 +1067,13 @@ export default function ForwardedRequestsPage() {
                             </div>
 
                             <div className="md:col-span-2 space-y-2">
-                              <label className="block text-sm font-medium text-foreground">Additional Notes</label>
+                              <label className="block text-xs sm:text-sm font-medium text-foreground">Notes</label>
                               <textarea
-                                placeholder="Any additional notes or special instructions..."
+                                placeholder="Any additional notes..."
                                 value={formData.notes}
                                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                 disabled={loading.createAppointment}
-                                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm transition-colors resize-none"
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm transition-colors resize-none"
                                 rows={3}
                               />
                             </div>
@@ -1062,30 +1083,32 @@ export default function ForwardedRequestsPage() {
                     )}
                   </div>
 
-                  {/* Footer - Only show on appointment tab */}
+                  {/* Footer - Only on appointment tab */}
                   {activeTab === "appointment" && (
-                    <div className="flex gap-3 p-6 border-t border-border bg-muted/30">
+                    <div className="flex gap-2 sm:gap-3 p-3 sm:p-4 md:p-6 border-t border-border bg-muted/30">
                       <button
                         onClick={() => setShowDetailModal(false)}
                         disabled={loading.createAppointment}
-                        className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-3 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed shadow-sm cursor-pointer"
+                        className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors font-medium text-xs sm:text-sm cursor-pointer disabled:cursor-not-allowed"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={createAppointmentAndCompleteReferral}
                         disabled={loading.createAppointment}
-                        className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-3 rounded-lg transition-colors font-medium cursor-pointer disabled:cursor-not-allowed shadow-sm"
+                        className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors font-medium text-xs sm:text-sm cursor-pointer disabled:cursor-not-allowed"
                       >
                         {loading.createAppointment ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Processing...
+                            <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
+                            <span className="hidden sm:inline">Processing...</span>
+                            <span className="sm:hidden">Processing...</span>
                           </>
                         ) : (
                           <>
-                            <CheckCircle className="w-4 h-4" />
-                            Book Appointment & Complete
+                            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline">Book & Complete</span>
+                            <span className="sm:hidden">Complete</span>
                           </>
                         )}
                       </button>
@@ -1096,55 +1119,55 @@ export default function ForwardedRequestsPage() {
             )}
 
             {showRejectModal && selectedReferral && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-                <div className="bg-card rounded-xl shadow-2xl border border-border max-w-md w-full">
-                  <div className="p-6 border-b border-border">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-destructive/10 rounded-lg">
-                        <AlertCircle className="w-6 h-6 text-destructive" />
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50 backdrop-blur-sm">
+                <div className="bg-card rounded-lg sm:rounded-xl shadow-2xl border border-border max-w-md w-full">
+                  <div className="p-4 sm:p-6 border-b border-border">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="p-1.5 sm:p-2 bg-destructive/10 rounded-lg">
+                        <AlertCircle className="w-4 h-4 sm:w-6 sm:h-6 text-destructive" />
                       </div>
-                      <h2 className="text-xl font-bold text-foreground">Reject Request</h2>
+                      <h2 className="text-lg sm:text-xl font-bold text-foreground">Reject Request</h2>
                     </div>
                   </div>
 
-                  <div className="p-6 space-y-4">
-                    <p className="text-muted-foreground">
-                      Are you sure you want to reject this forwarded request from Dr. {selectedReferral.doctorName}?
+                  <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Confirm rejection from Dr. {selectedReferral.doctorName}?
                     </p>
 
                     <div className="space-y-2">
-                      <label className="block text-sm font-medium text-foreground">Rejection Reason (Optional)</label>
+                      <label className="block text-xs sm:text-sm font-medium text-foreground">Reason (Optional)</label>
                       <textarea
-                        placeholder="Enter the reason for rejecting this request..."
+                        placeholder="Rejection reason..."
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
-                        className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-destructive text-foreground placeholder-muted-foreground text-sm transition-colors resize-none"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-destructive text-foreground placeholder-muted-foreground text-xs sm:text-sm transition-colors resize-none"
                         rows={3}
                       />
                     </div>
                   </div>
 
-                  <div className="flex gap-3 p-6 border-t border-border bg-muted/30">
+                  <div className="flex gap-2 sm:gap-3 p-4 sm:p-6 border-t border-border bg-muted/30">
                     <button
                       onClick={() => setShowRejectModal(false)}
-                      disabled={loading.reject} // disable on loading
-                      className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium shadow-sm disabled:cursor-not-allowed cursor-pointer"
+                      disabled={loading.reject}
+                      className="flex-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm cursor-pointer disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => rejectForwardRequest()}
-                      disabled={loading.reject} // disable on loading
-                      className="flex-1 flex items-center justify-center gap-2 bg-destructive hover:bg-destructive/90 disabled:bg-destructive/50 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-sm disabled:cursor-not-allowed cursor-pointer"
+                      disabled={loading.reject}
+                      className="flex-1 flex items-center justify-center gap-2 bg-destructive hover:bg-destructive/90 disabled:bg-destructive/50 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm cursor-pointer disabled:cursor-not-allowed"
                     >
                       {loading.reject ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                           Rejecting...
                         </>
                       ) : (
                         <>
-                          <XCircle className="w-4 h-4" />
+                          <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                           Reject
                         </>
                       )}

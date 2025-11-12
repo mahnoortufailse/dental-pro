@@ -78,46 +78,52 @@ export default function PatientDetailPage() {
       <div className="flex h-screen bg-background">
         <Sidebar />
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
-          <div className="p-4 sm:p-6 lg:p-8">
+          <div className="p-3 sm:p-4 md:p-6 lg:p-8">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-              <div className="flex items-center gap-4">
-                <Link href="/dashboard/patients" className="text-primary hover:text-primary/80 transition-colors">
-                  <ArrowLeft className="w-5 h-5" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-6 md:mb-8">
+              <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                <Link
+                  href="/dashboard/patients"
+                  className="text-primary hover:text-primary/80 transition-colors flex-shrink-0"
+                >
+                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Link>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{patient.name}</h1>
-                  <p className="text-muted-foreground text-sm mt-1">Patient ID: {patient._id}</p>
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground truncate">{patient.name}</h1>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Patient ID: {patient._id}</p>
                 </div>
               </div>
               {user?.role === "doctor" && (
                 <button
                   onClick={() => setShowBillingRequestModal(true)}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer whitespace-nowrap"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors text-xs sm:text-sm font-medium cursor-pointer whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" />
-                  Add Billing Request
+                  <span className="hidden sm:inline">Add Billing Request</span>
+                  <span className="sm:hidden">Add Billing</span>
                 </button>
               )}
             </div>
 
             {/* Patient Info Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-card border border-border rounded-lg p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-6 md:mb-8">
+              <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">Phone</p>
-                <p className="text-foreground font-medium">{patient.phone}</p>
+                <p className="text-foreground font-medium text-sm sm:text-base truncate">{patient.phone}</p>
               </div>
-              <div className="bg-card border border-border rounded-lg p-4">
+              <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">Email</p>
-                <p className="text-foreground font-medium text-sm">{patient.email}</p>
+                <p className="text-foreground font-medium text-xs sm:text-sm truncate">{patient.email}</p>
               </div>
-              <div className="bg-card border border-border rounded-lg p-4">
+              <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">DOB</p>
-                <p className="text-foreground font-medium">{patient.dob}</p>
+                <p className="text-foreground font-medium text-sm sm:text-base">{patient.dob}</p>
               </div>
-              <div className="bg-card border border-border rounded-lg p-4">
+              <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">Doctor</p>
-                <p className="text-foreground font-medium">{patient.assignedDoctorId?.name || "Unassigned"}</p>
+                <p className="text-foreground font-medium text-sm sm:text-base truncate">
+                  {patient.assignedDoctorId?.name || "Unassigned"}
+                </p>
               </div>
             </div>
 
@@ -128,60 +134,74 @@ export default function PatientDetailPage() {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-3 font-medium text-sm whitespace-nowrap transition-colors ${
+                    className={`px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs sm:text-sm whitespace-nowrap transition-colors ${
                       activeTab === tab
                         ? "text-primary border-b-2 border-primary"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {tab === "overview" && "Overview"}
-                    {tab === "medical-history" && "Medical History"}
-                    {tab === "tooth-chart" && "Tooth Chart"}
-                    {tab === "images" && "X-Rays & Images"}
+                    {tab === "medical-history" && "History"}
+                    {tab === "tooth-chart" && "Teeth"}
+                    {tab === "images" && "Images"}
                   </button>
                 ))}
               </div>
 
-              <div className="p-6">
+              <div className="p-3 sm:p-4 md:p-6">
                 {/* Overview Tab */}
                 {activeTab === "overview" && (
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     <div>
-                      <h3 className="font-semibold text-foreground mb-3">Patient Information</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <h3 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm sm:text-base">
+                        Patient Information
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase">ID Number</p>
-                          <p className="text-foreground">{patient.idNumber || "Not provided"}</p>
+                          <p className="text-foreground text-sm sm:text-base">{patient.idNumber || "Not provided"}</p>
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase">Address</p>
-                          <p className="text-foreground">{patient.address || "Not provided"}</p>
+                          <p className="text-foreground text-sm sm:text-base truncate">
+                            {patient.address || "Not provided"}
+                          </p>
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase">Insurance Provider</p>
-                          <p className="text-foreground">{patient.insuranceProvider}</p>
+                          <p className="text-foreground text-sm sm:text-base">{patient.insuranceProvider}</p>
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase">Insurance Number</p>
-                          <p className="text-foreground">{patient.insuranceNumber || "Not provided"}</p>
+                          <p className="text-foreground text-sm sm:text-base">
+                            {patient.insuranceNumber || "Not provided"}
+                          </p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="border-t border-border pt-6">
-                      <h3 className="font-semibold text-foreground mb-3">Medical Information</h3>
-                      <div className="space-y-4">
+                    <div className="border-t border-border pt-4 sm:pt-6">
+                      <h3 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm sm:text-base">
+                        Medical Information
+                      </h3>
+                      <div className="space-y-3 sm:space-y-4">
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase">Allergies</p>
-                          <p className="text-foreground">{patient.allergies?.join(", ") || "None"}</p>
+                          <p className="text-foreground text-sm sm:text-base">
+                            {patient.allergies?.join(", ") || "None"}
+                          </p>
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase">Medical Conditions</p>
-                          <p className="text-foreground">{patient.medicalConditions?.join(", ") || "None"}</p>
+                          <p className="text-foreground text-sm sm:text-base">
+                            {patient.medicalConditions?.join(", ") || "None"}
+                          </p>
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase">Medical History</p>
-                          <p className="text-foreground">{patient.medicalHistory || "No history recorded"}</p>
+                          <p className="text-foreground text-sm sm:text-base">
+                            {patient.medicalHistory || "No history recorded"}
+                          </p>
                         </div>
                       </div>
                     </div>
