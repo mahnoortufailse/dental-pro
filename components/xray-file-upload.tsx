@@ -109,13 +109,13 @@ export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileU
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Drag and Drop Area */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative border-2 border-dashed rounded-lg p-8 transition-colors ${
+        className={`relative border-2 border-dashed rounded-lg p-4 sm:p-6 md:p-8 transition-colors ${
           isDragging
             ? "border-primary bg-primary/5"
             : selectedFile
@@ -132,21 +132,21 @@ export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileU
           className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
         />
 
-        <div className="flex flex-col items-center justify-center gap-3">
+        <div className="flex flex-col items-center justify-center gap-2 sm:gap-3">
           {selectedFile ? (
             <>
-              <CheckCircle2 className="w-10 h-10 text-accent" />
+              <CheckCircle2 className="w-8 sm:w-10 h-8 sm:h-10 text-accent" />
               <div className="text-center">
-                <p className="font-semibold text-foreground">{selectedFile.name}</p>
-                <p className="text-sm text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
+                <p className="font-semibold text-foreground text-sm sm:text-base truncate px-2">{selectedFile.name}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
               </div>
             </>
           ) : (
             <>
-              <Upload className="w-10 h-10 text-muted-foreground" />
-              <div className="text-center">
-                <p className="font-semibold text-foreground">Drag and drop your X-ray image</p>
-                <p className="text-sm text-muted-foreground">or click to browse (Max 1MB)</p>
+              <Upload className="w-8 sm:w-10 h-8 sm:h-10 text-muted-foreground" />
+              <div className="text-center px-2">
+                <p className="font-semibold text-foreground text-sm sm:text-base">Drag and drop your X-ray image</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">or click to browse (Max 1MB)</p>
               </div>
             </>
           )}
@@ -155,10 +155,10 @@ export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileU
 
       {/* File Info */}
       {selectedFile && (
-        <div className="bg-muted/50 rounded-lg p-3 border border-border flex items-start justify-between gap-3">
-          <div className="flex items-start gap-2 flex-1">
+        <div className="bg-muted/50 rounded-lg p-2 sm:p-3 border border-border flex items-start justify-between gap-2 sm:gap-3">
+          <div className="flex items-start gap-2 flex-1 min-w-0">
             <AlertCircle className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-            <div className="text-sm">
+            <div className="text-xs sm:text-sm min-w-0">
               <p className="font-medium text-foreground">Image ready to upload</p>
               <p className="text-xs text-muted-foreground">X-ray image file</p>
             </div>
@@ -171,7 +171,7 @@ export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileU
               }
             }}
             disabled={uploading || isLoading}
-            className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
+            className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer flex-shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -181,7 +181,7 @@ export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileU
       {/* Upload Progress */}
       {uploading && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-xs sm:text-sm">
             <span className="text-muted-foreground">Uploading...</span>
             <span className="font-medium text-foreground">{uploadProgress}%</span>
           </div>
@@ -196,7 +196,7 @@ export function XrayFileUpload({ onUploadSuccess, isLoading = false }: XrayFileU
         <button
           onClick={handleUpload}
           disabled={uploading || isLoading}
-          className="w-full bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           Upload X-ray
         </button>

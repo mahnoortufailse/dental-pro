@@ -566,19 +566,21 @@ export default function ClinicalToolsPage() {
       <div className="flex h-screen bg-background">
         <Sidebar />
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
-          <div className="p-4 sm:p-6 lg:p-8">
-            <div className="mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Clinical Tools</h1>
-              <p className="text-muted-foreground text-sm mt-1">
+          <div className="p-3 sm:p-4 md:p-6 lg:p-8">
+            <div className="mb-6 sm:mb-8">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Clinical Tools</h1>
+              <p className="text-xs sm:text-sm mt-1 text-muted-foreground">
                 Manage patient records, tooth charts, and medical history
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               {/* Patients List */}
               <div className="lg:col-span-1">
-                <div className="bg-card rounded-lg shadow-md border border-border p-6">
-                  <h2 className="text-lg sm:text-xl font-bold mb-4 text-foreground">Your Patients</h2>
+                <div className="bg-card rounded-lg shadow-md border border-border p-3 sm:p-4 md:p-6">
+                  <h2 className="text-base sm:text-lg md:text-xl font-bold mb-3 sm:mb-4 text-foreground">
+                    Your Patients
+                  </h2>
                   <input
                     type="text"
                     placeholder="Search patients..."
@@ -587,22 +589,22 @@ export default function ClinicalToolsPage() {
                       setPatientSearch(e.target.value)
                       setCurrentPage(1)
                     }}
-                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm mb-4 cursor-text"
+                    className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm mb-3 sm:mb-4 cursor-text"
                   />
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  <div className="space-y-1.5 sm:space-y-2 max-h-[400px] sm:max-h-[500px] overflow-y-auto">
                     {loading.patients ? (
                       <div className="flex items-center justify-center py-8">
                         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                       </div>
                     ) : paginatedPatients.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No patients found</p>
+                      <p className="text-muted-foreground text-xs sm:text-sm">No patients found</p>
                     ) : (
                       paginatedPatients.map((patient) => (
                         <button
                           key={patient._id || patient.id}
                           onClick={() => handleSelectPatient(patient._id || patient.id)}
                           disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
-                          className={`w-full text-left px-4 py-3 rounded-lg transition-colors text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                          className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                             selectedPatient?._id === (patient._id || patient.id)
                               ? "bg-primary text-primary-foreground"
                               : "bg-muted hover:bg-muted/80 text-foreground"
@@ -615,21 +617,21 @@ export default function ClinicalToolsPage() {
                     )}
                   </div>
                   {totalPages > 1 && (
-                    <div className="mt-4 flex items-center justify-between text-sm">
+                    <div className="mt-3 sm:mt-4 flex items-center justify-between gap-2 text-xs sm:text-sm">
                       <button
                         onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                         disabled={currentPage === 1}
-                        className="px-3 py-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground rounded transition-colors disabled:cursor-not-allowed cursor-pointer"
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground rounded transition-colors disabled:cursor-not-allowed cursor-pointer"
                       >
-                        Previous
+                        Prev
                       </button>
                       <span className="text-muted-foreground">
-                        Page {currentPage} of {totalPages}
+                        {currentPage} / {totalPages}
                       </span>
                       <button
                         onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                         disabled={currentPage === totalPages}
-                        className="px-3 py-1 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground rounded transition-colors disabled:cursor-not-allowed cursor-pointer"
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground rounded transition-colors disabled:cursor-not-allowed cursor-pointer"
                       >
                         Next
                       </button>
@@ -641,30 +643,32 @@ export default function ClinicalToolsPage() {
               {/* Main Content */}
               <div className="lg:col-span-2">
                 {selectedPatient ? (
-                  <div className="bg-card rounded-lg shadow-md border border-border p-6">
+                  <div className="bg-card rounded-lg shadow-md border border-border p-3 sm:p-4 md:p-6">
                     {/* Patient Info Header */}
-                    <div className="mb-6 pb-4 border-b border-border">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                          <h2 className="text-xl sm:text-2xl font-bold text-foreground">{selectedPatient.name}</h2>
-                          <p className="text-muted-foreground text-sm">DOB: {selectedPatient.dob}</p>
+                    <div className="mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-border">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+                        <div className="min-w-0">
+                          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground truncate">
+                            {selectedPatient.name}
+                          </h2>
+                          <p className="text-xs sm:text-sm text-muted-foreground">DOB: {selectedPatient.dob}</p>
                         </div>
                         <button
                           onClick={() => setShowHistory(!showHistory)}
                           disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
-                          className="flex items-center gap-2 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground px-3 py-2 rounded-lg transition-colors text-sm font-medium disabled:cursor-not-allowed cursor-pointer"
+                          className="flex-shrink-0 flex items-center gap-2 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm font-medium disabled:cursor-not-allowed cursor-pointer"
                         >
-                          <History className="w-4 h-4" />
-                          History
+                          <History className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="hidden sm:inline">History</span>
                         </button>
                       </div>
 
                       {showHistory && doctorHistory.length > 0 && (
-                        <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
+                        <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-muted rounded-lg text-xs sm:text-sm">
                           <p className="font-semibold text-foreground mb-2">Doctor History:</p>
-                          <div className="space-y-1">
+                          <div className="space-y-0.5 sm:space-y-1">
                             {doctorHistory.map((history, idx) => (
-                              <div key={idx} className="text-muted-foreground">
+                              <div key={idx} className="text-muted-foreground text-xs sm:text-sm">
                                 <span className="font-medium">{history.doctorName}</span> - From{" "}
                                 {new Date(history.startDate).toLocaleDateString()}
                                 {history.endDate && ` to ${new Date(history.endDate).toLocaleDateString()}`}
@@ -676,21 +680,21 @@ export default function ClinicalToolsPage() {
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex gap-2 mb-6 border-b border-border">
+                    <div className="flex gap-1 sm:gap-2 mb-4 sm:mb-6 border-b border-border overflow-x-auto">
                       {["tooth-chart", "medical-history", "images"].map((tab) => (
                         <button
                           key={tab}
                           onClick={() => setActiveTab(tab)}
                           disabled={loading.toothChart || loading.medicalHistory || loading.patientImages}
-                          className={`px-4 py-2 font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                          className={`px-2 sm:px-4 py-2 font-medium text-xs sm:text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap ${
                             activeTab === tab
                               ? "text-primary border-b-2 border-primary"
                               : "text-muted-foreground hover:text-foreground"
                           }`}
                         >
-                          {tab === "tooth-chart" && "Tooth Chart"}
-                          {tab === "medical-history" && "Medical History"}
-                          {tab === "images" && "X-Rays & Images"}
+                          {tab === "tooth-chart" && "Teeth"}
+                          {tab === "medical-history" && "History"}
+                          {tab === "images" && "Images"}
                         </button>
                       ))}
                     </div>
@@ -705,11 +709,13 @@ export default function ClinicalToolsPage() {
                         ) : !toothChart ? (
                           <div className="text-center py-12">
                             <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                            <p className="text-muted-foreground mb-4">No tooth chart created yet</p>
+                            <p className="text-muted-foreground mb-4 text-sm sm:text-base">
+                              No tooth chart created yet
+                            </p>
                             <button
                               onClick={handleCreateToothChart}
                               disabled={loading.createChart}
-                              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 sm:px-6 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                             >
                               {loading.createChart && <Loader2 className="w-4 h-4 animate-spin" />}
                               {loading.createChart ? "Creating..." : "Create Tooth Chart"}
@@ -717,29 +723,26 @@ export default function ClinicalToolsPage() {
                           </div>
                         ) : (
                           <>
-                            {/* Save Button and Note on Top */}
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                              <p className="text-sm text-muted-foreground mb-2 sm:mb-0">
-                                ⚠️ Please make sure to{" "}
-                                <span className="font-semibold text-foreground">save the chart</span> after updating any
-                                tooth status.
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
+                              <p className="text-xs sm:text-sm text-muted-foreground">
+                                ⚠️ Save after updating tooth status
                               </p>
                               <button
                                 onClick={handleSaveToothChart}
                                 disabled={loading.saveChart}
-                                className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                className="flex-shrink-0 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-3 sm:px-6 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                               >
                                 {loading.saveChart && <Loader2 className="w-4 h-4 animate-spin" />}
                                 {loading.saveChart ? "Saving..." : "Save Chart"}
                               </button>
                             </div>
 
-                            {/* Tooth Chart Visual */}
                             <ToothChartVisual teeth={toothChart.teeth || {}} onToothClick={handleToothClick} />
 
-                            {/* Overall Notes */}
-                            <div className="mt-6">
-                              <label className="block text-sm font-semibold text-foreground mb-2">Overall Notes</label>
+                            <div className="mt-4 sm:mt-6">
+                              <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                                Overall Notes
+                              </label>
                               <textarea
                                 value={toothChart.overallNotes || ""}
                                 onChange={(e) =>
@@ -749,9 +752,9 @@ export default function ClinicalToolsPage() {
                                   })
                                 }
                                 disabled={loading.saveChart}
-                                className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 rows={4}
-                                placeholder="Add clinical notes about the patient's dental condition..."
+                                placeholder="Add clinical notes..."
                               />
                             </div>
                           </>
@@ -761,14 +764,16 @@ export default function ClinicalToolsPage() {
 
                     {/* Medical History Tab */}
                     {activeTab === "medical-history" && (
-                      <div className="space-y-6">
+                      <div className="space-y-4 sm:space-y-6">
                         {loading.medicalHistory ? (
                           <div className="flex items-center justify-center py-12">
                             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                           </div>
                         ) : medicalHistory && medicalHistory.entries && medicalHistory.entries.length > 0 ? (
                           <div className="space-y-3">
-                            <h3 className="font-semibold text-foreground">Medical History Entries</h3>
+                            <h3 className="font-semibold text-foreground text-sm sm:text-base">
+                              Medical History Entries
+                            </h3>
                             {medicalHistory.entries.map((entry, idx) => {
                               const canEdit =
                                 user?.role === "doctor" &&
@@ -784,11 +789,11 @@ export default function ClinicalToolsPage() {
                               })
 
                               return (
-                                <div key={idx} className="p-4 bg-muted rounded-lg border border-border">
+                                <div key={idx} className="p-3 sm:p-4 bg-muted rounded-lg border border-border">
                                   {editingEntryId === idx.toString() ? (
-                                    <div className="space-y-4">
+                                    <div className="space-y-3 sm:space-y-4">
                                       <div>
-                                        <label className="block text-xs font-semibold text-foreground mb-2">
+                                        <label className="block text-xs font-semibold text-foreground mb-1 sm:mb-2">
                                           Notes *
                                         </label>
                                         <textarea
@@ -800,13 +805,13 @@ export default function ClinicalToolsPage() {
                                             })
                                           }
                                           disabled={loading.addMedical}
-                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-xs sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                                           rows={2}
                                           placeholder="Enter clinical notes..."
                                         />
                                       </div>
                                       <div>
-                                        <label className="block text-xs font-semibold text-foreground mb-2">
+                                        <label className="block text-xs font-semibold text-foreground mb-1 sm:mb-2">
                                           Findings *
                                         </label>
                                         <textarea
@@ -818,13 +823,13 @@ export default function ClinicalToolsPage() {
                                             })
                                           }
                                           disabled={loading.addMedical}
-                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-xs sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                                           rows={2}
                                           placeholder="Enter findings..."
                                         />
                                       </div>
                                       <div>
-                                        <label className="block text-xs font-semibold text-foreground mb-2">
+                                        <label className="block text-xs font-semibold text-foreground mb-1 sm:mb-2">
                                           Treatment *
                                         </label>
                                         <textarea
@@ -836,13 +841,13 @@ export default function ClinicalToolsPage() {
                                             })
                                           }
                                           disabled={loading.addMedical}
-                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-xs sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                                           rows={2}
                                           placeholder="Enter treatment..."
                                         />
                                       </div>
                                       <div>
-                                        <label className="block text-xs font-semibold text-foreground mb-2">
+                                        <label className="block text-xs font-semibold text-foreground mb-1 sm:mb-2">
                                           Medications
                                         </label>
                                         <input
@@ -855,21 +860,21 @@ export default function ClinicalToolsPage() {
                                             })
                                           }
                                           disabled={loading.addMedical}
-                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-xs sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                                           placeholder="Comma-separated medications"
                                         />
                                       </div>
-                                      <div className="flex gap-3 pt-2">
+                                      <div className="flex gap-2 sm:gap-3 pt-1 sm:pt-2">
                                         <Button
                                           onClick={handleSaveEditedEntry}
                                           disabled={loading.addMedical}
                                           variant="default"
                                           size="sm"
-                                          className="flex-1 cursor-pointer"
+                                          className="flex-1 cursor-pointer text-xs sm:text-sm"
                                         >
                                           {loading.addMedical ? (
                                             <>
-                                              <Loader2 className="w-4 h-4 animate-spin" />
+                                              <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                                               Saving...
                                             </>
                                           ) : (
@@ -881,7 +886,7 @@ export default function ClinicalToolsPage() {
                                           disabled={loading.addMedical}
                                           variant="outline"
                                           size="sm"
-                                          className="flex-1 cursor-pointer"
+                                          className="flex-1 cursor-pointer text-xs sm:text-sm"
                                         >
                                           Cancel
                                         </Button>
@@ -889,7 +894,7 @@ export default function ClinicalToolsPage() {
                                     </div>
                                   ) : (
                                     <>
-                                      <div className="flex justify-between items-start mb-3">
+                                      <div className="flex justify-between items-start mb-2 sm:mb-3">
                                         <p className="text-xs text-muted-foreground font-medium">
                                           {new Date(entry.date).toLocaleDateString("en-US", {
                                             year: "numeric",
@@ -898,13 +903,13 @@ export default function ClinicalToolsPage() {
                                           })}
                                         </p>
                                         {canEdit && (
-                                          <div className="flex gap-2">
+                                          <div className="flex gap-1 sm:gap-2">
                                             <Button
                                               onClick={() => handleEditMedicalEntry(idx, entry)}
                                               disabled={loading.addMedical}
                                               variant="outline"
                                               size="sm"
-                                              className="h-7 px-3 text-xs cursor-pointer"
+                                              className="h-6 px-2 text-xs cursor-pointer"
                                             >
                                               Edit
                                             </Button>
@@ -916,7 +921,7 @@ export default function ClinicalToolsPage() {
                                               disabled={loading.addMedical}
                                               variant="destructive"
                                               size="sm"
-                                              className="h-7 px-3 text-xs cursor-pointer"
+                                              className="h-6 px-2 text-xs cursor-pointer"
                                             >
                                               Delete
                                             </Button>
@@ -924,31 +929,39 @@ export default function ClinicalToolsPage() {
                                         )}
                                       </div>
                                       {entry.notes && (
-                                        <div className="mb-2">
-                                          <p className="text-xs font-semibold text-foreground mb-1">Notes:</p>
-                                          <p className="text-sm text-foreground">{entry.notes}</p>
+                                        <div className="mb-1 sm:mb-2">
+                                          <p className="text-xs font-semibold text-foreground mb-0.5 sm:mb-1">Notes:</p>
+                                          <p className="text-xs sm:text-sm text-foreground">{entry.notes}</p>
                                         </div>
                                       )}
                                       {entry.findings && (
-                                        <div className="mb-2">
-                                          <p className="text-xs font-semibold text-foreground mb-1">Findings:</p>
-                                          <p className="text-sm text-foreground">{entry.findings}</p>
+                                        <div className="mb-1 sm:mb-2">
+                                          <p className="text-xs font-semibold text-foreground mb-0.5 sm:mb-1">
+                                            Findings:
+                                          </p>
+                                          <p className="text-xs sm:text-sm text-foreground">{entry.findings}</p>
                                         </div>
                                       )}
                                       {entry.treatment && (
-                                        <div className="mb-2">
-                                          <p className="text-xs font-semibold text-foreground mb-1">Treatment:</p>
-                                          <p className="text-sm text-foreground">{entry.treatment}</p>
+                                        <div className="mb-1 sm:mb-2">
+                                          <p className="text-xs font-semibold text-foreground mb-0.5 sm:mb-1">
+                                            Treatment:
+                                          </p>
+                                          <p className="text-xs sm:text-sm text-foreground">{entry.treatment}</p>
                                         </div>
                                       )}
                                       {entry.medications && entry.medications.length > 0 && (
                                         <div>
-                                          <p className="text-xs font-semibold text-foreground mb-1">Medications:</p>
-                                          <p className="text-sm text-foreground">{entry.medications.join(", ")}</p>
+                                          <p className="text-xs font-semibold text-foreground mb-0.5 sm:mb-1">
+                                            Medications:
+                                          </p>
+                                          <p className="text-xs sm:text-sm text-foreground">
+                                            {entry.medications.join(", ")}
+                                          </p>
                                         </div>
                                       )}
                                       {entry.createdByName && (
-                                        <div className="mt-2 pt-2 border-t border-border">
+                                        <div className="mt-1 sm:mt-2 pt-1 border-t border-border">
                                           <p className="text-xs text-muted-foreground">by Dr. {entry.createdByName}</p>
                                         </div>
                                       )}
@@ -959,16 +972,16 @@ export default function ClinicalToolsPage() {
                             })}
                           </div>
                         ) : (
-                          <p className="text-muted-foreground text-sm">No medical history entries yet</p>
+                          <p className="text-muted-foreground text-xs sm:text-sm">No medical history entries yet</p>
                         )}
                         {user?.role === "doctor" && (
                           <form
                             onSubmit={handleAddMedicalEntry}
-                            className="space-y-4 p-4 bg-muted rounded-lg border border-border"
+                            className="space-y-3 sm:space-y-4 p-3 sm:p-4 bg-muted rounded-lg border border-border"
                           >
-                            <h3 className="font-semibold text-foreground">Add Medical Entry</h3>
+                            <h3 className="font-semibold text-foreground text-sm sm:text-base">Add Medical Entry</h3>
                             <div>
-                              <label className="block text-sm font-medium text-foreground mb-2">Notes *</label>
+                              <label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">Notes *</label>
                               <textarea
                                 placeholder="Clinical notes..."
                                 value={medicalEntry.notes}
@@ -993,7 +1006,9 @@ export default function ClinicalToolsPage() {
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-foreground mb-2">Findings *</label>
+                              <label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+                                Findings *
+                              </label>
                               <textarea
                                 placeholder="Findings..."
                                 value={medicalEntry.findings}
@@ -1018,7 +1033,9 @@ export default function ClinicalToolsPage() {
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-foreground mb-2">Treatment *</label>
+                              <label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+                                Treatment *
+                              </label>
                               <textarea
                                 placeholder="Treatment..."
                                 value={medicalEntry.treatment}
@@ -1060,7 +1077,7 @@ export default function ClinicalToolsPage() {
                               disabled={loading.addMedical}
                               variant="default"
                               size="sm"
-                              className="w-full cursor-pointer"
+                              className="w-full cursor-pointer text-sm"
                             >
                               {loading.addMedical && <Loader2 className="w-4 h-4 animate-spin" />}
                               {loading.addMedical ? "Adding..." : "Add Entry"}
@@ -1072,13 +1089,13 @@ export default function ClinicalToolsPage() {
 
                     {/* Images Tab */}
                     {activeTab === "images" && (
-                      <div className="space-y-6">
+                      <div className="space-y-4 sm:space-y-6">
                         {loading.patientImages ? (
                           <div className="flex items-center justify-center py-12">
                             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                           </div>
                         ) : patientImages.length > 0 ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             {patientImages.map((image) => {
                               const isPdf = image.imageUrl?.toLowerCase().includes(".pdf")
                               const canDeleteImage = () => {
@@ -1092,26 +1109,30 @@ export default function ClinicalToolsPage() {
                               return (
                                 <div
                                   key={image._id}
-                                  className="p-4 bg-muted rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                                  className="p-3 sm:p-4 bg-muted rounded-lg cursor-pointer hover:shadow-md transition-shadow"
                                   onClick={() => setSelectedImage(image)}
                                 >
                                   {isPdf ? (
-                                    <div className="w-full h-40 bg-gradient-to-br from-muted to-muted/50 rounded-lg mb-3 flex items-center justify-center">
-                                      <FileText className="w-12 h-12 text-destructive/50" />
+                                    <div className="w-full h-32 sm:h-40 bg-gradient-to-br from-muted to-muted/50 rounded-lg mb-2 sm:mb-3 flex items-center justify-center">
+                                      <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-destructive/50" />
                                     </div>
                                   ) : (
                                     <img
                                       src={image.imageUrl || "/placeholder.svg"}
                                       alt={image.title}
-                                      className="w-full h-40 object-cover rounded-lg mb-3"
+                                      className="w-full h-32 sm:h-40 object-cover rounded-lg mb-2 sm:mb-3"
                                     />
                                   )}
-                                  <p className="font-semibold text-foreground text-sm">{image.title}</p>
+                                  <p className="font-semibold text-foreground text-xs sm:text-sm truncate">
+                                    {image.title}
+                                  </p>
                                   <p className="text-xs text-muted-foreground">{image.type.toUpperCase()}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">
+                                  <p className="text-xs text-muted-foreground mt-0.5 sm:mt-1">
                                     {new Date(image.uploadedAt).toLocaleDateString()}
                                   </p>
-                                  {image.notes && <p className="text-xs text-foreground mt-2">{image.notes}</p>}
+                                  {image.notes && (
+                                    <p className="text-xs text-foreground mt-1.5 sm:mt-2">{image.notes}</p>
+                                  )}
                                   {canDeleteImage() && (
                                     <button
                                       onClick={(e) => {
@@ -1120,7 +1141,7 @@ export default function ClinicalToolsPage() {
                                         setShowDeleteModal(true)
                                       }}
                                       disabled={loading.deleteImage}
-                                      className="mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                      className="mt-2 sm:mt-3 text-xs text-destructive hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
                                       <Trash2 className="w-3 h-3" />
                                       Delete
@@ -1131,14 +1152,19 @@ export default function ClinicalToolsPage() {
                             })}
                           </div>
                         ) : (
-                          <p className="text-muted-foreground text-sm">No images uploaded yet</p>
+                          <p className="text-muted-foreground text-xs sm:text-sm">No images uploaded yet</p>
                         )}
-                        <form onSubmit={handleUploadImage} className="space-y-4 p-4 bg-muted rounded-lg">
-                          <h3 className="font-semibold text-foreground">Upload X-Ray or Image</h3>
+                        <form
+                          onSubmit={handleUploadImage}
+                          className="space-y-3 sm:space-y-4 p-3 sm:p-4 bg-muted rounded-lg border border-border"
+                        >
+                          <h3 className="font-semibold text-foreground text-sm sm:text-base">Upload X-Ray or Image</h3>
 
                           {!imageUpload.imageUrl && (
-                            <div className="mb-4">
-                              <h4 className="text-sm font-medium text-foreground mb-3">Step 1: Upload File</h4>
+                            <div className="mb-3 sm:mb-4">
+                              <h4 className="text-xs sm:text-sm font-medium text-foreground mb-2 sm:mb-3">
+                                Step 1: Upload File
+                              </h4>
                               <XrayFileUpload
                                 onUploadSuccess={handleFileUploadSuccess}
                                 isLoading={loading.uploadImage}
@@ -1147,13 +1173,13 @@ export default function ClinicalToolsPage() {
                           )}
 
                           {imageUpload.imageUrl && (
-                            <div className="mb-4 p-3 bg-accent/10 border border-accent rounded-lg">
-                              <p className="text-sm text-foreground">
+                            <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-accent/10 border border-accent rounded-lg">
+                              <p className="text-xs sm:text-sm text-foreground">
                                 <span className="font-medium">File uploaded:</span> {imageUpload.title}
                               </p>
                               <button
                                 onClick={() => setImageUpload({ ...imageUpload, imageUrl: "", title: "" })}
-                                className="text-xs text-accent hover:underline mt-2 cursor-pointer"
+                                className="text-xs text-accent hover:underline mt-1 sm:mt-2 cursor-pointer"
                               >
                                 Change file
                               </button>
@@ -1169,14 +1195,16 @@ export default function ClinicalToolsPage() {
                               })
                             }
                             disabled={loading.uploadImage}
-                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <option value="xray">X-Ray</option>
                             <option value="photo">Photo</option>
                             <option value="scan">Scan</option>
                           </select>
                           <div>
-                            <label className="block text-sm font-medium text-foreground mb-1">Image Title *</label>
+                            <label className="block text-xs sm:text-sm font-medium text-foreground mb-1">
+                              Image Title *
+                            </label>
                             <input
                               type="text"
                               placeholder="Image title"
@@ -1189,7 +1217,7 @@ export default function ClinicalToolsPage() {
                                 setImageErrors({ ...imageErrors, title: "" })
                               }}
                               disabled={loading.uploadImage}
-                              className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                              className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                                 imageErrors.title ? "border-destructive" : "border-border"
                               }`}
                             />
@@ -1205,15 +1233,15 @@ export default function ClinicalToolsPage() {
                               })
                             }
                             disabled={loading.uploadImage}
-                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             rows={2}
                           />
                           <button
                             type="submit"
                             disabled={loading.uploadImage || !imageUpload.imageUrl}
-                            className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-3 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                           >
-                            {loading.uploadImage && <Loader2 className="w-4 h-4 animate-spin" />}
+                            {loading.uploadImage && <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />}
                             {loading.uploadImage ? "Uploading..." : "Upload Image"}
                           </button>
                         </form>
@@ -1221,9 +1249,11 @@ export default function ClinicalToolsPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="bg-card rounded-lg shadow-md border border-border p-8 text-center">
-                    <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                    <p className="text-muted-foreground">Select a patient to view their clinical records</p>
+                  <div className="bg-card rounded-lg shadow-md border border-border p-6 sm:p-8 text-center">
+                    <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground text-sm sm:text-base">
+                      Select a patient to view their clinical records
+                    </p>
                   </div>
                 )}
               </div>

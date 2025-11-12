@@ -426,11 +426,11 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
         </div>
       )}
 
-      <Dialog open={!!selectedReferral} onOpenChange={(open) => !open && setSelectedReferral(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={!!selectedReferral} onOpenChange={(open) => !open && setSelectedReferral(null)}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl flex items-center gap-2">
-              <FileText className="w-5 h-5" />
+            <DialogTitle className="text-lg sm:text-xl flex items-center gap-2 flex-wrap">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
               Referral Details & Actions
               {selectedReferral &&
                 (isSentReferral(selectedReferral) ? (
@@ -445,7 +445,7 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
                   </span>
                 ))}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm sm:text-base">
               {selectedReferral && isSentReferral(selectedReferral)
                 ? "View the status of your referral request"
                 : "Manage the referral request with complete control"}
@@ -453,34 +453,34 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
           </DialogHeader>
 
           {selectedReferral && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Referral Flow Timeline */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-xs font-semibold text-blue-900 mb-3">REFERRAL FLOW</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                <p className="text-xs font-semibold text-blue-900 mb-2 sm:mb-3">REFERRAL FLOW</p>
                 <div className="flex items-center justify-between text-xs">
                   <div className="text-center">
-                    <div className="font-semibold text-blue-900">{selectedReferral.fromDoctorName}</div>
-                    <div className="text-blue-700">(Referred From)</div>
+                    <div className="font-semibold text-blue-900 text-xs sm:text-sm">{selectedReferral.fromDoctorName}</div>
+                    <div className="text-blue-700 text-xs">(Referred From)</div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-blue-600" />
+                  <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                   <div className="text-center">
-                    <div className="font-semibold text-blue-900">{selectedReferral.toDoctorName}</div>
-                    <div className="text-blue-700">(Referred To)</div>
+                    <div className="font-semibold text-blue-900 text-xs sm:text-sm">{selectedReferral.toDoctorName}</div>
+                    <div className="text-blue-700 text-xs">(Referred To)</div>
                   </div>
                   {selectedReferral.status === "referred_back" && (
                     <>
-                      <ArrowRight className="w-4 h-4 text-blue-600" />
+                      <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                       <div className="text-center">
-                        <div className="font-semibold text-green-900">{selectedReferral.fromDoctorName}</div>
-                        <div className="text-green-700">(Returned)</div>
+                        <div className="font-semibold text-green-900 text-xs sm:text-sm">{selectedReferral.fromDoctorName}</div>
+                        <div className="text-green-700 text-xs">(Returned)</div>
                       </div>
                     </>
                   )}
                   {selectedReferral.status === "rejected" && (
                     <>
-                      <X className="w-4 h-4 text-red-600" />
+                      <X className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
                       <div className="text-center">
-                        <div className="font-semibold text-red-900">Rejected</div>
+                        <div className="font-semibold text-red-900 text-xs sm:text-sm">Rejected</div>
                       </div>
                     </>
                   )}
@@ -488,28 +488,28 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
               </div>
 
               {/* Patient & Doctor Info */}
-              <div className="border-b border-border pb-4">
-                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+              <div className="border-b border-border pb-3 sm:pb-4">
+                <h3 className="font-semibold text-foreground mb-2 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
                   <User className="w-4 h-4" />
                   Request Information
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Patient</p>
-                    <p className="text-foreground font-medium">{selectedReferral.patientName}</p>
+                    <p className="text-foreground font-medium text-sm sm:text-base">{selectedReferral.patientName}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground uppercase font-medium mb-1">From Doctor</p>
-                    <p className="text-foreground font-medium">{selectedReferral.fromDoctorName}</p>
+                    <p className="text-foreground font-medium text-sm sm:text-base">{selectedReferral.fromDoctorName}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground uppercase font-medium mb-1">To Doctor</p>
-                    <p className="text-foreground font-medium">{selectedReferral.toDoctorName}</p>
+                    <p className="text-foreground font-medium text-sm sm:text-base">{selectedReferral.toDoctorName}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Current Status</p>
                     <span
-                      className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${getStatusBadgeColor(selectedReferral.status)}`}
+                      className={`inline-flex items-center gap-1 text-xs px-2 sm:px-3 py-1 rounded-full font-medium ${getStatusBadgeColor(selectedReferral.status)}`}
                     >
                       {getStatusIcon(selectedReferral.status)}
                       {selectedReferral.status.charAt(0).toUpperCase() +
@@ -520,7 +520,7 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
                     <p className="text-xs text-muted-foreground uppercase font-medium mb-1">
                       {isSentReferral(selectedReferral) ? "Sent Date" : "Received Date"}
                     </p>
-                    <p className="text-foreground">
+                    <p className="text-foreground text-sm sm:text-base">
                       {new Date(selectedReferral.createdAt).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "short",
@@ -532,26 +532,26 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
               </div>
 
               {/* Referral Reason */}
-              <div className="border-b border-border pb-4">
-                <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+              <div className="border-b border-border pb-3 sm:pb-4">
+                <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2 text-sm sm:text-base">
                   <FileText className="w-4 h-4" />
                   Referral Reason
                 </h3>
-                <p className="text-foreground text-sm bg-muted p-3 rounded-lg">{selectedReferral.referralReason}</p>
+                <p className="text-foreground text-sm bg-muted p-2 sm:p-3 rounded-lg">{selectedReferral.referralReason}</p>
               </div>
 
               {/* Notes (if any) */}
               {selectedReferral.notes && (
-                <div className="border-b border-border pb-4">
-                  <h3 className="font-semibold text-foreground mb-2">Treatment Notes</h3>
-                  <p className="text-foreground text-sm bg-green-50 border border-green-200 p-3 rounded-lg">
+                <div className="border-b border-border pb-3 sm:pb-4">
+                  <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Treatment Notes</h3>
+                  <p className="text-foreground text-sm bg-green-50 border border-green-200 p-2 sm:p-3 rounded-lg">
                     {selectedReferral.notes}
                   </p>
                 </div>
               )}
 
-              <div className="space-y-3 bg-gray-50 p-4 rounded-lg border border-border">
-                <p className="text-xs font-semibold text-gray-600 uppercase mb-3">
+              <div className="space-y-3 bg-gray-50 p-3 sm:p-4 rounded-lg border border-border">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-2 sm:mb-3">
                   {isSentReferral(selectedReferral) ? "Referral Status" : "Actions"}
                 </p>
 
@@ -559,9 +559,9 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
                   // Doctor who SENT the referral - VIEW ONLY
                   <>
                     {selectedReferral.status === "pending" && (
-                      <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                        <p className="text-sm text-amber-800">
+                      <div className="bg-amber-50 border border-amber-200 p-2 sm:p-3 rounded-lg flex items-start gap-2">
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs sm:text-sm text-amber-800">
                           <strong>Pending:</strong> Waiting for {selectedReferral.toDoctorName} to accept or reject this
                           referral.
                         </p>
@@ -569,9 +569,9 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
                     )}
 
                     {selectedReferral.status === "accepted" && (
-                      <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                        <p className="text-sm text-blue-800">
+                      <div className="bg-blue-50 border border-blue-200 p-2 sm:p-3 rounded-lg flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs sm:text-sm text-blue-800">
                           <strong>Accepted:</strong> {selectedReferral.toDoctorName} has accepted this referral and is
                           currently treating the patient.
                         </p>
@@ -579,18 +579,18 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
                     )}
 
                     {selectedReferral.status === "completed" && (
-                      <div className="bg-green-50 border border-green-200 p-3 rounded-lg flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                        <p className="text-sm text-green-800">
+                      <div className="bg-green-50 border border-green-200 p-2 sm:p-3 rounded-lg flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs sm:text-sm text-green-800">
                           <strong>Completed:</strong> This referral has been completed and returned to you.
                         </p>
                       </div>
                     )}
 
                     {selectedReferral.status === "referred_back" && (
-                      <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg flex items-center gap-2">
-                        <ArrowRight className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                        <p className="text-sm text-purple-800">
+                      <div className="bg-purple-50 border border-purple-200 p-2 sm:p-3 rounded-lg flex items-start gap-2">
+                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs sm:text-sm text-purple-800">
                           <strong>Referred Back:</strong> The appointment has been returned to you by{" "}
                           {selectedReferral.toDoctorName}. You can now continue treatment.
                         </p>
@@ -598,9 +598,9 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
                     )}
 
                     {selectedReferral.status === "rejected" && (
-                      <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-center gap-2">
-                        <X className="w-5 h-5 text-red-600 flex-shrink-0" />
-                        <p className="text-sm text-red-800">
+                      <div className="bg-red-50 border border-red-200 p-2 sm:p-3 rounded-lg flex items-start gap-2">
+                        <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs sm:text-sm text-red-800">
                           <strong>Rejected:</strong> {selectedReferral.toDoctorName} has rejected this referral request.
                         </p>
                       </div>
@@ -616,19 +616,19 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
                           <button
                             onClick={() => handleAction(selectedReferral._id, "accept")}
                             disabled={actionLoading}
-                            className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-3 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer"
+                            className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:cursor-not-allowed cursor-pointer"
                           >
-                            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                            <CheckCircle className="w-4 h-4" />
+                            {actionLoading && <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />}
+                            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                             Accept
                           </button>
                           <button
                             onClick={() => handleAction(selectedReferral._id, "reject")}
                             disabled={actionLoading}
-                            className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white px-4 py-3 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer"
+                            className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:cursor-not-allowed cursor-pointer"
                           >
-                            {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                            <X className="w-4 h-4" />
+                            {actionLoading && <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />}
+                            <X className="w-3 h-3 sm:w-4 sm:h-4" />
                             Reject
                           </button>
                         </div>
@@ -647,26 +647,26 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
                             value={actionNotes}
                             onChange={(e) => setActionNotes(e.target.value)}
                             disabled={actionLoading}
-                            className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
+                            className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm"
                             rows={3}
                           />
                         </div>
                         <button
                           onClick={() => handleAction(selectedReferral._id, "refer_back", actionNotes)}
                           disabled={actionLoading}
-                          className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:cursor-not-allowed cursor-pointer"
+                          className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:cursor-not-allowed cursor-pointer"
                         >
-                          {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                          <ArrowRight className="w-4 h-4" />
+                          {actionLoading && <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />}
+                          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                           Refer Back
                         </button>
                       </div>
                     )}
 
                     {selectedReferral.status === "completed" && (
-                      <div className="bg-green-50 border border-green-200 p-3 rounded-lg flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                        <p className="text-sm text-green-800">
+                      <div className="bg-green-50 border border-green-200 p-2 sm:p-3 rounded-lg flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs sm:text-sm text-green-800">
                           <strong>Completed:</strong> You have completed this referral and returned it to{" "}
                           {selectedReferral.fromDoctorName}.
                         </p>
@@ -674,9 +674,9 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
                     )}
 
                     {selectedReferral.status === "referred_back" && (
-                      <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg flex items-center gap-2">
-                        <ArrowRight className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                        <p className="text-sm text-purple-800">
+                      <div className="bg-purple-50 border border-purple-200 p-2 sm:p-3 rounded-lg flex items-start gap-2">
+                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs sm:text-sm text-purple-800">
                           <strong>Referred Back:</strong> You have returned this appointment to{" "}
                           {selectedReferral.fromDoctorName}.
                         </p>
@@ -684,9 +684,9 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
                     )}
 
                     {selectedReferral.status === "rejected" && (
-                      <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-center gap-2">
-                        <X className="w-5 h-5 text-red-600 flex-shrink-0" />
-                        <p className="text-sm text-red-800">
+                      <div className="bg-red-50 border border-red-200 p-2 sm:p-3 rounded-lg flex items-start gap-2">
+                        <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs sm:text-sm text-red-800">
                           <strong>Rejected:</strong> You have rejected this referral request from{" "}
                           {selectedReferral.fromDoctorName}.
                         </p>
@@ -699,7 +699,7 @@ export function ReferRequestsTab({ token }: ReferRequestsTabProps) {
               {/* Close button */}
               <button
                 onClick={() => setSelectedReferral(null)}
-                className="w-full bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                className="w-full bg-muted hover:bg-muted/80 text-muted-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm cursor-pointer"
               >
                 Close
               </button>

@@ -166,7 +166,9 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
   }
 
   const renderTeethRow = (toothNumbers: number[], bgColor: string, borderColor: string) => (
-    <div className={`grid grid-cols-8 gap-3 p-6 ${bgColor} rounded-lg border ${borderColor}`}>
+    <div
+      className={`grid grid-cols-4 sm:grid-cols-8 gap-1 sm:gap-2 md:gap-3 p-2 sm:p-4 md:p-6 ${bgColor} rounded-lg border ${borderColor}`}
+    >
       {toothNumbers.map((toothNum) => {
         const toothStatus = teeth[toothNum]?.status || "healthy"
         const statusDisplayName = getStatusDisplayName(toothStatus)
@@ -180,7 +182,7 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
               !readOnly && onToothClick(toothNum)
             }}
             disabled={readOnly}
-            className={`relative h-28 w-full rounded-lg flex flex-col items-center justify-center transition-all overflow-visible border-4 group
+            className={`relative h-16 sm:h-20 md:h-28 w-full rounded-lg flex flex-col items-center justify-center transition-all overflow-visible border-2 sm:border-4 group
               ${readOnly ? "cursor-default" : "hover:shadow-md cursor-pointer hover:scale-105"}
               ${selectedTooth === toothNum ? "ring-2 ring-offset-2 ring-primary" : ""}
             `}
@@ -195,15 +197,15 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
 
             {indicator && (
               <div
-                className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md"
+                className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-3 sm:w-4 md:w-5 h-3 sm:h-4 md:h-5 rounded-full flex items-center justify-center text-white text-[8px] sm:text-xs font-bold shadow-md"
                 style={{ backgroundColor: getToothColor(toothStatus) }}
               >
                 {indicator}
               </div>
             )}
 
-            {/* Tooltip - only visible on hover */}
-            <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white border border-gray-300 rounded-md shadow-md px-2 py-1 text-center z-50 min-w-[120px]">
+            {/* Tooltip - responsive positioning */}
+            <div className="hidden sm:block absolute -top-12 sm:-top-14 md:-top-16 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white border border-gray-300 rounded-md shadow-md px-2 py-1 text-center z-50 min-w-[120px]">
               <p className="text-red-600 font-semibold text-xs">{toothNum}</p>
               <p className="text-gray-700 text-[10px]">{getToothName(toothNum)}</p>
               <p className="text-gray-600 text-[10px] font-medium mt-1" style={{ color: getToothColor(toothStatus) }}>
@@ -217,10 +219,10 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Upper Teeth */}
       <div>
-        <h3 className="font-semibold text-foreground mb-3 text-sm">Upper Teeth</h3>
+        <h3 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm md:text-base">Upper Teeth</h3>
         {renderTeethRow(
           [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28],
           "bg-blue-50",
@@ -230,7 +232,7 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
 
       {/* Lower Teeth */}
       <div>
-        <h3 className="font-semibold text-foreground mb-3 text-sm">Lower Teeth</h3>
+        <h3 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm md:text-base">Lower Teeth</h3>
         {renderTeethRow(
           [38, 37, 36, 35, 34, 33, 32, 31, 41, 42, 43, 44, 45, 46, 47, 48],
           "bg-green-50",
@@ -238,9 +240,10 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
         )}
       </div>
 
-      <div className="p-4 bg-muted rounded-lg border border-border">
-        <h3 className="font-semibold text-foreground mb-3 text-sm">Tooth Status Legend</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+      {/* Legend - responsive grid */}
+      <div className="p-3 sm:p-4 bg-muted rounded-lg border border-border">
+        <h3 className="font-semibold text-foreground mb-3 text-sm md:text-base">Tooth Status Legend</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 text-xs">
           <LegendItem color="#10b981" label="Healthy" />
           <LegendItem color="#ef4444" label="Cavity" indicator="●" />
           <LegendItem color="#9ca3af" label="Missing" dashed indicator="✕" />
@@ -252,10 +255,10 @@ export function ToothChartVisual({ teeth, onToothClick, readOnly = false }: Toot
         </div>
       </div>
 
-      {/* Notation Guide */}
-      <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-        <h3 className="font-semibold text-foreground mb-2 text-sm">Dental Notation Guide</h3>
-        <div className="grid grid-cols-2 gap-4 text-xs">
+      {/* Notation Guide - responsive layout */}
+      <div className="p-3 sm:p-4 bg-amber-50 rounded-lg border border-amber-200">
+        <h3 className="font-semibold text-foreground mb-2 text-sm md:text-base">Dental Notation Guide</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs md:text-sm">
           <div>
             <p className="font-medium mb-1 text-foreground">Upper Teeth:</p>
             <p className="text-muted-foreground">11–18 (Upper Right) / 21–28 (Upper Left)</p>

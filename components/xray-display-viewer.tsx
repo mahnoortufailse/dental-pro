@@ -69,41 +69,45 @@ export function XrayDisplayViewer({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-      <div className="bg-card rounded-lg shadow-xl border border-border max-w-xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200">
+      <div className="bg-card rounded-lg shadow-xl border border-border w-full max-w-sm sm:max-w-md md:max-w-xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 flex flex-col">
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card z-10">
-          <div className="flex items-center gap-3">
-            {isPdf ? <FileText className="w-5 h-5 text-destructive" /> : <ImageIcon className="w-5 h-5 text-primary" />}
-            <div>
-              <h3 className="font-semibold text-foreground">{title || "Document"}</h3>
+        <div className="flex items-center justify-between p-2 sm:p-4 border-b border-border sticky top-0 bg-card z-10 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {isPdf ? (
+              <FileText className="w-4 sm:w-5 h-4 sm:h-5 text-destructive flex-shrink-0" />
+            ) : (
+              <ImageIcon className="w-4 sm:w-5 h-4 sm:h-5 text-primary flex-shrink-0" />
+            )}
+            <div className="min-w-0">
+              <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">{title || "Document"}</h3>
               <p className="text-xs text-muted-foreground">{getTypeLabel(type)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <button
               onClick={handleDownload}
               disabled={isDownloading}
-              className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 sm:p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               title="Download"
             >
-              <Download className={`w-5 h-5 ${isDownloading ? "animate-spin" : ""}`} />
+              <Download className={`w-4 sm:w-5 h-4 sm:h-5 ${isDownloading ? "animate-spin" : ""}`} />
             </button>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
+              className="p-1.5 sm:p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 sm:w-5 h-4 sm:h-5" />
             </button>
           </div>
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+        <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 flex-1 overflow-y-auto">
           {/* File Preview */}
           <div className="bg-muted rounded-lg border border-border overflow-hidden">
             {isPdf ? (
-              <div className="w-full h-96 bg-muted flex items-center justify-center">
+              <div className="w-full h-64 sm:h-80 md:h-96 bg-muted flex items-center justify-center">
                 <iframe
                   src={`${imageUrl}#toolbar=0`}
                   className="w-full h-full"
@@ -126,56 +130,56 @@ export function XrayDisplayViewer({
               </div>
             )}
           </div>
-{/* Details in one box */}
-<div className="bg-muted/50 rounded-lg p-4 border border-border space-y-2">
-  <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-2">Details</h4>
 
-  <p className="text-sm text-foreground">
-    <span className="font-medium text-muted-foreground">Type:</span> {getTypeLabel(type)}
-  </p>
+          {/* Details in one box */}
+          <div className="bg-muted/50 rounded-lg p-3 sm:p-4 border border-border space-y-2">
+            <h4 className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase mb-2">Details</h4>
 
-  {uploadedAt && (
-    <p className="text-sm text-foreground">
-      <span className="font-medium text-muted-foreground">Uploaded:</span>{" "}
-      {new Date(uploadedAt).toLocaleDateString()} {new Date(uploadedAt).toLocaleTimeString()}
-    </p>
-  )}
+            <p className="text-xs sm:text-sm text-foreground">
+              <span className="font-medium text-muted-foreground">Type:</span> {getTypeLabel(type)}
+            </p>
 
-  {uploadedBy && (
-    <p className="text-sm text-foreground">
-      <span className="font-medium text-muted-foreground">Uploaded By:</span> {uploadedBy}
-    </p>
-  )}
+            {uploadedAt && (
+              <p className="text-xs sm:text-sm text-foreground">
+                <span className="font-medium text-muted-foreground">Uploaded:</span>{" "}
+                {new Date(uploadedAt).toLocaleDateString()} {new Date(uploadedAt).toLocaleTimeString()}
+              </p>
+            )}
 
-  {description && (
-    <p className="text-sm text-foreground">
-      <span className="font-medium text-muted-foreground">Description:</span> {description}
-    </p>
-  )}
+            {uploadedBy && (
+              <p className="text-xs sm:text-sm text-foreground">
+                <span className="font-medium text-muted-foreground">Uploaded By:</span> {uploadedBy}
+              </p>
+            )}
 
-  {notes && (
-    <div className="pt-2 border-t border-border">
-      <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Clinical Notes</p>
-      <p className="text-sm text-foreground whitespace-pre-wrap">{notes}</p>
-    </div>
-  )}
-</div>
+            {description && (
+              <p className="text-xs sm:text-sm text-foreground">
+                <span className="font-medium text-muted-foreground">Description:</span> {description}
+              </p>
+            )}
 
+            {notes && (
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Clinical Notes</p>
+                <p className="text-xs sm:text-sm text-foreground whitespace-pre-wrap">{notes}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-border bg-muted/30 flex gap-2">
+        <div className="p-2 sm:p-4 border-t border-border bg-muted/30 flex gap-2">
           <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
           >
-            <Download className={`w-4 h-4 ${isDownloading ? "animate-spin" : ""}`} />
+            <Download className={`w-3.5 sm:w-4 h-3.5 sm:h-4 ${isDownloading ? "animate-spin" : ""}`} />
             {isDownloading ? "Downloading..." : "Download"}
           </button>
           <button
             onClick={onClose}
-            className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium cursor-pointer"
+            className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors font-medium cursor-pointer text-xs sm:text-sm"
           >
             Close
           </button>

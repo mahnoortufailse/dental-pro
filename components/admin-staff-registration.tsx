@@ -170,13 +170,13 @@ export function AdminStaffRegistration() {
         {/* Role Selection Tabs */}
         <div className="mb-8">
           <label className="block text-xs sm:text-sm font-semibold text-foreground mb-3">Select Role</label>
-          <div className={`grid gap-2 sm:gap-3 ${availableRoles.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+          <div className={`grid gap-0 sm:gap-3 ${availableRoles.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
             {availableRoles.map((role) => (
               <button
                 key={role}
                 type="button"
                 onClick={() => handleRoleChange(role)}
-                className={`py-2 px-2 sm:px-3 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 ${
+                className={`py-2 px-1 sm:px-3 sm:rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 ${
                   selectedRole === role
                     ? "bg-primary text-primary-foreground border-2 border-primary"
                     : "bg-muted text-muted-foreground border-2 border-border hover:border-primary/50"
