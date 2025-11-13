@@ -587,7 +587,7 @@ export default function PatientsPage() {
         <Sidebar />
         <main className="flex-1 overflow-auto md:pt-0 pt-16">
           <div className="p-3 sm:p-4 md:p-6 lg:p-8">
-            <div className="flex flex-col gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Patients</h1>
                 <p className="text-muted-foreground text-xs sm:text-sm mt-1">
@@ -595,21 +595,6 @@ export default function PatientsPage() {
                 </p>
               </div>
               <div className="flex gap-2 flex-col xs:flex-row">
-                {/* ADDED billing request button for doctors only */}
-                {/* {user?.role === "doctor" && (
-                  <button
-                    onClick={() => setShowExtraChargesModal(true)}
-                    disabled={loading.patients || loading.doctors || loading.addPatient || loading.updatePatient}
-                    className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {loadingExtraCharges ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <CreditCard className="w-4 h-4" />
-                    )}
-                    Add Billing Request
-                  </button>
-                )} */}
                 {user?.role !== "doctor" && (
                   <button
                     onClick={() => {
@@ -635,7 +620,7 @@ export default function PatientsPage() {
                       }
                     }}
                     disabled={loading.patients || loading.doctors || loading.addPatient || loading.updatePatient}
-                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors text-sm sm:text-base font-medium cursor-pointer disabled:cursor-not-allowed w-fit"
                   >
                     {loading.addPatient || loading.updatePatient ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
