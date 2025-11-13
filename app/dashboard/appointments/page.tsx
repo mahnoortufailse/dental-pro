@@ -763,7 +763,7 @@ export default function AppointmentsPage() {
 
                   {/* Calendar Days Header */}
                   <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4">
-                    {["Sat", "Mon", "Tue", "Wed", "Thu", "Fri", "Sun"].map((day) => (
+                    {["Sa", "Mo", "Tu", "We", "Th", "Fr", "Su"].map((day) => (
                       <div
                         key={day}
                         className="text-center font-semibold text-muted-foreground text-xs sm:text-xs md:text-sm py-1 sm:py-1.5 md:py-2"
