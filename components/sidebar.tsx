@@ -254,7 +254,7 @@ export function Sidebar() {
             className="w-full flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors text-xs sm:text-sm font-medium cursor-pointer"
           >
             <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline">Logout</span>
+            <span className="">Logout</span>
           </button>
         </div>
       </aside>
