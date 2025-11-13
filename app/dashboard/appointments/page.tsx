@@ -685,10 +685,10 @@ export default function AppointmentsPage() {
     <ProtectedRoute>
       <div className="flex h-screen bg-background">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 overflow-auto md:pt-0 !mt-16 !sm:mt-0 ">
+        <main className="flex-1 overflow-auto md:pt-0  ">
           <div className="p-3 sm:p-4 md:p-6 lg:p-8 ">
            
-              <div className="mb-4 sm:mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+              <div className="mb-4 sm:mb-6 md:mb-8 mt-16 sm:mt-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
               <div className="hidden md:block">
                 <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
                   Appointments Calendar
@@ -763,7 +763,7 @@ export default function AppointmentsPage() {
 
                   {/* Calendar Days Header */}
                   <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4">
-                    {["S", "M", "T", "W", "TH", "F", "SUN"].map((day) => (
+                    {["Sa", "Mo", "Tu", "We", "Th", "Fr", "Su"].map((day) => (
                       <div
                         key={day}
                         className="text-center font-semibold text-muted-foreground text-xs sm:text-xs md:text-sm py-1 sm:py-1.5 md:py-2"
