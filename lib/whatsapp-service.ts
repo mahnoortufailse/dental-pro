@@ -1,271 +1,276 @@
 /**
  * WhatsApp Business API Service
  * Handles all WhatsApp template-based notifications
- * Fully dynamic with comprehensive error handling
+ * Updated with new template structure: appointment_confirmation, appointment_reschedule, appointment_reminding
  */
 
 interface WhatsAppTemplateParams {
-  to: string // Phone number in international format (e.g., "923391415151")
-  templateName: string
-  parameters: string[]
+	to: string; // Phone number in international format (e.g., "923391415151")
+	templateName: string;
+	parameters: string[];
 }
 
 interface WhatsAppResponse {
-  success: boolean
-  messageId?: string
-  error?: string
+	success: boolean;
+	messageId?: string;
+	error?: string;
 }
 
-const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL!
+const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL!;
 
-const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN
+const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 
 /**
  * Sends a WhatsApp template message
  * @param params - Template parameters including phone number and template name
  * @returns Response with success status and message ID or error
  */
-export async function sendWhatsAppTemplate(params: WhatsAppTemplateParams): Promise<WhatsAppResponse> {
-  try {
-    console.log("[DEBUG] sendWhatsAppTemplate called with:", params)
-    console.log("[DEBUG] WHATSAPP_API_URL:", WHATSAPP_API_URL)
-    console.log("[DEBUG] Access Token Present:", !!WHATSAPP_ACCESS_TOKEN)
+export async function sendWhatsAppTemplate(
+	params: WhatsAppTemplateParams
+): Promise<WhatsAppResponse> {
+	try {
+		console.log(
+			"[v0] 🔵 WhatsApp Template Service: sendWhatsAppTemplate called",
+			{
+				templateName: params.templateName,
+				phoneNumber: params.to,
+				parametersCount: params.parameters.length,
+			}
+		);
+		console.log(
+			"[v0] 🔵 WhatsApp Service: API URL configured:",
+			!!WHATSAPP_API_URL
+		);
+		console.log(
+			"[v0] 🔵 WhatsApp Service: Access Token present:",
+			!!WHATSAPP_ACCESS_TOKEN
+		);
 
-    const payload = {
-      messaging_product: "whatsapp",
-      to: params.to,
-      type: "template",
-      template: {
-        name: params.templateName,
-        language: { code: "en" },
-        components: buildTemplateComponents(params.templateName, params.parameters),
-      },
-    }
+		const payload = {
+			messaging_product: "whatsapp",
+			to: params.to,
+			type: "template",
+			template: {
+				name: params.templateName,
+				language: { code: "en" },
+				components: buildTemplateComponents(
+					params.templateName,
+					params.parameters
+				),
+			},
+		};
 
-    console.log("[DEBUG] WhatsApp payload:", JSON.stringify(payload, null, 2))
+		console.log(
+			"[v0] 🔵 WhatsApp Service: Payload constructed:",
+			JSON.stringify(payload, null, 2)
+		);
 
-    const response = await fetch(WHATSAPP_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify(payload),
-    })
+		const response = await fetch(WHATSAPP_API_URL, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+			},
+			body: JSON.stringify(payload),
+		});
 
-    console.log("[DEBUG] WhatsApp API response status:", response.status)
-    const data = await response.json()
-    console.log("[DEBUG] WhatsApp API raw response:", JSON.stringify(data, null, 2))
+		console.log(
+			"[v0] 🔵 WhatsApp Service: API Response Status:",
+			response.status
+		);
+		const data = await response.json();
+		console.log(
+			"[v0] 🔵 WhatsApp Service: Full API Response:",
+			JSON.stringify(data, null, 2)
+		);
 
-    if (!response.ok) {
-      console.error("  WhatsApp API error:", data)
-      return {
-        success: false,
-        error: data.error?.message || "Failed to send WhatsApp message",
-      }
-    }
+		if (!response.ok) {
+			console.error("[v0] ❌ WhatsApp Service: API Error Response:", data);
+			return {
+				success: false,
+				error: data.error?.message || "Failed to send WhatsApp message",
+			};
+		}
 
-    const messageId = data.messages?.[0]?.id
-    console.log("  WhatsApp: Message sent successfully", { messageId })
+		const messageId = data.messages?.[0]?.id;
+		console.log(
+			"[v0] ✅ WhatsApp Service: Message sent successfully with ID:",
+			messageId
+		);
 
-    return { success: true, messageId }
-  } catch (error) {
-    console.error("  WhatsApp service error:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+		return { success: true, messageId };
+	} catch (error) {
+		console.error("[v0] ❌ WhatsApp Service: Critical error:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }
 
 /**
  * Builds template components based on template name
- * Each template has specific structure and parameter count
+ * NEW TEMPLATES: appointment_confirmation, appointment_reschedule, appointment_reminding
  */
-function buildTemplateComponents(templateName: string, parameters: string[]): any[] {
-  switch (templateName) {
-    case "account_confirmation":
-      // account_confirmation: patient name + verification link
-      return [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: parameters[0] || "" }, // Patient name
-          ],
-        },
-        {
-          type: "button",
-          sub_type: "url",
-          index: "0",
-          parameters: [
-            { type: "text", text: parameters[1] || "" }, // Verification link
-          ],
-        },
-      ]
+function buildTemplateComponents(
+	templateName: string,
+	parameters: string[]
+): any[] {
+	console.log("[v0] 🟡 Template Builder: Processing template:", templateName);
 
-    case "appointment_confirmation":
-      // hello_world (appointment confirmation): patient name, service, date, time, doctor, appointment ID
-      return [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: parameters[0] || "" }, // Patient name
-            { type: "text", text: parameters[1] || "" }, // Service/Type
-            { type: "text", text: parameters[2] || "" }, // Date
-            { type: "text", text: parameters[3] || "" }, // Time
-            { type: "text", text: parameters[4] || "" }, // Doctor name
-            { type: "text", text: parameters[5] || "" }, // Appointment ID
-          ],
-        },
-      ]
+	switch (templateName) {
+		case "appointment_confirmation":
+			console.log(
+				"[v0] 🟡 Template Builder: Building appointment_confirmation with params:",
+				parameters
+			);
+			return [
+				{
+					type: "body",
+					parameters: [
+						{ type: "text", text: parameters[0] || "" }, // Patient name
+						{ type: "text", text: parameters[1] || "" }, // Date
+						{ type: "text", text: parameters[2] || "" }, // Time
+						{ type: "text", text: parameters[3] || "" }, // Doctor name
+					],
+				},
+			];
 
-    case "appointment_reminder":
-      // appointment_reminder: patient name, time
-      return [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: parameters[0] || "" }, // Patient name
-            { type: "text", text: parameters[1] || "" }, // Time
-          ],
-        },
-      ]
+		case "appointment_reminding":
+			console.log(
+				"[v0] 🟡 Template Builder: Building appointment_reminding with params:",
+				parameters
+			);
+			return [
+				{
+					type: "body",
+					parameters: [
+						{ type: "text", text: parameters[0] || "" }, // Patient name
+						{ type: "text", text: parameters[1] || "" }, // Date
+						{ type: "text", text: parameters[2] || "" }, // Time
+						{ type: "text", text: parameters[3] || "" }, // Doctor name
+					],
+				},
+			];
 
-    case "appointment_reschedule":
-      // appointment_reschedule: patient name, doctor name, date, time
-      return [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: parameters[0] || "" }, // Patient name
-            { type: "text", text: parameters[1] || "" }, // Doctor name
-            { type: "text", text: parameters[2] || "" }, // New date
-            { type: "text", text: parameters[3] || "" }, // New time
-          ],
-        },
-      ]
+		case "appointment_reschedule":
+			console.log(
+				"[v0] 🟡 Template Builder: Building appointment_reschedule with params:",
+				parameters
+			);
+			return [
+				{
+					type: "body",
+					parameters: [
+						{ type: "text", text: parameters[0] || "" }, // Patient name
+						{ type: "text", text: parameters[1] || "" }, // New date
+						{ type: "text", text: parameters[2] || "" }, // New time
+						{ type: "text", text: parameters[3] || "" }, // Doctor name
+					],
+				},
+			];
 
-    case "report_message":
-      // medical_report: patient name, date, time, doctor name + report link button
-      return [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: parameters[0] || "" }, // Patient name
-            { type: "text", text: parameters[1] || "" }, // Date
-            { type: "text", text: parameters[2] || "" }, // Time
-            { type: "text", text: parameters[3] || "" }, // Doctor name
-          ],
-        },
-        {
-          type: "button",
-          sub_type: "url",
-          index: "0",
-          parameters: [
-            { type: "text", text: parameters[4] || "" }, // Report link
-          ],
-        },
-      ]
-
-    default:
-      console.warn("  WhatsApp: Unknown template name:", templateName)
-      return []
-  }
-}
-
-/**
- * Sends account confirmation notification
- */
-export async function sendAccountConfirmation(
-  phoneNumber: string,
-  patientName: string,
-  verificationLink: string,
-): Promise<WhatsAppResponse> {
-  return sendWhatsAppTemplate({
-    to: phoneNumber,
-    templateName: "account_confirmation",
-    parameters: [patientName, verificationLink],
-  })
+		default:
+			console.warn(
+				"[v0] ⚠️ Template Builder: Unknown template name:",
+				templateName
+			);
+			return [];
+	}
 }
 
 /**
  * Sends appointment confirmation notification
+ * New signature: patientName, date, time, doctorName (simplified from old template)
  */
 export async function sendAppointmentConfirmation(
-  phoneNumber: string,
-  patientName: string,
-  appointmentType: string,
-  date: string,
-  time: string,
-  doctorName: string,
-  appointmentId: string,
+	phoneNumber: string,
+	patientName: string,
+	date: string,
+	time: string,
+	doctorName: string
 ): Promise<WhatsAppResponse> {
-  return sendWhatsAppTemplate({
-    to: phoneNumber,
-    templateName: "appointment_confirmation",
-    parameters: [patientName, appointmentType, date, time, doctorName, appointmentId],
-  })
+	console.log(
+		"[v0] 📋 sendAppointmentConfirmation: Initiating confirmation send",
+		{
+			phone: phoneNumber,
+			patient: patientName,
+			doctor: doctorName,
+			date,
+			time,
+		}
+	);
+
+	const result = await sendWhatsAppTemplate({
+		to: phoneNumber,
+		templateName: "appointment_confirmation",
+		parameters: [patientName, date, time, doctorName],
+	});
+
+	console.log("[v0] 📋 sendAppointmentConfirmation: Result:", result);
+	return result;
 }
 
 /**
  * Sends appointment reschedule notification
+ * Updated to use new template structure
  */
 export async function sendAppointmentReschedule(
-  phoneNumber: string,
-  patientName: string,
-  doctorName: string,
-  newDate: string,
-  newTime: string,
+	phoneNumber: string,
+	patientName: string,
+	newDate: string,
+	newTime: string,
+	doctorName: string
 ): Promise<WhatsAppResponse> {
-  return sendWhatsAppTemplate({
-    to: phoneNumber,
-    templateName: "appointment_reschedule",
-    parameters: [patientName, doctorName, newDate, newTime],
-  })
+	console.log("[v0] 📅 sendAppointmentReschedule: Initiating reschedule send", {
+		phone: phoneNumber,
+		patient: patientName,
+		doctor: doctorName,
+		newDate,
+		newTime,
+	});
+
+	const result = await sendWhatsAppTemplate({
+		to: phoneNumber,
+		templateName: "appointment_reschedule",
+		parameters: [patientName, newDate, newTime, doctorName],
+	});
+
+	console.log("[v0] 📅 sendAppointmentReschedule: Result:", result);
+	return result;
 }
 
 /**
  * Sends appointment reminder notification
+ * New template: appointment_reminding for server-side cron job integration
  */
 export async function sendAppointmentReminder(
-  phoneNumber: string,
-  patientName: string,
-  time: string,
+	phoneNumber: string,
+	patientName: string,
+	date: string,
+	time: string,
+	doctorName: string
 ): Promise<WhatsAppResponse> {
-  return sendWhatsAppTemplate({
-    to: phoneNumber,
-    templateName: "appointment_reminder",
-    parameters: [patientName, time],
-  })
-}
+	console.log(
+		"[v0] ⏰ sendAppointmentReminder: Initiating reminder send (cron job ready)",
+		{
+			phone: phoneNumber,
+			patient: patientName,
+			doctor: doctorName,
+			date,
+			time,
+		}
+	);
+	console.log(
+		"[v0] ⏰ sendAppointmentReminder: This will be triggered by server-side cron job"
+	);
 
-/**
- * Sends appointment cancellation notification
- */
-export async function sendAppointmentCancellation(
-  phoneNumber: string,
-  patientName: string,
-  doctorName: string,
-  appointmentDate: string,
-): Promise<WhatsAppResponse> {
-  return sendWhatsAppTemplate({
-    to: phoneNumber,
-    templateName: "appointment_cancelled",
-    parameters: [patientName, doctorName, appointmentDate],
-  })
-}
+	const result = await sendWhatsAppTemplate({
+		to: phoneNumber,
+		templateName: "appointment_reminding",
+		parameters: [patientName, date, time, doctorName],
+	});
 
-export async function sendMedicalReportLink(
-  phoneNumber: string,
-  patientName: string,
-  appointmentDate: string,
-  appointmentTime: string,
-  doctorName: string,
-  reportLink: string,
-): Promise<WhatsAppResponse> {
-  return sendWhatsAppTemplate({
-    to: phoneNumber,
-    templateName: "report_message",
-    parameters: [patientName, appointmentDate, appointmentTime, doctorName, reportLink],
-  })
+	console.log("[v0] ⏰ sendAppointmentReminder: Result:", result);
+	return result;
 }
