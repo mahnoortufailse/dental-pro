@@ -192,19 +192,17 @@ export async function POST(request: NextRequest) {
       const whatsappResult = await sendAppointmentConfirmation(
         patient?.phone,
         patientName,
-        type || "Appointment",
         date,
         time,
         doctorName,
-        appointmentId,
       )
 
-      console.log("[DEBUG] WhatsApp result:", whatsappResult)
+      console.log("[v0] ✅ CONFIRMATION TEMPLATE: WhatsApp result:", whatsappResult)
 
       if (!whatsappResult.success) {
-        console.warn("  WhatsApp notification failed for appointment creation:", whatsappResult.error)
+        console.warn("[v0] ⚠️ CONFIRMATION TEMPLATE FAILED:", whatsappResult.error)
       } else {
-        console.log("  WhatsApp appointment confirmation sent:", whatsappResult.messageId)
+        console.log("[v0] ✅ CONFIRMATION TEMPLATE SENT successfully with messageId:", whatsappResult.messageId)
       }
     } else {
       console.warn("[DEBUG] Patient phone missing — WhatsApp message skipped")

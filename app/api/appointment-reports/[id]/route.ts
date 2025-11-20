@@ -190,17 +190,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const whatsappResult = await sendAppointmentReschedule(
           patient.phone,
           originalAppointment.patientName,
-          originalAppointment.doctorName,
           newDate,
           newTime,
+          originalAppointment.doctorName,
         )
 
-        console.log("🟣 [PUT] WhatsApp reschedule result:", whatsappResult)
+        console.log("[v0] ✅ RESCHEDULE TEMPLATE: WhatsApp result:", whatsappResult)
 
         if (!whatsappResult.success) {
-          console.warn("⚠️ [PUT] WhatsApp reschedule failed:", whatsappResult.error)
+          console.warn("[v0] ⚠️ RESCHEDULE TEMPLATE FAILED:", whatsappResult.error)
         } else {
-          console.log("✅ [PUT] WhatsApp reschedule sent successfully:", whatsappResult.messageId)
+          console.log("[v0] ✅ RESCHEDULE TEMPLATE SENT successfully with messageId:", whatsappResult.messageId)
         }
 
         if (patient.email) {
