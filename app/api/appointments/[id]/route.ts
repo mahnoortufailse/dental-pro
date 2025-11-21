@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { Appointment, connectDB, User } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 import { sendAppointmentReschedule, sendAppointmentCancellation } from "@/lib/whatsapp-service"
-import { validateAppointmentScheduling } from "@/lib/appointment-validation"
+import { validateAppointmentSchedulingServer } from "@/lib/appointment-validation-server"
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -130,7 +130,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
       // Only check if date/time actually changed
       if (newDate !== originalAppointment.date || newTime !== originalAppointment.time) {
-        const validation = await validateAppointmentScheduling(
+        const validation = await validateAppointmentSchedulingServer(
           originalAppointment.doctorId,
           newDate,
           newTime,
