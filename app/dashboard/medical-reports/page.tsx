@@ -17,6 +17,7 @@ import {
   ChevronRight,
   RefreshCw,
   Edit2,
+  Search
 } from "lucide-react";
 
 export default function MedicalReportsPage() {
@@ -47,10 +48,11 @@ export default function MedicalReportsPage() {
     nextVisit: "",
   });
 
+  
   // Search and pagination state
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   useEffect(() => {
     if (token) {
@@ -409,15 +411,15 @@ export default function MedicalReportsPage() {
   });
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentReports = filteredReports.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(filteredReports.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentReports = filteredReports.slice(startIndex, endIndex)
 
   // Reset to first page when search term or items per page changes
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, itemsPerPage, filterPatient]);
+    setCurrentPage(1)
+  }, [searchTerm, itemsPerPage, filterPatient])
 
   return (
     <ProtectedRoute>
