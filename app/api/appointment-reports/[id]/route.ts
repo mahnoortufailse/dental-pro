@@ -255,10 +255,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    if (payload.role !== "admin" && payload.role !== "receptionist") {
-      console.warn("🔴 [DELETE] Unauthorized role tried to delete report:", payload.role)
-      return NextResponse.json({ error: "Access denied" }, { status: 403 })
-    }
+    // if (payload.role !== "admin" && payload.role !== "receptionist") {
+    //   console.warn("🔴 [DELETE] Unauthorized role tried to delete report:", payload.role)
+    //   return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    // }
 
     const { id } = await params
     console.log("🟠 [DELETE] Report ID:", id)

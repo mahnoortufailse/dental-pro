@@ -610,7 +610,7 @@ export default function ForwardedRequestsPage() {
                       {paginatedReferrals.map((referral) => (
                         <TableRow key={referral._id} className="hover:bg-muted/30 transition-colors">
                           <TableCell className="font-medium text-foreground">{referral.patientName}</TableCell>
-                          <TableCell className="text-muted-foreground">Dr. {referral.doctorName}</TableCell>
+                          <TableCell className="text-muted-foreground">{referral.doctorName}</TableCell>
                           <TableCell className="text-muted-foreground">{referral.patientPhone}</TableCell>
                           <TableCell className="text-muted-foreground">{referral.patientEmail || "N/A"}</TableCell>
                           <TableCell>
@@ -712,7 +712,7 @@ export default function ForwardedRequestsPage() {
                         </h2>
                         <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
                           <Stethoscope className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span className="truncate">Dr. {selectedReferral.doctorName}</span>
+                          <span className="truncate">{selectedReferral.doctorName}</span>
                         </p>
                       </div>
                     </div>
@@ -1132,7 +1132,7 @@ export default function ForwardedRequestsPage() {
 
                   <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
                     <p className="text-xs sm:text-sm text-muted-foreground">
-                      Confirm rejection from Dr. {selectedReferral.doctorName}?
+                      Confirm rejection from {selectedReferral.doctorName}?
                     </p>
 
                     <div className="space-y-2">

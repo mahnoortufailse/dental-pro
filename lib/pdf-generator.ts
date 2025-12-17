@@ -91,7 +91,7 @@ export function generateReportPDF(report: ReportData) {
   /* -------------------- DOCTOR INFO -------------------- */
   y = drawSectionHeader(doc, "ATTENDING DOCTOR", y, blue, pageWidth)
   y = drawInfoCard(doc, [
-    `Name: Dr. ${report.doctorId?.name || "N/A"}`,
+    `Name: ${report.doctorId?.name || "N/A"}`,
     `Specialty: ${report.doctorId?.specialty || "General Dentistry"}`,
     report.doctorId?.email ? `Email: ${report.doctorId.email}` : "",
     report.doctorId?.licenseNumber ? `License #: ${report.doctorId.licenseNumber}` : "",

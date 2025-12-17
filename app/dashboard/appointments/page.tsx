@@ -763,7 +763,7 @@ export default function AppointmentsPage() {
 
                   {/* Calendar Days Header */}
                   <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4">
-                    {["Sa", "Mo", "Tu", "We", "Th", "Fr", "Su"].map((day) => (
+                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
                       <div
                         key={day}
                         className="text-center font-semibold text-muted-foreground text-xs sm:text-xs md:text-sm py-1 sm:py-1.5 md:py-2"
@@ -902,7 +902,7 @@ export default function AppointmentsPage() {
                                     {apt.patientName}
                                   </p>
                                   {user?.role !== "doctor" && (
-                                    <p className="text-xs text-muted-foreground truncate">Dr. {apt.doctorName}</p>
+                                    <p className="text-xs text-muted-foreground truncate"> {apt.doctorName}</p>
                                   )}
                                   {apt.isReferred && (
                                     <span className="text-xs rounded bg-purple-100 text-purple-800 px-1.5 py-0.5 inline-block mt-1">
@@ -1102,7 +1102,7 @@ export default function AppointmentsPage() {
                                   {apt.patientName}
                                 </p>
                                 {user?.role !== "doctor" && (
-                                  <p className="text-xs text-muted-foreground truncate">Dr. {apt.doctorName}</p>
+                                  <p className="text-xs text-muted-foreground truncate"> {apt.doctorName}</p>
                                 )}
                                 {apt.isReferred && (
                                   <span className="text-xs rounded bg-purple-100 text-purple-800 px-1.5 py-0.5 inline-block mt-1">

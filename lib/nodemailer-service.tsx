@@ -195,7 +195,7 @@ function generateTreatmentReportEmail(
 	const proceduresList = procedures.map((p) => `<li>${p}</li>`).join("");
 	const content = `
     <p>Dear <strong>${patientName}</strong>,</p>
-    <p>Your treatment report from Dr. ${doctorName} is ready.</p>
+    <p>Your treatment report from  ${doctorName} is ready.</p>
 
     <div style="background: white; border-left: 4px solid #667eea;
                 padding: 20px; margin: 20px 0; border-radius: 4px;">
@@ -222,7 +222,7 @@ function generateDoctorAssignmentEmail(
 	patientEmail: string
 ): EmailTemplate {
 	const content = `
-    <p>Dear Dr. <strong>${doctorName}</strong>,</p>
+    <p>Dear <strong>${doctorName}</strong>,</p>
     <p>A new patient has been assigned to you.</p>
 
     <div style="background: white; border-left: 4px solid #667eea;

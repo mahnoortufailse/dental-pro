@@ -569,7 +569,7 @@ export default function DashboardPage() {
                               {referral.patientPhone}
                             </td>
                             <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden sm:table-cell text-sm">
-                              Dr. {referral.doctorName}
+                              {referral.doctorName}
                             </td>
                             <td className="px-4 sm:px-6 py-3 text-muted-foreground hidden md:table-cell text-sm truncate max-w-xs">
                               {referral.referralReason}
@@ -671,7 +671,7 @@ export default function DashboardPage() {
                           <tr key={req._id} className="border-b border-border hover:bg-muted/50 transition-colors">
                             <td className="py-2 sm:py-3 px-2 sm:px-4 font-medium">{req.patientName}</td>
                             <td className="py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground">{req.patientPhone}</td>
-                            <td className="py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground">Dr. {req.doctorName}</td>
+                            <td className="py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground">{req.doctorName}</td>
                             <td className="py-2 sm:py-3 px-2 sm:px-4">
                               <span
                                 className={`text-xs px-2 py-1 rounded-full font-medium ${

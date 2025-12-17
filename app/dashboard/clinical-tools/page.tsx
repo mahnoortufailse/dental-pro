@@ -962,7 +962,7 @@ export default function ClinicalToolsPage() {
                                       )}
                                       {entry.createdByName && (
                                         <div className="mt-1 sm:mt-2 pt-1 border-t border-border">
-                                          <p className="text-xs text-muted-foreground">by Dr. {entry.createdByName}</p>
+                                          <p className="text-xs text-muted-foreground">by {entry.createdByName}</p>
                                         </div>
                                       )}
                                     </>
