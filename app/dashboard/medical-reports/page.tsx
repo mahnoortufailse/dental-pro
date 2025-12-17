@@ -1,54 +1,42 @@
 //@ts-nocheck
-"use client";
-import { ProtectedRoute } from "@/components/protected-route";
-import { Sidebar } from "@/components/sidebar";
-import { useAuth } from "@/components/auth-context";
-import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
-import { generateReportPDF } from "@/lib/pdf-generator";
-import { useState, useEffect } from "react";
-import { toast } from "react-hot-toast";
-import {
-  FileText,
-  Eye,
-  Trash2,
-  Download,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw,
-  Edit2,
-  Search
-} from "lucide-react";
+"use client"
+import { ProtectedRoute } from "@/components/protected-route"
+import { Sidebar } from "@/components/sidebar"
+import { useAuth } from "@/components/auth-context"
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
+import { generateReportPDF } from "@/lib/pdf-generator"
+import { useState, useEffect } from "react"
+import { toast } from "react-hot-toast"
+import { FileText, Eye, Trash2, Download, X, ChevronLeft, ChevronRight, RefreshCw, Edit2 } from "lucide-react"
 
 export default function MedicalReportsPage() {
-  const { user, token } = useAuth();
-  const [reports, setReports] = useState([]);
-  const [allPatients, setAllPatients] = useState([]);
-  const [appointmentPatients, setAppointmentPatients] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [patientReportStatus, setPatientReportStatus] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [selectedReport, setSelectedReport] = useState(null);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [filterPatient, setFilterPatient] = useState("");
-  const [patients, setPatients] = useState([]);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [reportToDelete, setReportToDelete] = useState<any>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [patientSearch, setPatientSearch] = useState("");
-  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  const { user, token } = useAuth()
+  const [reports, setReports] = useState([])
+  const [allPatients, setAllPatients] = useState([])
+  const [appointmentPatients, setAppointmentPatients] = useState([])
+  const [appointments, setAppointments] = useState([])
+  const [patientReportStatus, setPatientReportStatus] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [selectedReport, setSelectedReport] = useState(null)
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [filterPatient, setFilterPatient] = useState("")
+  const [patients, setPatients] = useState([])
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [reportToDelete, setReportToDelete] = useState<any>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [patientSearch, setPatientSearch] = useState("")
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false)
 
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingReport, setEditingReport] = useState<any>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingReport, setEditingReport] = useState<any>(null)
+  const [isSaving, setIsSaving] = useState(false)
   const [editFormData, setEditFormData] = useState({
     findings: "",
     notes: "",
     followUpDetails: "",
     nextVisit: "",
-  });
+  })
 
-  
   // Search and pagination state
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -56,196 +44,182 @@ export default function MedicalReportsPage() {
 
   useEffect(() => {
     if (token) {
-      fetchReports();
+      fetchReports()
       if (user?.role === "doctor") {
-        fetchReportsAndPatients();
+        fetchReportsAndPatients()
       } else {
         // For admin and receptionist, fetch all reports with patient/doctor details
-        fetchReportsAndPatients();
+        fetchReportsAndPatients()
       }
     }
-  }, [token, user]);
+  }, [token, user])
 
   const fetchReportsAndPatients = async () => {
     try {
       const appointmentsRes = await fetch("/api/appointments", {
         headers: { Authorization: `Bearer ${token}` },
-      });
+      })
       if (appointmentsRes.ok) {
-        const appointmentsData = await appointmentsRes.json();
-        const appointmentsList = appointmentsData.appointments || [];
-        setAppointments(appointmentsList);
+        const appointmentsData = await appointmentsRes.json()
+        const appointmentsList = appointmentsData.appointments || []
+        setAppointments(appointmentsList)
 
         // Get unique patient IDs from appointments
-        const patientIds = [
-          ...new Set(appointmentsList.map((apt: any) => apt.patientId)),
-        ];
+        const patientIds = [...new Set(appointmentsList.map((apt: any) => apt.patientId))]
 
         // Fetch all patients to get their full details
         const patientsRes = await fetch("/api/patients", {
           headers: { Authorization: `Bearer ${token}` },
-        });
+        })
         if (patientsRes.ok) {
-          const patientsData = await patientsRes.json();
-          const allPatientsList = patientsData.patients || [];
+          const patientsData = await patientsRes.json()
+          const allPatientsList = patientsData.patients || []
 
           if (user?.role === "doctor") {
-            const patientsWithAppointments = allPatientsList.filter((p: any) =>
-              patientIds.includes(p._id)
-            );
-            setAppointmentPatients(patientsWithAppointments);
+            const patientsWithAppointments = allPatientsList.filter((p: any) => patientIds.includes(p._id))
+            setAppointmentPatients(patientsWithAppointments)
           } else {
-            setAppointmentPatients(allPatientsList);
+            setAppointmentPatients(allPatientsList)
           }
         }
       }
     } catch (error) {
-      console.error("Failed to fetch reports and patients:", error);
+      console.error("Failed to fetch reports and patients:", error)
     }
-  };
+  }
 
   const fetchReports = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       const appointmentsRes = await fetch("/api/appointments", {
         headers: { Authorization: `Bearer ${token}` },
-      });
+      })
 
       if (!appointmentsRes.ok) {
-        toast.error("Failed to fetch appointments");
-        setLoading(false);
-        return;
+        toast.error("Failed to fetch appointments")
+        setLoading(false)
+        return
       }
 
-      const appointmentsData = await appointmentsRes.json();
-      const appointmentsList = appointmentsData.appointments || [];
-      setAppointments(appointmentsList);
+      const appointmentsData = await appointmentsRes.json()
+      const appointmentsList = appointmentsData.appointments || []
+      setAppointments(appointmentsList)
 
       const res = await fetch("/api/appointment-reports", {
         headers: { Authorization: `Bearer ${token}` },
-      });
+      })
 
       if (res.ok) {
-        const data = await res.json();
-        const allReports = data.reports || [];
-        setReports(allReports);
+        const data = await res.json()
+        const allReports = data.reports || []
+        setReports(allReports)
 
         if (user?.role === "doctor") {
-          const statusMap: any = {};
+          const statusMap: any = {}
 
           // Get all appointments owned by the current doctor (not cancelled)
           const relevantAppointments = appointmentsList.filter((apt: any) => {
-            const isOwner =
-              String(apt.doctorId) === String(user.userId) ||
-              String(apt.doctorId) === String(user.id);
+            const isOwner = String(apt.doctorId) === String(user.userId) || String(apt.doctorId) === String(user.id)
             const isOriginalOwner =
-              String(apt.originalDoctorId) === String(user.userId) ||
-              String(apt.originalDoctorId) === String(user.id);
-            const notCancelled =
-              apt.status !== "cancelled" && apt.status !== "no-show";
-            return (isOwner || isOriginalOwner) && notCancelled;
-          });
+              String(apt.originalDoctorId) === String(user.userId) || String(apt.originalDoctorId) === String(user.id)
+            const notCancelled = apt.status !== "cancelled" && apt.status !== "no-show"
+            return (isOwner || isOriginalOwner) && notCancelled
+          })
 
           // Mark all relevant appointments as pending initially
           relevantAppointments.forEach((apt: any) => {
-            const aptId = apt.id || apt._id;
-            statusMap[aptId] = "pending";
-          });
+            const aptId = apt.id || apt._id
+            statusMap[aptId] = "pending"
+          })
 
           allReports.forEach((report: any) => {
-            const reportAppointmentId =
-              report.appointmentId?._id || report.appointmentId;
+            const reportAppointmentId = report.appointmentId?._id || report.appointmentId
             if (reportAppointmentId) {
               // Check if this appointment belongs to the current doctor (or they're the original doctor)
               const appointment = relevantAppointments.find((apt: any) => {
-                const aptId = apt._id || apt.id;
-                return String(aptId) === String(reportAppointmentId);
-              });
+                const aptId = apt._id || apt.id
+                return String(aptId) === String(reportAppointmentId)
+              })
 
               if (appointment) {
-                statusMap[reportAppointmentId] = "created";
+                statusMap[reportAppointmentId] = "created"
               }
             }
-          });
+          })
 
-          setPatientReportStatus(statusMap);
+          setPatientReportStatus(statusMap)
         }
       } else {
-        toast.error("Failed to fetch reports");
+        toast.error("Failed to fetch reports")
       }
     } catch (error) {
-      console.error("Failed to fetch reports:", error);
-      toast.error("Error fetching reports");
+      console.error("Failed to fetch reports:", error)
+      toast.error("Error fetching reports")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const fetchPatients = async () => {
     try {
       const res = await fetch("/api/patients", {
         headers: { Authorization: `Bearer ${token}` },
-      });
+      })
       if (res.ok) {
-        const data = await res.json();
-        setPatients(data.patients || []);
+        const data = await res.json()
+        setPatients(data.patients || [])
       }
     } catch (error) {
-      console.error("Failed to fetch patients:", error);
+      console.error("Failed to fetch patients:", error)
     }
-  };
+  }
 
   const handleViewReport = (report: any) => {
-    setSelectedReport(report);
-    setShowReportModal(true);
-  };
+    setSelectedReport(report)
+    setShowReportModal(true)
+  }
 
   const handleDeleteReport = async () => {
-    if (!reportToDelete) return;
+    if (!reportToDelete) return
 
-    setIsDeleting(true);
+    setIsDeleting(true)
     try {
-      const res = await fetch(
-        `/api/appointment-reports/${reportToDelete._id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await fetch(`/api/appointment-reports/${reportToDelete._id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
 
       if (res.ok) {
-        setReports(reports.filter((r) => r._id !== reportToDelete._id));
-        toast.success("Report deleted successfully");
-        setShowDeleteModal(false);
-        setReportToDelete(null);
+        setReports(reports.filter((r) => r._id !== reportToDelete._id))
+        toast.success("Report deleted successfully")
+        setShowDeleteModal(false)
+        setReportToDelete(null)
       } else {
-        toast.error("Failed to delete report");
+        toast.error("Failed to delete report")
       }
     } catch (error) {
-      console.error("Failed to delete report:", error);
-      toast.error("Error deleting report");
+      console.error("Failed to delete report:", error)
+      toast.error("Error deleting report")
     } finally {
-      setIsDeleting(false);
+      setIsDeleting(false)
     }
-  };
+  }
 
   const handleEditReport = (report: any) => {
-    setEditingReport(report);
+    setEditingReport(report)
     setEditFormData({
       findings: report.findings || "",
       notes: report.notes || "",
       followUpDetails: report.followUpDetails || "",
-      nextVisit: report.nextVisit
-        ? new Date(report.nextVisit).toISOString().split("T")[0]
-        : "",
-    });
-    setShowEditModal(true);
-  };
+      nextVisit: report.nextVisit ? new Date(report.nextVisit).toISOString().split("T")[0] : "",
+    })
+    setShowEditModal(true)
+  }
 
   const handleSaveEditReport = async () => {
-    if (!editingReport) return;
+    if (!editingReport) return
 
-    setIsSaving(true);
+    setIsSaving(true)
     try {
       const res = await fetch(`/api/appointment-reports/${editingReport._id}`, {
         method: "PATCH",
@@ -257,158 +231,108 @@ export default function MedicalReportsPage() {
           findings: editFormData.findings,
           notes: editFormData.notes,
           followUpDetails: editFormData.followUpDetails,
-          nextVisit: editFormData.nextVisit
-            ? new Date(editFormData.nextVisit)
-            : null,
+          nextVisit: editFormData.nextVisit ? new Date(editFormData.nextVisit) : null,
         }),
-      });
+      })
 
       if (res.ok) {
-        const updatedReport = await res.json();
-        setReports(
-          reports.map((r) => (r._id === updatedReport._id ? updatedReport : r))
-        );
-        toast.success("Report updated successfully");
-        setShowEditModal(false);
-        setEditingReport(null);
+        const updatedReport = await res.json()
+        setReports(reports.map((r) => (r._id === updatedReport._id ? updatedReport : r)))
+        toast.success("Report updated successfully")
+        setShowEditModal(false)
+        setEditingReport(null)
       } else {
-        toast.error("Failed to update report");
+        toast.error("Failed to update report")
       }
     } catch (error) {
-      console.error("Failed to update report:", error);
-      toast.error("Error updating report");
+      console.error("Failed to update report:", error)
+      toast.error("Error updating report")
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }
 
   const handleDownloadReport = (report: any) => {
     try {
-      generateReportPDF(report);
-      toast.success("Report downloaded successfully");
+      generateReportPDF(report)
+      toast.success("Report downloaded successfully")
     } catch (error) {
-      console.error("Failed to generate PDF:", error);
-      toast.error("Failed to download report");
+      console.error("Failed to generate PDF:", error)
+      toast.error("Failed to download report")
     }
-  };
+  }
 
-  const patientsForDropdown =
-    user?.role === "doctor" ? appointmentPatients : patients;
-  const filteredPatients = patientsForDropdown.filter((p) =>
-    p.name.toLowerCase().includes(patientSearch.toLowerCase())
-  );
+  const patientsForDropdown = user?.role === "doctor" ? appointmentPatients : patients
+  const filteredPatients = patientsForDropdown.filter((p) => p.name.toLowerCase().includes(patientSearch.toLowerCase()))
 
   const getDisplayData = () => {
     if (user?.role === "doctor") {
-      const patientMap: any = {};
+      const patientMap: any = {}
       appointmentPatients.forEach((p: any) => {
-        patientMap[p._id] = p;
-      });
+        patientMap[p._id] = p
+      })
 
-      return Object.entries(patientReportStatus).map(
-        ([appointmentId, status]: [string, any]) => {
-          const report = reports.find(
-            (r) => r.appointmentId?._id === appointmentId
-          );
+      return Object.entries(patientReportStatus).map(([appointmentId, status]: [string, any]) => {
+        const report = reports.find((r) => r.appointmentId?._id === appointmentId)
 
-          const appointment = appointments.find((a: any) => {
-            const aId = a._id || a.id;
-            return aId === appointmentId || aId?.toString() === appointmentId;
-          });
+        const appointment = appointments.find((a: any) => {
+          const aId = a._id || a.id
+          return aId === appointmentId || aId?.toString() === appointmentId
+        })
 
-          let patientInfo = null;
-          if (report?.patientId) {
-            patientInfo = report.patientId;
-          } else if (
-            appointment?.patientId &&
-            patientMap[appointment.patientId]
-          ) {
-            patientInfo = patientMap[appointment.patientId];
-          }
-
-          return {
-            appointmentId,
-            reportStatus: status,
-            report: report,
-            patientInfo: patientInfo,
-            appointmentStatus: appointment?.status,
-          };
+        let patientInfo = null
+        if (report?.patientId) {
+          patientInfo = report.patientId
+        } else if (appointment?.patientId && patientMap[appointment.patientId]) {
+          patientInfo = patientMap[appointment.patientId]
         }
-      );
-    }
-    return reports;
-  };
 
-  const displayData = getDisplayData();
+        return {
+          appointmentId,
+          reportStatus: status,
+          report: report,
+          patientInfo: patientInfo,
+          appointmentStatus: appointment?.status,
+        }
+      })
+    }
+    return reports
+  }
+
+  const displayData = getDisplayData()
+
   // Filter reports/patients based on search term and patient filter
   const filteredReports = displayData.filter((item: any) => {
     // Apply patient filter
     if (filterPatient) {
-      if (user?.role === "doctor") {
-        const itemPatientId = item.patientInfo?._id;
-        if (itemPatientId !== filterPatient) {
-          return false;
-        }
-      } else {
-        const itemPatientId = item.patientId?._id || item.patientId;
-        if (itemPatientId !== filterPatient) {
-          return false;
-        }
+      const itemId = item._id || item.patientInfo?._id || item.appointmentId
+      if (itemId !== filterPatient) {
+        return false
       }
     }
 
     // Apply search term filter
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase().trim();
-
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
       if (user?.role === "doctor") {
-        // For doctor view, search in patient name, email, phone, and report type
-        const patientName = item.patientInfo?.name || "";
-        const patientEmail = item.patientInfo?.email || "";
-        const patientPhone = item.patientInfo?.phone || "";
-        const appointmentType = item.report?.appointmentId?.type || "";
-        const reportFindings = item.report?.findings || "";
-        const reportNotes = item.report?.notes || "";
-
         return (
-          patientName.toLowerCase().includes(searchLower) ||
-          patientEmail.toLowerCase().includes(searchLower) ||
-          patientPhone.toLowerCase().includes(searchLower) ||
-          appointmentType.toLowerCase().includes(searchLower) ||
-          reportFindings.toLowerCase().includes(searchLower) ||
-          reportNotes.toLowerCase().includes(searchLower)
-        );
+          item.patientInfo?.name?.toLowerCase().includes(searchLower) ||
+          item.report?.appointmentId?.type?.toLowerCase().includes(searchLower)
+        )
       } else {
-        // For admin/receptionist, search in multiple fields
-        const patientName = item.patientId?.name || "";
-        const patientEmail = item.patientId?.email || "";
-        const patientPhone = item.patientId?.phone || "";
-        const doctorName = item.doctorId?.name || "";
-        const findings = item.findings || "";
-        const notes = item.notes || "";
-        const followUpDetails = item.followUpDetails || "";
-
-        // Check procedures
-        const hasProcedureMatch =
-          item.procedures?.some((p: any) =>
-            p.name?.toLowerCase().includes(searchLower)
-          ) || false;
-
+        // For others, search in report details
         return (
-          patientName.toLowerCase().includes(searchLower) ||
-          patientEmail.toLowerCase().includes(searchLower) ||
-          patientPhone.toLowerCase().includes(searchLower) ||
-          doctorName.toLowerCase().includes(searchLower) ||
-          findings.toLowerCase().includes(searchLower) ||
-          notes.toLowerCase().includes(searchLower) ||
-          followUpDetails.toLowerCase().includes(searchLower) ||
-          hasProcedureMatch
-        );
+          item.patientId?.name?.toLowerCase().includes(searchLower) ||
+          item.doctorId?.name?.toLowerCase().includes(searchLower) ||
+          item.procedures?.some((p: any) => p.name.toLowerCase().includes(searchLower)) ||
+          item.findings?.toLowerCase().includes(searchLower) ||
+          item.notes?.toLowerCase().includes(searchLower)
+        )
       }
     }
 
-    return true;
-  });
+    return true
+  })
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredReports.length / itemsPerPage)
@@ -429,9 +353,7 @@ export default function MedicalReportsPage() {
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="mb-8">
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                {user?.role === "doctor"
-                  ? "Patient Medical Reports Status"
-                  : "Medical Reports"}
+                {user?.role === "doctor" ? "Patient Medical Reports Status" : "Medical Reports"}
               </h1>
               <p className="text-muted-foreground text-sm mt-1">
                 {user?.role === "doctor"
@@ -443,22 +365,19 @@ export default function MedicalReportsPage() {
             {/* Search and Filters */}
             <div className="bg-card rounded-lg shadow-md border border-border p-4 mb-6">
               <div className="flex flex-col lg:flex-row gap-4">
-                {/* General Search Input */}
+                {/* Search Input */}
                 <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder={
-                        user?.role === "doctor"
-                          ? "Search patients by name, email, phone, or report details..."
-                          : "Search by patient name, doctor, procedures, findings, or notes..."
-                      }
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    placeholder={
+                      user?.role === "doctor"
+                        ? "Search by patient name or appointment type..."
+                        : "Search by patient, doctor, procedure, findings, or notes..."
+                    }
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                  />
                 </div>
 
                 {/* Patient Filter */}
@@ -466,11 +385,11 @@ export default function MedicalReportsPage() {
                   <div className="relative flex-1">
                     <input
                       type="text"
-                      placeholder="Filter by specific patient..."
+                      placeholder="Filter by patient..."
                       value={patientSearch}
                       onChange={(e) => {
-                        setPatientSearch(e.target.value);
-                        setShowPatientDropdown(true);
+                        setPatientSearch(e.target.value)
+                        setShowPatientDropdown(true)
                       }}
                       onFocus={() => setShowPatientDropdown(true)}
                       className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
@@ -480,9 +399,9 @@ export default function MedicalReportsPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setFilterPatient("");
-                            setPatientSearch("");
-                            setShowPatientDropdown(false);
+                            setFilterPatient("")
+                            setPatientSearch("")
+                            setShowPatientDropdown(false)
                           }}
                           className="w-full text-left px-4 py-2 hover:bg-muted transition-colors text-sm text-foreground border-b border-border"
                         >
@@ -493,9 +412,9 @@ export default function MedicalReportsPage() {
                             key={p._id}
                             type="button"
                             onClick={() => {
-                              setFilterPatient(p._id);
-                              setPatientSearch(p.name);
-                              setShowPatientDropdown(false);
+                              setFilterPatient(p._id)
+                              setPatientSearch(p.name)
+                              setShowPatientDropdown(false)
                             }}
                             className="w-full text-left px-4 py-2 hover:bg-muted transition-colors text-sm text-foreground"
                           >
@@ -510,17 +429,14 @@ export default function MedicalReportsPage() {
                 {/* Controls */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex items-center gap-2">
-                    <label
-                      htmlFor="itemsPerPage"
-                      className="text-sm text-muted-foreground whitespace-nowrap"
-                    >
+                    <label htmlFor="itemsPerPage" className="text-sm text-muted-foreground whitespace-nowrap">
                       Rows:
                     </label>
                     <select
                       id="itemsPerPage"
                       value={itemsPerPage}
                       onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                      className="px-2 py-1 bg-input border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary text-foreground text-sm"
+                      className="px-2 py-1 bg-input border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary text-foreground text-sm"
                     >
                       <option value="5">5</option>
                       <option value="10">10</option>
@@ -530,65 +446,15 @@ export default function MedicalReportsPage() {
                   </div>
 
                   <button
-                    onClick={() => {
-                      setFilterPatient("");
-                      setPatientSearch("");
-                      setSearchTerm("");
-                    }}
-                    className="flex items-center gap-2 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                    Clear Filters
-                  </button>
-
-                  <button
                     onClick={fetchReports}
                     disabled={loading}
                     className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 cursor-pointer"
                   >
-                    <RefreshCw
-                      className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-                    />
+                    <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                     {loading ? "Loading..." : "Refresh"}
                   </button>
                 </div>
               </div>
-
-              {/* Active Filters Info */}
-              {(filterPatient || searchTerm) && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">
-                      Active filters:
-                    </span>
-                    {filterPatient && (
-                      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded text-xs">
-                        Patient: {patientSearch}
-                        <button
-                          onClick={() => {
-                            setFilterPatient("");
-                            setPatientSearch("");
-                          }}
-                          className="hover:text-blue-600"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    )}
-                    {searchTerm && (
-                      <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded text-xs">
-                        Search: "{searchTerm}"
-                        <button
-                          onClick={() => setSearchTerm("")}
-                          className="hover:text-green-600"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Reports/Patients List */}
@@ -608,9 +474,7 @@ export default function MedicalReportsPage() {
                         style={{ animationDelay: "0.2s" }}
                       ></div>
                     </div>
-                    <span className="text-muted-foreground text-sm">
-                      Loading...
-                    </span>
+                    <span className="text-muted-foreground text-sm">Loading...</span>
                   </div>
                 </div>
               )}
@@ -623,22 +487,8 @@ export default function MedicalReportsPage() {
                       <div className="bg-muted/40 rounded-lg p-8 text-center">
                         <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
                         <p className="text-muted-foreground">
-                          {searchTerm || filterPatient
-                            ? "No results found matching your criteria"
-                            : "No data found"}
+                          {searchTerm || filterPatient ? "No results found matching your criteria" : "No data found"}
                         </p>
-                        {(searchTerm || filterPatient) && (
-                          <button
-                            onClick={() => {
-                              setFilterPatient("");
-                              setPatientSearch("");
-                              setSearchTerm("");
-                            }}
-                            className="mt-4 text-sm text-primary hover:text-primary/80"
-                          >
-                            Clear all filters
-                          </button>
-                        )}
                       </div>
                     ) : user?.role === "doctor" ? (
                       currentReports.map((appointment: any) => (
@@ -649,22 +499,13 @@ export default function MedicalReportsPage() {
                           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                             <div className="flex-1 min-w-0">
                               <h3 className="text-lg font-semibold text-foreground truncate">
-                                {appointment.patientInfo?.name ||
-                                  "Unknown Patient"}
+                                {appointment.patientInfo?.name || "Unknown Patient"}
                               </h3>
                               <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                                <span>
-                                  Email:{" "}
-                                  {appointment.patientInfo?.email || "N/A"}
-                                </span>
-                                <span>
-                                  Phone:{" "}
-                                  {appointment.patientInfo?.phone || "N/A"}
-                                </span>
+                                <span>Email: {appointment.patientInfo?.email || "N/A"}</span>
+                                <span>Phone: {appointment.patientInfo?.phone || "N/A"}</span>
                                 {appointment.report?.doctorId?.name && (
-                                  <span>
-                                    Doctor: {appointment.report.doctorId.name}
-                                  </span>
+                                  <span>Doctor: {appointment.report.doctorId.name}</span>
                                 )}
                               </div>
                               <div className="mt-3">
@@ -675,9 +516,7 @@ export default function MedicalReportsPage() {
                                       : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                                   }`}
                                 >
-                                  {appointment.reportStatus === "created"
-                                    ? "✓ Report Created"
-                                    : "⏳ Pending Report"}
+                                  {appointment.reportStatus === "created" ? "✓ Report Created" : "⏳ Pending Report"}
                                 </span>
                               </div>
                             </div>
@@ -685,54 +524,38 @@ export default function MedicalReportsPage() {
                               {appointment.report && (
                                 <>
                                   <button
-                                    onClick={() =>
-                                      handleViewReport(appointment.report)
-                                    }
+                                    onClick={() => handleViewReport(appointment.report)}
                                     className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
                                   >
                                     <Eye className="w-4 h-4" />
-                                    <span className="hidden sm:inline">
-                                      View
-                                    </span>
+                                    <span className="hidden sm:inline">View</span>
                                   </button>
-                                  {appointment.appointmentStatus !==
-                                    "completed" && (
+                                  {appointment.appointmentStatus !== "completed" && (
                                     <button
-                                      onClick={() =>
-                                        handleEditReport(appointment.report)
-                                      }
+                                      onClick={() => handleEditReport(appointment.report)}
                                       className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
                                     >
                                       <Edit2 className="w-4 h-4" />
-                                      <span className="hidden sm:inline">
-                                        Edit
-                                      </span>
+                                      <span className="hidden sm:inline">Edit</span>
                                     </button>
                                   )}
                                   <button
-                                    onClick={() =>
-                                      handleDownloadReport(appointment.report)
-                                    }
+                                    onClick={() => handleDownloadReport(appointment.report)}
                                     className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
                                   >
                                     <Download className="w-4 h-4" />
-                                    <span className="hidden sm:inline">
-                                      Download
-                                    </span>
+                                    <span className="hidden sm:inline">Download</span>
                                   </button>
-                                  {appointment.appointmentStatus !==
-                                    "completed" && (
+                                  {appointment.appointmentStatus !== "completed" && (
                                     <button
                                       onClick={() => {
-                                        setReportToDelete(appointment.report);
-                                        setShowDeleteModal(true);
+                                        setReportToDelete(appointment.report)
+                                        setShowDeleteModal(true)
                                       }}
                                       className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer text-white"
                                     >
                                       <Trash2 className="w-4 h-4" />
-                                      <span className="hidden sm:inline">
-                                        Delete
-                                      </span>
+                                      <span className="hidden sm:inline">Delete</span>
                                     </button>
                                   )}
                                 </>
@@ -753,21 +576,12 @@ export default function MedicalReportsPage() {
                                 {report.patientId?.name || "Unknown Patient"}
                               </h3>
                               <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                                <span>
-                                  Doctor: {report.doctorId?.name || "Unknown"}
-                                </span>
-                                <span>
-                                  Date:{" "}
-                                  {new Date(
-                                    report.createdAt
-                                  ).toLocaleDateString()}
-                                </span>
+                                <span>Doctor: {report.doctorId?.name || "Unknown"}</span>
+                                <span>Date: {new Date(report.createdAt).toLocaleDateString()}</span>
                               </div>
                               <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                                 <span className="font-medium">Procedures:</span>{" "}
-                                {report.procedures
-                                  ?.map((p: any) => p.name)
-                                  .join(", ") || "N/A"}
+                                {report.procedures?.map((p: any) => p.name).join(", ") || "N/A"}
                               </p>
                             </div>
                             <div className="flex gap-2 flex-wrap sm:flex-nowrap">
@@ -783,22 +597,18 @@ export default function MedicalReportsPage() {
                                 className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
                               >
                                 <Download className="w-4 h-4" />
-                                <span className="hidden sm:inline">
-                                  Download
-                                </span>
+                                <span className="hidden sm:inline">Download</span>
                               </button>
                               {user?.role !== "doctor" && (
                                 <button
                                   onClick={() => {
-                                    setReportToDelete(report);
-                                    setShowDeleteModal(true);
+                                    setReportToDelete(report)
+                                    setShowDeleteModal(true)
                                   }}
                                   className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer text-white"
                                 >
                                   <Trash2 className="w-4 h-4" />
-                                  <span className="hidden sm:inline">
-                                    Delete
-                                  </span>
+                                  <span className="hidden sm:inline">Delete</span>
                                 </button>
                               )}
                             </div>
@@ -812,26 +622,14 @@ export default function MedicalReportsPage() {
                   {filteredReports.length > 0 && (
                     <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div className="text-sm text-muted-foreground">
-                        Showing{" "}
-                        <span className="font-medium">
-                          {filteredReports.length === 0 ? 0 : startIndex + 1}
-                        </span>{" "}
-                        to{" "}
-                        <span className="font-medium">
-                          {Math.min(endIndex, filteredReports.length)}
-                        </span>{" "}
-                        of{" "}
-                        <span className="font-medium">
-                          {filteredReports.length}
-                        </span>{" "}
-                        results
+                        Showing <span className="font-medium">{filteredReports.length === 0 ? 0 : startIndex + 1}</span>{" "}
+                        to <span className="font-medium">{Math.min(endIndex, filteredReports.length)}</span> of{" "}
+                        <span className="font-medium">{filteredReports.length}</span> results
                       </div>
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() =>
-                            setCurrentPage((prev) => Math.max(prev - 1, 1))
-                          }
+                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                           disabled={currentPage === 1}
                           className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
@@ -840,16 +638,9 @@ export default function MedicalReportsPage() {
 
                         <div className="flex items-center gap-1">
                           {Array.from({ length: totalPages }, (_, i) => i + 1)
-                            .filter(
-                              (page) =>
-                                page === 1 ||
-                                page === totalPages ||
-                                Math.abs(page - currentPage) <= 1
-                            )
+                            .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                             .map((page, index, array) => {
-                              const showEllipsis =
-                                index < array.length - 1 &&
-                                array[index + 1] - page > 1;
+                              const showEllipsis = index < array.length - 1 && array[index + 1] - page > 1
                               return (
                                 <div key={page} className="flex items-center">
                                   <button
@@ -862,25 +653,15 @@ export default function MedicalReportsPage() {
                                   >
                                     {page}
                                   </button>
-                                  {showEllipsis && (
-                                    <span className="px-1 text-muted-foreground">
-                                      ...
-                                    </span>
-                                  )}
+                                  {showEllipsis && <span className="px-1 text-muted-foreground">...</span>}
                                 </div>
-                              );
+                              )
                             })}
                         </div>
 
                         <button
-                          onClick={() =>
-                            setCurrentPage((prev) =>
-                              Math.min(prev + 1, totalPages)
-                            )
-                          }
-                          disabled={
-                            currentPage === totalPages || totalPages === 0
-                          }
+                          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages || totalPages === 0}
                           className="p-2 rounded border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <ChevronRight className="w-4 h-4" />
@@ -898,20 +679,15 @@ export default function MedicalReportsPage() {
                   {/* Modal Header */}
                   <div className="flex justify-between items-start p-6 sm:p-8 border-b border-border sticky top-0 bg-gradient-to-r from-card to-muted/30">
                     <div className="min-w-0 pr-4">
-                      <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-                        Medical Report
-                      </h2>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Medical Report</h2>
                       <p className="text-sm text-muted-foreground mt-2">
                         Generated on{" "}
-                        {new Date(selectedReport.createdAt).toLocaleDateString(
-                          "en-US",
-                          {
-                            weekday: "long",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          }
-                        )}
+                        {new Date(selectedReport.createdAt).toLocaleDateString("en-US", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
                       </p>
                     </div>
                     <button
@@ -939,17 +715,13 @@ export default function MedicalReportsPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-                            Email
-                          </p>
+                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">Email</p>
                           <p className="text-foreground font-semibold mt-2 text-sm sm:text-base truncate">
                             {selectedReport.patientId?.email || "Not provided"}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-                            Phone
-                          </p>
+                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">Phone</p>
                           <p className="text-foreground font-semibold mt-2 text-sm sm:text-base truncate">
                             {selectedReport.patientId?.phone || "N/A"}
                           </p>
@@ -965,9 +737,7 @@ export default function MedicalReportsPage() {
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <div>
-                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-                            Name
-                          </p>
+                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">Name</p>
                           <p className="text-foreground font-semibold mt-2 text-sm sm:text-base truncate">
                             {selectedReport.doctorId?.name || "N/A"}
                           </p>
@@ -977,8 +747,7 @@ export default function MedicalReportsPage() {
                             Specialty
                           </p>
                           <p className="text-foreground font-semibold mt-2 text-sm sm:text-base truncate">
-                            {selectedReport.doctorId?.specialty ||
-                              "General Dentistry"}
+                            {selectedReport.doctorId?.specialty || "General Dentistry"}
                           </p>
                         </div>
                       </div>
@@ -991,31 +760,21 @@ export default function MedicalReportsPage() {
                         Clinical Findings
                       </h3>
 
-                      {selectedReport.procedures &&
-                        selectedReport.procedures.length > 0 && (
-                          <div className="bg-muted/40 rounded-xl p-5 sm:p-6 border border-border">
-                            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-3">
-                              Procedures Performed
-                            </p>
-                            <ul className="text-foreground space-y-2">
-                              {selectedReport.procedures.map(
-                                (p: any, idx: number) => (
-                                  <li
-                                    key={idx}
-                                    className="flex items-start gap-3 text-sm sm:text-base"
-                                  >
-                                    <span className="text-primary font-bold flex-shrink-0 mt-0.5">
-                                      ✓
-                                    </span>
-                                    <span className="break-words font-medium">
-                                      {p.name}
-                                    </span>
-                                  </li>
-                                )
-                              )}
-                            </ul>
-                          </div>
-                        )}
+                      {selectedReport.procedures && selectedReport.procedures.length > 0 && (
+                        <div className="bg-muted/40 rounded-xl p-5 sm:p-6 border border-border">
+                          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-3">
+                            Procedures Performed
+                          </p>
+                          <ul className="text-foreground space-y-2">
+                            {selectedReport.procedures.map((p: any, idx: number) => (
+                              <li key={idx} className="flex items-start gap-3 text-sm sm:text-base">
+                                <span className="text-primary font-bold flex-shrink-0 mt-0.5">✓</span>
+                                <span className="break-words font-medium">{p.name}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
                       {selectedReport.findings && (
                         <div className="bg-muted/40 rounded-xl p-5 sm:p-6 border border-border">
@@ -1045,9 +804,7 @@ export default function MedicalReportsPage() {
                             Recommended Next Visit
                           </p>
                           <p className="text-foreground font-semibold text-sm sm:text-base">
-                            {new Date(
-                              selectedReport.nextVisit
-                            ).toLocaleDateString("en-US", {
+                            {new Date(selectedReport.nextVisit).toLocaleDateString("en-US", {
                               weekday: "long",
                               year: "numeric",
                               month: "long",
@@ -1096,18 +853,15 @@ export default function MedicalReportsPage() {
                   {/* Modal Header */}
                   <div className="flex justify-between items-start p-6 sm:p-8 border-b border-border sticky top-0 bg-gradient-to-r from-card to-muted/30">
                     <div className="min-w-0 pr-4">
-                      <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-                        Edit Medical Report
-                      </h2>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Edit Medical Report</h2>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Update report details for{" "}
-                        {editingReport.patientId?.name}
+                        Update report details for {editingReport.patientId?.name}
                       </p>
                     </div>
                     <button
                       onClick={() => {
-                        setShowEditModal(false);
-                        setEditingReport(null);
+                        setShowEditModal(false)
+                        setEditingReport(null)
                       }}
                       className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-2 hover:bg-muted rounded-lg flex-shrink-0"
                     >
@@ -1118,17 +872,10 @@ export default function MedicalReportsPage() {
                   <div className="p-6 sm:p-8 space-y-6">
                     {/* Findings */}
                     <div>
-                      <label className="block text-sm font-semibold text-foreground mb-2">
-                        Clinical Findings
-                      </label>
+                      <label className="block text-sm font-semibold text-foreground mb-2">Clinical Findings</label>
                       <textarea
                         value={editFormData.findings}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            findings: e.target.value,
-                          })
-                        }
+                        onChange={(e) => setEditFormData({ ...editFormData, findings: e.target.value })}
                         className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm min-h-[120px]"
                         placeholder="Enter clinical findings..."
                       />
@@ -1136,17 +883,10 @@ export default function MedicalReportsPage() {
 
                     {/* Notes */}
                     <div>
-                      <label className="block text-sm font-semibold text-foreground mb-2">
-                        Additional Notes
-                      </label>
+                      <label className="block text-sm font-semibold text-foreground mb-2">Additional Notes</label>
                       <textarea
                         value={editFormData.notes}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            notes: e.target.value,
-                          })
-                        }
+                        onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
                         className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm min-h-[120px]"
                         placeholder="Enter additional notes..."
                       />
@@ -1154,17 +894,10 @@ export default function MedicalReportsPage() {
 
                     {/* Follow-up Details */}
                     <div>
-                      <label className="block text-sm font-semibold text-foreground mb-2">
-                        Follow-up Instructions
-                      </label>
+                      <label className="block text-sm font-semibold text-foreground mb-2">Follow-up Instructions</label>
                       <textarea
                         value={editFormData.followUpDetails}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            followUpDetails: e.target.value,
-                          })
-                        }
+                        onChange={(e) => setEditFormData({ ...editFormData, followUpDetails: e.target.value })}
                         className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm min-h-[100px]"
                         placeholder="Enter follow-up instructions..."
                       />
@@ -1172,18 +905,11 @@ export default function MedicalReportsPage() {
 
                     {/* Next Visit Date */}
                     <div>
-                      <label className="block text-sm font-semibold text-foreground mb-2">
-                        Next Visit Date
-                      </label>
+                      <label className="block text-sm font-semibold text-foreground mb-2">Next Visit Date</label>
                       <input
                         type="date"
                         value={editFormData.nextVisit}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            nextVisit: e.target.value,
-                          })
-                        }
+                        onChange={(e) => setEditFormData({ ...editFormData, nextVisit: e.target.value })}
                         className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
                       />
                     </div>
@@ -1200,8 +926,8 @@ export default function MedicalReportsPage() {
                     </button>
                     <button
                       onClick={() => {
-                        setShowEditModal(false);
-                        setEditingReport(null);
+                        setShowEditModal(false)
+                        setEditingReport(null)
                       }}
                       className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-3 rounded-lg transition-colors font-semibold cursor-pointer text-sm sm:text-base"
                     >
@@ -1217,15 +943,11 @@ export default function MedicalReportsPage() {
               isOpen={showDeleteModal}
               title="Delete Medical Report"
               description="Are you sure you want to delete this medical report? This action cannot be undone."
-              itemName={
-                reportToDelete
-                  ? `Report for ${reportToDelete.patientId?.name}`
-                  : undefined
-              }
+              itemName={reportToDelete ? `Report for ${reportToDelete.patientId?.name}` : undefined}
               onConfirm={handleDeleteReport}
               onCancel={() => {
-                setShowDeleteModal(false);
-                setReportToDelete(null);
+                setShowDeleteModal(false)
+                setReportToDelete(null)
               }}
               isLoading={isDeleting}
             />
@@ -1233,5 +955,5 @@ export default function MedicalReportsPage() {
         </main>
       </div>
     </ProtectedRoute>
-  );
+  )
 }
