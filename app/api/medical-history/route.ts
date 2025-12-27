@@ -76,10 +76,15 @@ export async function GET(request: NextRequest) {
         hasAppointment: !!hasAppointment,
       })
 
+      console.log("[v0] Doctor access granted for all medical history viewing", currentDoctorIdStr)
+
+      /* 
+      // Removed restricted access logic to allow all doctors to see patient history
       if (!isCurrentAssignedDoctor && !wasPreviouslyAssigned && !hasAppointment) {
         console.error("[v0] Access denied - doctor not assigned to patient and no appointment")
         return NextResponse.json({ error: "Access denied" }, { status: 403 })
       }
+      */
     }
 
     const history = await MedicalHistory.findOne({ patientId }).populate("doctorId", "name specialty").lean()

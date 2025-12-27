@@ -45,6 +45,7 @@ userSchema.pre("save", async function (next) {
 const patientSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true },
+  additionalPhones: { type: [String], default: [] },
   email: {
     type: String,
     required: false,
@@ -146,9 +147,25 @@ const billingSchema = new mongoose.Schema({
   ],
   totalAmount: { type: Number, required: true },
   paidAmount: { type: Number, default: 0 },
+  transactions: [
+    {
+      _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+      transactionId: { type: String, required: true },
+      paymentStatus: { type: String, enum: ["Paid", "Partially Paid"], default: "Paid" },
+      paymentSplits: [
+        {
+          paymentType: { type: String, required: true },
+          amount: { type: Number, required: true },
+        },
+      ],
+      totalAmount: { type: Number, required: true },
+      date: { type: Date, default: Date.now },
+      notes: String,
+    },
+  ],
   paymentSplits: [
     {
-      paymentType: { type: String, required: true }, // "MasterCard", "Cash", "Insurance", etc.
+      paymentType: { type: String, required: true },
       amount: { type: Number, required: true },
       _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
     },
@@ -408,6 +425,7 @@ export async function initializeDB() {
           await Patient.create({
             name: "John Doe",
             phone: "9876543210",
+            additionalPhones: [],
             email: "john@example.com",
             dob: "1990-05-15",
             idNumber: "ID123456",

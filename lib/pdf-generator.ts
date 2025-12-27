@@ -80,22 +80,36 @@ export function generateReportPDF(report: ReportData) {
 
   /* -------------------- PATIENT INFO -------------------- */
   y = drawSectionHeader(doc, "PATIENT INFORMATION", y, blue, pageWidth)
-  y = drawInfoCard(doc, [
-    `Name: ${report.patientId?.name || "N/A"}`,
-    `Email: ${report.patientId?.email || "N/A"}`,
-    `Phone: ${report.patientId?.phone || "N/A"}`,
-    report.patientId?.dateOfBirth ? `Date of Birth: ${format(new Date(report.patientId.dateOfBirth), "MMMM dd, yyyy")}` : "",
-    report.patientId?.address ? `Address: ${report.patientId.address}` : "",
-  ].filter(Boolean), y, softGray, pageWidth)
+  y = drawInfoCard(
+    doc,
+    [
+      `Name: ${report.patientId?.name || "N/A"}`,
+      `Email: ${report.patientId?.email || "N/A"}`,
+      `Phone: ${report.patientId?.phone || "N/A"}`,
+      report.patientId?.dateOfBirth
+        ? `Date of Birth: ${format(new Date(report.patientId.dateOfBirth), "MMMM dd, yyyy")}`
+        : "",
+      report.patientId?.address ? `Address: ${report.patientId.address}` : "",
+    ].filter(Boolean),
+    y,
+    softGray,
+    pageWidth,
+  )
 
   /* -------------------- DOCTOR INFO -------------------- */
   y = drawSectionHeader(doc, "ATTENDING DOCTOR", y, blue, pageWidth)
-  y = drawInfoCard(doc, [
-    `Name: ${report.doctorId?.name || "N/A"}`,
-    `Specialty: ${report.doctorId?.specialty || "General Dentistry"}`,
-    report.doctorId?.email ? `Email: ${report.doctorId.email}` : "",
-    report.doctorId?.licenseNumber ? `License #: ${report.doctorId.licenseNumber}` : "",
-  ].filter(Boolean), y, softGray, pageWidth)
+  y = drawInfoCard(
+    doc,
+    [
+      `Name: ${report.doctorId?.name || "N/A"}`,
+      `Specialty: ${report.doctorId?.specialty || "General Dentistry"}`,
+      report.doctorId?.email ? `Email: ${report.doctorId.email}` : "",
+      report.doctorId?.licenseNumber ? `License #: ${report.doctorId.licenseNumber}` : "",
+    ].filter(Boolean),
+    y,
+    softGray,
+    pageWidth,
+  )
 
   /* -------------------- PROCEDURES -------------------- */
   y = drawSectionHeader(doc, "PROCEDURES PERFORMED", y, blue, pageWidth)
@@ -230,7 +244,7 @@ function checkNewPage(doc, y, pageHeight) {
   if (y > pageHeight - 70) {
     doc.addPage()
     // reduce top margin for next page content
-    return 20  // was 35 — reduced to 20 for tighter layout
+    return 20 // was 35 — reduced to 20 for tighter layout
   }
   return y
 }

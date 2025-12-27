@@ -53,6 +53,7 @@ export default function PatientsPage() {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+    additionalPhones: "",
     email: "",
     dob: "",
     idNumber: "",
@@ -315,6 +316,12 @@ export default function PatientsPage() {
         body: JSON.stringify({
           ...formData,
           phone: formattedPhone,
+          additionalPhones: formData.additionalPhones
+            ? formData.additionalPhones
+                .split(",")
+                .map((p) => formatPhoneForDatabase(p.trim()))
+                .filter(Boolean)
+            : [],
           email: formData.email || "", // Ensure empty string if not provided
           address: formData.address || "",
           insuranceProvider: formData.insuranceProvider || "", // Ensure empty string if not provided
@@ -466,6 +473,7 @@ export default function PatientsPage() {
     setFormData({
       name: patient.name,
       phone: displayPhone,
+      additionalPhones: patient.additionalPhones?.join(", ") || "",
       email: patient.email,
       dob: patient.dob,
       idNumber: patient.idNumber || "",
@@ -645,6 +653,7 @@ export default function PatientsPage() {
                           medicalConditions: "",
                           assignedDoctorId: "",
                           photoUrl: "", // Reset photoUrl when closing form
+                          additionalPhones: "", // Reset additionalPhones
                         })
                         // Reset showPhotoUpload state when closing the form
                         setShowPhotoUpload(false)
@@ -1303,6 +1312,16 @@ export default function PatientsPage() {
                             {selectedPatient.address || "Not provided"}
                           </span>
                         </div>
+                        {selectedPatient.additionalPhones && selectedPatient.additionalPhones.length > 0 && (
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 py-1">
+                            <span className="text-muted-foreground font-medium text-xs sm:text-sm">
+                              Additional Phones:
+                            </span>
+                            <span className="text-foreground font-semibold text-sm sm:text-base">
+                              {selectedPatient.additionalPhones.map(formatPhoneForDisplay).join(", ")}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 

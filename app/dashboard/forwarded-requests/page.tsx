@@ -598,39 +598,41 @@ export default function ForwardedRequestsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50">
-                        <TableHead className="font-semibold">Patient Name</TableHead>
-                        <TableHead className="font-semibold">Referred By</TableHead>
-                        <TableHead className="font-semibold">Phone</TableHead>
-                        <TableHead className="font-semibold">Email</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold text-right">Action</TableHead>
+                        <TableHead className="px-6 py-4">Patient Name</TableHead>
+                        <TableHead className="px-6 py-4">Referred By</TableHead>
+                        <TableHead className="px-6 py-4">Phone</TableHead>
+                        <TableHead className="px-6 py-4">Email</TableHead>
+                        <TableHead className="px-6 py-4">Status</TableHead>
+                        <TableHead className="px-6 py-4 text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
+
                     <TableBody>
                       {paginatedReferrals.map((referral) => (
                         <TableRow key={referral._id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell className="font-medium text-foreground">{referral.patientName}</TableCell>
-                          <TableCell className="text-muted-foreground">{referral.doctorName}</TableCell>
-                          <TableCell className="text-muted-foreground">{referral.patientPhone}</TableCell>
-                          <TableCell className="text-muted-foreground">{referral.patientEmail || "N/A"}</TableCell>
-                          <TableCell>
+                          <TableCell className="px-6 py-4 font-medium">{referral.patientName}</TableCell>
+                          <TableCell className="px-6 py-4 text-muted-foreground">{referral.doctorName}</TableCell>
+                          <TableCell className="px-6 py-4 text-muted-foreground">{referral.patientPhone}</TableCell>
+                          <TableCell className="px-6 py-4 text-muted-foreground">
+                            {referral.patientEmail || "N/A"}
+                          </TableCell>
+                          <TableCell className="px-6 py-4">
                             <span
-                              className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(referral.status)}`}
+                              className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(
+                                referral.status
+                              )}`}
                             >
-                              {referral.status.charAt(0).toUpperCase() + referral.status.slice(1).replace("-", " ")}
+                              {referral.status}
                             </span>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="px-6 py-4 text-right">
                             {(referral.status === "pending" || referral.status === "in-progress") && (
                               <button
                                 onClick={() => handleOpenReferral(referral)}
-                                disabled={loading.createAppointment || loading.reject} // disable on any loading
+                                disabled={loading.createAppointment || loading.reject}
                                 className="inline-flex items-center gap-1 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-3 py-1 rounded-lg transition-colors font-medium text-sm cursor-pointer disabled:cursor-not-allowed"
                               >
-                                {/* The original code had a check for loading.fetch here which seems incorrect.
-                                    Assuming it was meant to be for loading the details or was a leftover.
-                                    Removed it and added a generic loading state if it were to be applied. */}
-                                {loading.fetch ? ( // Kept for consistency if fetch was meant to be here, but typically not on button click
+                                {loading.fetch ? (
                                   <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                     Loading...
@@ -654,46 +656,95 @@ export default function ForwardedRequestsPage() {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center">
-                    <Pagination>
-                      <PaginationContent>
-                        {currentPage > 1 && (
-                          <PaginationItem>
-                            <PaginationPrevious
-                              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
+                  {/* Pagination Section */}
+                  <div className="flex items-center justify-between mt-6 border-t border-border pt-4 px-4 py-3 ">
+                    {/* Results info */}
+                    <div className="text-sm text-muted-foreground">
+                      Showing{" "}
+                      <span className="font-medium text-foreground">
+                        {paginatedReferrals.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}
+                      </span>{" "}
+                      to{" "}
+                      <span className="font-medium text-foreground">
+                        {Math.min(currentPage * ITEMS_PER_PAGE, filteredReferrals.length)}
+                      </span>{" "}
+                      of{" "}
+                      <span className="font-medium text-foreground">
+                        {filteredReferrals.length}
+                      </span>{" "}
+                      referrals
+                    </div>
 
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              onClick={() => setCurrentPage(page)}
-                              isActive={currentPage === page}
-                              className="cursor-pointer"
+                    {/* Pagination */}
+                      <div className="flex items-center gap-1">
+                        {/* Previous Button */}
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="h-8 w-8 flex items-center justify-center rounded-md border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          aria-label="Previous page"
+                        >
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+
+                        {/* Page Numbers */}
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+                          
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`h-8 w-8 rounded-md text-sm font-medium transition-colors ${
+                                currentPage === pageNum
+                                  ? "bg-primary text-primary-foreground"
+                                  : "border border-border hover:bg-muted"
+                              }`}
                             >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ))}
+                              {pageNum}
+                            </button>
+                          );
+                        })}
 
-                        {currentPage < totalPages && (
-                          <PaginationItem>
-                            <PaginationNext
-                              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                      </PaginationContent>
-                    </Pagination>
+                        {/* Next Button */}
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="h-8 w-8 flex items-center justify-center rounded-md border border-border bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          aria-label="Next page"
+                        >
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                 
                   </div>
-                )}
+                </div>
               </div>
             )}
 

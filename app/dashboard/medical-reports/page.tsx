@@ -35,6 +35,7 @@ export default function MedicalReportsPage() {
     notes: "",
     followUpDetails: "",
     nextVisit: "",
+    nextVisitTime: "",
   })
 
   // Search and pagination state
@@ -181,7 +182,7 @@ export default function MedicalReportsPage() {
 
   const handleDeleteReport = async () => {
     if (!reportToDelete) return
-
+    
     setIsDeleting(true)
     try {
       const res = await fetch(`/api/appointment-reports/${reportToDelete._id}`, {
@@ -192,7 +193,9 @@ export default function MedicalReportsPage() {
       if (res.ok) {
         setReports(reports.filter((r) => r._id !== reportToDelete._id))
         toast.success("Report deleted successfully")
+        
         setShowDeleteModal(false)
+        setLoading(true)
         setReportToDelete(null)
       } else {
         toast.error("Failed to delete report")
@@ -207,11 +210,13 @@ export default function MedicalReportsPage() {
 
   const handleEditReport = (report: any) => {
     setEditingReport(report)
+    const nextVisitDate = report.nextVisit ? new Date(report.nextVisit) : null
     setEditFormData({
       findings: report.findings || "",
       notes: report.notes || "",
       followUpDetails: report.followUpDetails || "",
-      nextVisit: report.nextVisit ? new Date(report.nextVisit).toISOString().split("T")[0] : "",
+      nextVisit: nextVisitDate ? nextVisitDate.toISOString().split("T")[0] : "",
+      nextVisitTime: nextVisitDate ? nextVisitDate.toTimeString().slice(0, 5) : "",
     })
     setShowEditModal(true)
   }
@@ -221,6 +226,13 @@ export default function MedicalReportsPage() {
 
     setIsSaving(true)
     try {
+      let nextVisitValue = null
+      if (editFormData.nextVisit) {
+        const [year, month, day] = editFormData.nextVisit.split("-").map(Number)
+        const [hours, minutes] = (editFormData.nextVisitTime || "00:00").split(":").map(Number)
+        nextVisitValue = new Date(year, month - 1, day, hours, minutes)
+      }
+
       const res = await fetch(`/api/appointment-reports/${editingReport._id}`, {
         method: "PATCH",
         headers: {
@@ -231,7 +243,7 @@ export default function MedicalReportsPage() {
           findings: editFormData.findings,
           notes: editFormData.notes,
           followUpDetails: editFormData.followUpDetails,
-          nextVisit: editFormData.nextVisit ? new Date(editFormData.nextVisit) : null,
+          nextVisit: nextVisitValue,
         }),
       })
 
@@ -903,15 +915,26 @@ export default function MedicalReportsPage() {
                       />
                     </div>
 
-                    {/* Next Visit Date */}
-                    <div>
-                      <label className="block text-sm font-semibold text-foreground mb-2">Next Visit Date</label>
-                      <input
-                        type="date"
-                        value={editFormData.nextVisit}
-                        onChange={(e) => setEditFormData({ ...editFormData, nextVisit: e.target.value })}
-                        className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
-                      />
+                    {/* Next Visit Date and Time */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-foreground mb-2">Next Visit Date</label>
+                        <input
+                          type="date"
+                          value={editFormData.nextVisit}
+                          onChange={(e) => setEditFormData({ ...editFormData, nextVisit: e.target.value })}
+                          className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-foreground mb-2">Next Visit Time</label>
+                        <input
+                          type="time"
+                          value={editFormData.nextVisitTime}
+                          onChange={(e) => setEditFormData({ ...editFormData, nextVisitTime: e.target.value })}
+                          className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
 

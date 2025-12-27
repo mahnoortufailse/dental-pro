@@ -1234,6 +1234,8 @@ export default function AppointmentsTablePage() {
                         <option value="Cleaning">Cleaning</option>
                         <option value="Filling">Filling</option>
                         <option value="Root Canal">Root Canal</option>
+                        {/* </CHANGE> added 'Other' visit type option in getActionItems or form logic */}
+                        <option value="Other">Other</option>
                       </select>
                     </div>
 

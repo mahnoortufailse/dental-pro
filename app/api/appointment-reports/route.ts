@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { appointmentId, patientId, procedures, findings, notes, nextVisit, followUpDetails } = body
+    const { appointmentId, patientId, procedures, findings, notes, nextVisit, nextVisitTime, followUpDetails } = body
 
     if (!appointmentId || !String(appointmentId).trim()) {
       return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 })
@@ -132,6 +132,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
     }
 
+    let nextVisitFull = null
+    if (nextVisit && nextVisitTime) {
+      nextVisitFull = new Date(`${nextVisit}T${nextVisitTime}`)
+    } else if (nextVisit) {
+      nextVisitFull = new Date(nextVisit)
+    }
+
     const reportData = {
       appointmentId: String(appointmentId).trim(),
       patientId: String(patientId).trim(),
@@ -139,7 +146,7 @@ export async function POST(request: NextRequest) {
       procedures: proceduresArray,
       findings: String(findings).trim(),
       notes: String(notes).trim(),
-      nextVisit: nextVisit ? new Date(nextVisit) : null,
+      nextVisit: nextVisitFull,
       followUpDetails: followUpDetails ? String(followUpDetails).trim() : "",
     }
 
@@ -164,7 +171,16 @@ export async function POST(request: NextRequest) {
       const { sendTreatmentReportEmail } = await import("@/lib/nodemailer-service")
 
       const procedureNames = proceduresArray.map((p) => p.name)
-      const nextVisitDateFormatted = nextVisit ? new Date(nextVisit).toLocaleDateString() : undefined
+      const nextVisitFormatted = nextVisitFull
+        ? nextVisitFull.toLocaleString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : undefined
 
       const emailResult = await sendTreatmentReportEmail(
         patientData.email,
@@ -172,7 +188,7 @@ export async function POST(request: NextRequest) {
         doctorExists.name,
         procedureNames,
         findings,
-        nextVisitDateFormatted,
+        nextVisitFormatted,
       )
 
       if (!emailResult.success) {
@@ -183,49 +199,6 @@ export async function POST(request: NextRequest) {
     } else {
       console.warn("  Patient email not found — Treatment report email skipped")
     }
-
-    // if (patientData?.phone) {
-    //   console.log("  Scheduling WhatsApp notification for 1 minute after report creation")
-
-    //     try {
-    //       console.log("  Sending WhatsApp medical report link to patient:", patientData.phone)
-    //       const { sendMedicalReportLink } = await import("@/lib/whatsapp-service")
-    //       const { encryptData } = await import("@/lib/encryption")
-
-    //       // Generate secure token for the report
-    //       const token = encryptData(JSON.stringify({ appointmentId, patientId }))
-    //       const encodedToken = encodeURIComponent(token)
-    //       const reportLink = `${process.env.NEXT_PUBLIC_APP_URL}/public/reports/${encodedToken}`
-
-    //       const appointmentData = await Appointment.findById(appointmentId)
-    //       const appointmentDate = appointmentData?.date
-    //         ? new Date(appointmentData.date).toLocaleDateString("en-US", {
-    //             year: "numeric",
-    //             month: "short",
-    //             day: "numeric",
-    //           })
-    //         : "N/A"
-    //       const appointmentTime = appointmentData?.time || "N/A"
-
-    //       const whatsappResult = await sendMedicalReportLink(
-    //         patientData.phone,
-    //         patientData.name,
-    //         appointmentDate,
-    //         appointmentTime,
-    //         doctorExists.name,
-    //         reportLink,
-    //       )
-
-    //       if (whatsappResult.success) {
-    //         console.log("  WhatsApp medical report link sent successfully:", whatsappResult.messageId)
-    //       } else {
-    //         console.warn("  WhatsApp medical report link failed:", whatsappResult.error)
-    //       }
-    //     } catch (err) {
-    //       console.error("  Error sending WhatsApp notification:", err)
-    //     }
-    //  // 60000 milliseconds = 1 minute
-    // }
 
     return NextResponse.json({ success: true, report: populatedReport })
   } catch (error) {

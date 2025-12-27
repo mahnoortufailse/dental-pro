@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { ChevronLeft, ChevronRight, Plus, FileText, X, CheckCircle, Loader2, AlertCircle, Menu } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, FileText, X, CheckCircle, Loader2, AlertCircle } from "lucide-react"
 import { AppointmentActionModal } from "@/components/appointment-action-modal"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { SearchableDropdown } from "@/components/searchable-dropdown"
@@ -52,6 +52,7 @@ export default function AppointmentsPage() {
     findings: "",
     notes: "",
     nextVisit: "",
+    nextVisitTime: "",
     followUpDetails: "",
   })
   const [patients, setPatients] = useState([])
@@ -83,9 +84,7 @@ export default function AppointmentsPage() {
     if (token) {
       fetchAppointments()
       fetchPatients()
-      if (user?.role !== "doctor") {
-        fetchDoctors()
-      }
+      fetchDoctors()
     }
   }, [token, user])
 
@@ -341,8 +340,11 @@ export default function AppointmentsPage() {
   const currentUserId = user?.userId || user?.id
 
   const handleEditAppointment = (appointment: any) => {
-    if (user?.role === "doctor" && String(appointment.doctorId) !== String(currentUserId)) {
-      toast.error("You can only edit your own appointments")
+    const isOwner = String(appointment.doctorId) === String(currentUserId)
+    const isCreator = String(appointment.createdBy) === String(currentUserId) || !appointment.createdBy
+
+    if (user?.role === "doctor" && !isOwner && !isCreator) {
+      toast.error("You can only edit appointments you created or are assigned to")
       return
     }
 
@@ -431,6 +433,7 @@ export default function AppointmentsPage() {
       type: formData.type,
       roomNumber: formData.roomNumber,
       duration: formData.duration || 30,
+      createdBy: currentUserId,
     }
 
     const timeConflict = appointments.some((apt) => {
@@ -606,6 +609,7 @@ export default function AppointmentsPage() {
           findings: reportData.findings.trim(),
           notes: reportData.notes.trim(),
           nextVisit: reportData.nextVisit || null,
+          nextVisitTime: reportData.nextVisitTime || null,
           followUpDetails: reportData.followUpDetails || "",
         }),
       })
@@ -621,6 +625,7 @@ export default function AppointmentsPage() {
           findings: "",
           notes: "",
           nextVisit: "",
+          nextVisitTime: "",
           followUpDetails: "",
         })
         setSelectedAppointment(null)
@@ -687,8 +692,7 @@ export default function AppointmentsPage() {
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <main className="flex-1 overflow-auto md:pt-0  ">
           <div className="p-3 sm:p-4 md:p-6 lg:p-8 ">
-           
-              <div className="mb-4 sm:mb-6 md:mb-8 mt-16 sm:mt-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+            <div className="mb-4 sm:mb-6 md:mb-8 mt-16 sm:mt-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
               <div className="hidden md:block">
                 <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
                   Appointments Calendar
@@ -789,7 +793,9 @@ export default function AppointmentsPage() {
                           key={idx}
                           onClick={() => day && !loading.appointments && handleDateClick(day)}
                           className={`aspect-square p-1 sm:p-1.5 md:p-2 rounded-lg border-2 transition-colors text-xs sm:text-xs md:text-sm ${
-                            day && !loading.appointments ? "cursor-pointer hover:border-primary/50" : "cursor-not-allowed"
+                            day && !loading.appointments
+                              ? "cursor-pointer hover:border-primary/50"
+                              : "cursor-not-allowed"
                           } ${
                             isSelected
                               ? "border-accent bg-accent/20"
@@ -802,7 +808,9 @@ export default function AppointmentsPage() {
                         >
                           {day && (
                             <div className="h-full flex flex-col items-center justify-center">
-                              <span className={`font-semibold ${isSelected ? "text-accent-foreground" : "text-foreground"}`}>
+                              <span
+                                className={`font-semibold ${isSelected ? "text-accent-foreground" : "text-foreground"}`}
+                              >
                                 {day}
                               </span>
                               {dayAppointments.length > 0 && (
@@ -912,7 +920,9 @@ export default function AppointmentsPage() {
                                     </span>
                                   )}
                                 </div>
-                                <span className={`text-xs px-2 py-1 rounded flex-shrink-0 ${getStatusColor(apt.status)}`}>
+                                <span
+                                  className={`text-xs px-2 py-1 rounded flex-shrink-0 ${getStatusColor(apt.status)}`}
+                                >
                                   {apt.status}
                                 </span>
                               </div>
@@ -920,7 +930,7 @@ export default function AppointmentsPage() {
                                 {apt.time} - {apt.type}
                               </p>
                               <p className="text-xs text-muted-foreground">Room: {apt.roomNumber}</p>
-                              
+
                               {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
                                 <div className="flex items-center gap-1 mt-1">
                                   {hasReport ? (
@@ -936,19 +946,21 @@ export default function AppointmentsPage() {
                                   )}
                                 </div>
                               )}
-                              
+
                               {/* Action Buttons */}
                               <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2 text-xs">
                                 {user?.role !== "doctor" && apt.status !== "completed" && apt.status !== "closed" && (
                                   <button
                                     onClick={() => handleEditAppointment(apt)}
-                                    disabled={loading.addAppointment || loading.updateAppointment || loading.deleteAppointment}
+                                    disabled={
+                                      loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                    }
                                     className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1"
                                   >
                                     Edit
                                   </button>
                                 )}
-                                
+
                                 {user?.role !== "doctor" && (
                                   <>
                                     <button
@@ -1121,8 +1133,10 @@ export default function AppointmentsPage() {
                                 </span>
                               </div>
                             </div>
-                            <p className="text-xs text-muted-foreground">{apt.type} • Room: {apt.roomNumber}</p>
-                            
+                            <p className="text-xs text-muted-foreground">
+                              {apt.type} • Room: {apt.roomNumber}
+                            </p>
+
                             {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
                               <div className="flex items-center gap-1 mt-1">
                                 {hasReport ? (
@@ -1138,19 +1152,21 @@ export default function AppointmentsPage() {
                                 )}
                               </div>
                             )}
-                            
+
                             {/* Action Buttons */}
                             <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2 text-xs">
                               {user?.role !== "doctor" && apt.status !== "completed" && apt.status !== "closed" && (
                                 <button
                                   onClick={() => handleEditAppointment(apt)}
-                                  disabled={loading.addAppointment || loading.updateAppointment || loading.deleteAppointment}
+                                  disabled={
+                                    loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                  }
                                   className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1"
                                 >
                                   Edit
                                 </button>
                               )}
-                              
+
                               {user?.role !== "doctor" && (
                                 <>
                                   <button
@@ -1265,7 +1281,6 @@ export default function AppointmentsPage() {
                   </div>
                 </div>
               </div>
-           
             </div>
 
             {/* Appointment Form Modal */}
@@ -1287,7 +1302,7 @@ export default function AppointmentsPage() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  
+
                   <form onSubmit={handleAddAppointment} className="space-y-3 sm:space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">Patient *</label>
@@ -1380,6 +1395,7 @@ export default function AppointmentsPage() {
                           <option value="Cleaning">Cleaning</option>
                           <option value="Filling">Filling</option>
                           <option value="Root Canal">Root Canal</option>
+                          <option value="Other">Other</option>
                         </select>
                       </div>
 
@@ -1467,7 +1483,7 @@ export default function AppointmentsPage() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  
+
                   <form onSubmit={handleCreateReport} className="space-y-3 sm:space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">Procedures *</label>
@@ -1538,7 +1554,7 @@ export default function AppointmentsPage() {
 
                     <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Next Visit</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Next Visit Date</label>
                         <input
                           type="date"
                           value={reportData.nextVisit}
@@ -1546,6 +1562,21 @@ export default function AppointmentsPage() {
                             setReportData({
                               ...reportData,
                               nextVisit: e.target.value,
+                            })
+                          }
+                          disabled={loading.createReport}
+                          className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Next Visit Time</label>
+                        <input
+                          type="time"
+                          value={reportData.nextVisitTime}
+                          onChange={(e) =>
+                            setReportData({
+                              ...reportData,
+                              nextVisitTime: e.target.value,
                             })
                           }
                           disabled={loading.createReport}

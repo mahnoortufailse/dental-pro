@@ -11,7 +11,6 @@ import {
   Billing,
 } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
-import { Types } from "mongoose"
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -24,20 +23,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const patient = await Patient.findById(params.id).populate("assignedDoctorId", "name email specialty")
     if (!patient) return NextResponse.json({ error: "Patient not found" }, { status: 404 })
-
-    if (payload.role === "doctor") {
-      const doctorId = new Types.ObjectId(payload.userId)
-      console.log("  Doctor access check - Doctor ID:", doctorId, "Patient assigned to:", patient.assignedDoctorId?._id)
-      if (!patient.assignedDoctorId || !patient.assignedDoctorId._id.equals(doctorId)) {
-        console.log(
-          "  Access denied: Doctor",
-          payload.userId,
-          "trying to access patient assigned to",
-          patient.assignedDoctorId?._id,
-        )
-        return NextResponse.json({ error: "Access denied" }, { status: 403 })
-      }
-    }
 
     return NextResponse.json({ success: true, patient })
   } catch (error) {
@@ -58,6 +43,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const { id } = params
     const updateData = await request.json()
+
+    if (updateData.additionalPhones && Array.isArray(updateData.additionalPhones)) {
+      const { formatPhoneForDatabase } = await import("@/lib/validation")
+      updateData.additionalPhones = updateData.additionalPhones
+        .map((p) => formatPhoneForDatabase(String(p).trim()))
+        .filter(Boolean)
+    }
 
     // Handle email in update data - convert empty strings to null
     if (updateData.email !== undefined) {

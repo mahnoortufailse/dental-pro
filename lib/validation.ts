@@ -89,8 +89,17 @@ export function generateStrongPassword(): string {
 }
 
 export function validatePhone(phone: string): boolean {
-  const re = /^[\d\s\-+$$$$]{10,}$/
+  const re = /^[\d\s\-+()]{10,}$/
   return re.test(phone)
+}
+
+export function validatePhones(phones: string[]): { valid: boolean; error?: string } {
+  for (const phone of phones) {
+    if (phone.trim() && !validatePhone(phone)) {
+      return { valid: false, error: `Invalid phone number: ${phone}` }
+    }
+  }
+  return { valid: true }
 }
 
 export function formatPhoneForDisplay(phone: string): string {

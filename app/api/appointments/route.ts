@@ -28,12 +28,7 @@ export async function GET(request: NextRequest) {
     const query: any = {}
 
     if (payload?.role === "doctor") {
-      query.$or = [
-        { doctorId: String(payload.userId) }, // Current appointments assigned to this doctor
-        { originalDoctorId: String(payload.userId) }, // Referred appointments they referred out
-      ]
-      console.log("[v0] Doctor fetching appointments with query:", JSON.stringify(query))
-      console.log("[v0] Doctor ID:", String(payload.userId))
+      console.log("[v0] Doctor fetching all appointments for visibility")
     } else if (patientId) {
       // For patients, show only their appointments
       query.patientId = patientId
@@ -166,6 +161,7 @@ export async function POST(request: NextRequest) {
       originalDoctorId: null,
       originalDoctorName: null,
       currentReferralId: null,
+      createdBy: payload.userId, // Assuming the user ID is the creator
     })
     console.log("[DEBUG] Appointment created:", newAppointment._id.toString())
 
@@ -189,13 +185,7 @@ export async function POST(request: NextRequest) {
         appointmentId,
       })
 
-      const whatsappResult = await sendAppointmentConfirmation(
-        patient?.phone,
-        patientName,
-        date,
-        time,
-        doctorName,
-      )
+      const whatsappResult = await sendAppointmentConfirmation(patient?.phone, patientName, date, time, doctorName)
 
       console.log("[v0] ✅ CONFIRMATION TEMPLATE: WhatsApp result:", whatsappResult)
 
@@ -302,8 +292,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
     }
 
-    if (payload?.role === "doctor" && appointment.doctorId !== payload.userId) {
-      console.warn("[DEBUG] Doctor trying to edit another doctor's appointment")
+    const isOwner = String(appointment.doctorId) === String(payload.userId)
+    const isCreator = String(appointment.createdBy) === String(payload.userId)
+
+    if (payload?.role === "doctor" && !isOwner && !isCreator) {
+      console.warn("[DEBUG] Doctor trying to edit unauthorized appointment")
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 

@@ -24,6 +24,10 @@ export default function PatientDetailPage() {
   const [showBillingRequestModal, setShowBillingRequestModal] = useState(false)
 
   useEffect(() => {
+    console.log("[v0] Modal state changed:", showBillingRequestModal)
+  }, [showBillingRequestModal])
+
+  useEffect(() => {
     if (token && patientId) {
       fetchPatient()
     }

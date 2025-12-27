@@ -38,11 +38,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
-    if (payload.role === "doctor" && appointment.doctorId !== payload.userId) {
-      console.warn("🔴 [GET] Doctor trying to view another doctor's appointment")
-      return NextResponse.json({ error: "Access denied" }, { status: 403 })
-    }
-
     console.log("🟢 [GET] Appointment fetched successfully")
     return NextResponse.json({
       success: true,
@@ -85,8 +80,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
       const appointment = await Appointment.findById(id)
       if (appointment && appointment.doctorId !== payload.userId) {
-        console.warn("🔴 [PUT] Doctor trying to update another doctor's appointment")
-        return NextResponse.json({ error: "You can only manage your own appointments" }, { status: 403 })
+        if (appointment.createdBy !== payload.userId) {
+          console.warn("🔴 [PUT] Doctor trying to update another doctor's appointment")
+          return NextResponse.json({ error: "You can only manage your own appointments" }, { status: 403 })
+        }
       }
     } else if (payload.role !== "admin" && payload.role !== "receptionist") {
       console.warn("🔴 [PUT] Unauthorized role tried to update appointment:", payload.role)
@@ -254,11 +251,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       console.warn("🔴 [DELETE] Invalid token")
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
-
-    // if (payload.role !== "admin" && payload.role !== "receptionist") {
-    //   console.warn("🔴 [DELETE] Unauthorized role tried to delete report:", payload.role)
-    //   return NextResponse.json({ error: "Access denied" }, { status: 403 })
-    // }
 
     const { id } = await params
     console.log("🟠 [DELETE] Report ID:", id)
