@@ -16,31 +16,11 @@ export async function GET(request: NextRequest) {
     const query: any = {}
 
     if (payload.role === "doctor") {
-      const { Appointment } = await import("@/lib/db-server")
-
-      const appointments = await Appointment.find({
-        doctorId: payload.userId,
-        status: { $nin: ["cancelled", "no-show", "closed"] },
-      })
-      const appointmentPatientIds = [...new Set(appointments.map((apt: any) => apt.patientId))]
-
-      // Build query to get: assigned patients OR patients with active appointments
-      query.$or = [
-        { assignedDoctorId: new Types.ObjectId(payload.userId) },
-        {
-          _id: {
-            $in: appointmentPatientIds.map((id: string) => {
-              try {
-                return new Types.ObjectId(id)
-              } catch {
-                return id
-              }
-            }),
-          },
-        },
-      ]
-
-      console.log("Doctor filter - userId:", payload.userId, "appointmentPatientIds:", appointmentPatientIds.length)
+      // Previously: doctors could only see assigned patients or patients with active appointments
+      // Now: doctors can see all patients in the system
+      // This allows doctors to book appointments and access medical history for any patient
+      const patients = await Patient.find({}).populate("assignedDoctorId", "name email specialty")
+      return NextResponse.json({ success: true, patients })
     }
 
     const patients = await Patient.find(query).populate("assignedDoctorId", "name email specialty")

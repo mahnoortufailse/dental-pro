@@ -1022,6 +1022,7 @@ export default function ForwardedRequestsPage() {
                                 <option value="Cleaning">Cleaning</option>
                                 <option value="Filling">Filling</option>
                                 <option value="Root Canal">Root Canal</option>
+                                <option value="Other">Other</option>
                               </select>
                             </div>
 

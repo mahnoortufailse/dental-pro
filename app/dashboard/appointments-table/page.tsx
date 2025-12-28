@@ -106,7 +106,11 @@ function ActionDropdown({
     const isReferredDoctor = userRole === "doctor" && appointment.doctorId === userId && appointment.isReferred === true
 
     // Edit action
-    if (appointment.status !== "completed" && appointment.status !== "closed" && userRole !== "doctor") {
+    if (
+      appointment.status !== "completed" &&
+      appointment.status !== "closed" &&
+      (userRole !== "doctor" || (userRole === "doctor" && String(appointment.createdBy) === String(userId)))
+    ) {
       items.push({
         label: "Edit",
         icon: <Edit className="w-4 h-4" />,
@@ -270,6 +274,8 @@ function AppointmentsTableView({
         return "bg-blue-100 text-blue-800"
       case "closed":
         return "bg-gray-100 text-gray-800"
+      case "refer_back": // added refer_back status color
+        return "bg-orange-100 text-orange-800"
       default:
         return "bg-yellow-100 text-yellow-800"
     }
@@ -326,6 +332,13 @@ function AppointmentsTableView({
                           {appointment.originalDoctorId === userId
                             ? `Referred to ${appointment.doctorName}`
                             : "Referred In"}
+                        </span>
+                      </div>
+                    )}
+                    {appointment.status === "refer_back" && ( // added refer_back status display
+                      <div className="mt-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          Refer Back Pending
                         </span>
                       </div>
                     )}
@@ -638,7 +651,7 @@ export default function AppointmentsTablePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: "cancelled" }),
+        body: JSON.JSON.stringify({ status: "cancelled" }),
       })
 
       if (res.ok) {
@@ -669,7 +682,7 @@ export default function AppointmentsTablePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: "completed" }),
+        body: JSON.JSON.stringify({ status: "completed" }),
       })
 
       if (res.ok) {
@@ -692,8 +705,8 @@ export default function AppointmentsTablePage() {
   }
 
   const handleEditAppointment = (appointment: any) => {
-    if (user?.role === "doctor" && appointment.doctorId !== user.userId) {
-      toast.error("You can only edit your own appointments")
+    if (user?.role === "doctor" && String(appointment.createdBy) !== String(user.userId)) {
+      toast.error("You can only edit appointments you created")
       return
     }
 
@@ -786,6 +799,7 @@ export default function AppointmentsTablePage() {
       type: formData.type,
       roomNumber: formData.roomNumber,
       duration: formData.duration || 30,
+      createdBy: user?.userId, // Add createdBy field
     }
 
     const timeConflict = appointments.some((apt) => {
@@ -871,7 +885,7 @@ export default function AppointmentsTablePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(submissionData),
+        body: JSON.JSON.stringify(submissionData),
       })
 
       if (res.ok) {
@@ -954,7 +968,7 @@ export default function AppointmentsTablePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
+        body: JSON.JSON.stringify({
           appointmentId: selectedAppointment._id || selectedAppointment.id,
           patientId: selectedAppointment.patientId,
           procedures: proceduresArray,
@@ -1234,6 +1248,7 @@ export default function AppointmentsTablePage() {
                         <option value="Cleaning">Cleaning</option>
                         <option value="Filling">Filling</option>
                         <option value="Root Canal">Root Canal</option>
+                        <option value="Other">Other</option>
                       </select>
                     </div>
 

@@ -144,12 +144,36 @@ export function generateReportPDF(report: ReportData) {
   y = drawParagraphCard(doc, report.notes || "No additional notes.", y, pageWidth)
 
   /* -------------------- NEXT VISIT -------------------- */
-  if (report.nextVisit) {
-    y = checkNewPage(doc, y, pageHeight)
-    y = drawSectionHeader(doc, "NEXT APPOINTMENT", y, green, pageWidth)
-    const nextVisit = format(new Date(report.nextVisit), "EEEE, MMMM dd, yyyy 'at' hh:mm a")
-    y = drawParagraphCard(doc, `Scheduled for: ${nextVisit}`, y, pageWidth)
+  /* -------------------- NEXT VISIT -------------------- */
+if (report.nextVisit) {
+  y = checkNewPage(doc, y, pageHeight)
+  y = drawSectionHeader(doc, "NEXT APPOINTMENT", y, green, pageWidth)
+  
+  // Parse date and time
+  const nextVisitDate = new Date(report.nextVisit)
+  const dateStr = nextVisitDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+  
+  let timeStr = ""
+  // Check if nextVisitTime exists in the report
+  if ((report as any).nextVisitTime) {
+    const timeDate = new Date(`2000-01-01T${(report as any).nextVisitTime}`)
+    timeStr = timeDate.toLocaleTimeString("en-US", {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
   }
+  
+  // Use drawParagraphCard instead of directly writing with doc.text
+  const nextVisitText = timeStr ? `${dateStr} at ${timeStr}` : dateStr
+  y = drawParagraphCard(doc, `Scheduled for: ${nextVisitText}`, y, pageWidth)
+}
+  
 
   /* -------------------- FOLLOW-UP -------------------- */
   if (report.followUpDetails) {

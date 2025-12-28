@@ -113,14 +113,21 @@ const appointmentSchema = new mongoose.Schema({
   doctorName: { type: String, required: true },
   date: { type: String, required: true },
   time: { type: String, required: true },
-  type: { type: String, enum: ["Consultation", "Cleaning", "Filling", "Root Canal"], required: true },
-  status: { type: String, enum: ["pending", "confirmed", "completed", "cancelled", "closed"], default: "pending" },
+  type: { type: String, enum: ["Consultation", "Cleaning", "Filling", "Root Canal", "Other"], required: true },
+  status: {
+    type: String,
+    enum: ["pending", "confirmed", "completed", "cancelled", "closed", "refer_back"],
+    default: "pending",
+  },
   roomNumber: String,
   duration: Number,
-  originalDoctorId: { type: String, default: null }, // Track the original doctor when referred
+  originalDoctorId: { type: String, default: null },
   originalDoctorName: { type: String, default: null },
-  isReferred: { type: Boolean, default: false }, // Flag to indicate if appointment is currently referred
-  currentReferralId: { type: mongoose.Schema.Types.ObjectId, ref: "AppointmentReferral", default: null }, // Link to active referral
+  isReferred: { type: Boolean, default: false },
+  currentReferralId: { type: mongoose.Schema.Types.ObjectId, ref: "AppointmentReferral", default: null },
+  referralNotes: { type: String, default: "" },
+  lastReferBackDate: { type: Date, default: null },
+  awaitingOriginalDoctorAction: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 })
 
@@ -234,6 +241,7 @@ const appointmentReportSchema = new mongoose.Schema({
   appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Appointment", required: true },
   patientId: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
   doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  doctorName: { type: String, required: true },
   procedures: [
     {
       name: String,
@@ -244,8 +252,20 @@ const appointmentReportSchema = new mongoose.Schema({
   ],
   findings: String,
   notes: String,
-  nextVisit: Date,
+  nextVisitDate: {
+    type: Date,
+    default: null,
+  },
+  nextVisitTime: {
+    type: String,
+    default: null,
+  },
   followUpDetails: String,
+  signature: { type: String, default: null },
+  doctorRole: { type: String, enum: ["original", "referred"], default: "original" },
+  referralId: { type: mongoose.Schema.Types.ObjectId, ref: "AppointmentReferral", default: null },
+  reportStatus: { type: String, enum: ["draft", "submitted", "reviewed", "approved"], default: "submitted" },
+  previousReportId: { type: mongoose.Schema.Types.ObjectId, ref: "AppointmentReport", default: null },
   createdAt: { type: Date, default: Date.now },
 })
 
@@ -264,7 +284,7 @@ const patientReferralSchema = new mongoose.Schema({
   allergies: { type: [String], default: [] },
   medicalConditions: { type: [String], default: [] },
   medicalHistory: { type: String, default: "" },
-  photoUrl: { type: String, default: null }, // Will be uploaded by receptionist/admin
+  photoUrl: { type: String, default: null },
   status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
   referralDate: { type: Date, default: Date.now },
   processedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
@@ -288,7 +308,7 @@ const patientReferralRequestSchema = new mongoose.Schema({
   referralReason: { type: String, required: true },
   status: { type: String, enum: ["pending", "processing", "completed", "rejected"], default: "pending" },
   pictureUrl: { type: String, default: null },
-  pictureSavedBy: { type: String, default: null }, // receptionist or admin who uploaded the picture
+  pictureSavedBy: { type: String, default: null },
   appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Appointment", default: null },
   notes: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
@@ -307,7 +327,7 @@ const appointmentReferralSchema = new mongoose.Schema({
   referralReason: { type: String, required: true },
   status: {
     type: String,
-    enum: ["pending", "accepted", "completed", "referred_back", "rejected"], // ← ADD "rejected" HERE
+    enum: ["pending", "accepted", "completed", "referred_back", "rejected"],
     default: "pending",
   },
   notes: { type: String, default: "" },

@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
-import { ChevronLeft, ChevronRight, Plus, FileText, X, CheckCircle, Loader2, AlertCircle, Menu } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, FileText, X, CheckCircle, Loader2, AlertCircle } from "lucide-react"
 import { AppointmentActionModal } from "@/components/appointment-action-modal"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { SearchableDropdown } from "@/components/searchable-dropdown"
@@ -51,7 +51,8 @@ export default function AppointmentsPage() {
     procedures: [],
     findings: "",
     notes: "",
-    nextVisit: "",
+    nextVisitDate: "",
+    nextVisitTime: "", // Add this
     followUpDetails: "",
   })
   const [patients, setPatients] = useState([])
@@ -78,6 +79,8 @@ export default function AppointmentsPage() {
   const [showReferralModal, setShowReferralModal] = useState(false)
   const [showReferModal, setShowReferModal] = useState(false)
   const [selectedAppointmentForReferral, setSelectedAppointmentForReferral] = useState<any>(null)
+
+  const currentUserId = user?.userId || user?.id // Declare currentUserId here
 
   useEffect(() => {
     if (token) {
@@ -294,7 +297,11 @@ export default function AppointmentsPage() {
           appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
         )
         toast.success("Appointment cancelled successfully")
-        setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
+        setAppointmentActionModal({
+          isOpen: false,
+          action: null,
+          appointmentId: null,
+        })
       } else {
         const errorData = await res.json()
         toast.error(errorData.error || "Failed to cancel appointment")
@@ -325,7 +332,11 @@ export default function AppointmentsPage() {
           appointments.map((a) => (a._id === appointmentId || a.id === appointmentId ? data.appointment : a)),
         )
         toast.success("Appointment marked as completed")
-        setAppointmentActionModal({ isOpen: false, action: null, appointmentId: null })
+        setAppointmentActionModal({
+          isOpen: false,
+          action: null,
+          appointmentId: null,
+        })
       } else {
         const errorData = await res.json()
         toast.error(errorData.error || "Failed to complete appointment")
@@ -338,11 +349,10 @@ export default function AppointmentsPage() {
     }
   }
 
-  const currentUserId = user?.userId || user?.id
-
   const handleEditAppointment = (appointment: any) => {
-    if (user?.role === "doctor" && String(appointment.doctorId) !== String(currentUserId)) {
-      toast.error("You can only edit your own appointments")
+    const currentUserId = user?.userId || user?.id
+    if (user?.role === "doctor" && String(appointment.createdBy) !== String(currentUserId)) {
+      toast.error("You can only edit appointments you created")
       return
     }
 
@@ -431,6 +441,7 @@ export default function AppointmentsPage() {
       type: formData.type,
       roomNumber: formData.roomNumber,
       duration: formData.duration || 30,
+      createdBy: user?.id, // Add createdBy
     }
 
     const timeConflict = appointments.some((apt) => {
@@ -605,7 +616,8 @@ export default function AppointmentsPage() {
           procedures: proceduresArray,
           findings: reportData.findings.trim(),
           notes: reportData.notes.trim(),
-          nextVisit: reportData.nextVisit || null,
+          nextVisitDate: reportData.nextVisitDate || null,
+          nextVisitTime: reportData.nextVisitTime || null, // Add this
           followUpDetails: reportData.followUpDetails || "",
         }),
       })
@@ -620,7 +632,8 @@ export default function AppointmentsPage() {
           procedures: [],
           findings: "",
           notes: "",
-          nextVisit: "",
+          nextVisitDate: "",
+          nextVisitTime: "", // Add this
           followUpDetails: "",
         })
         setSelectedAppointment(null)
@@ -639,7 +652,10 @@ export default function AppointmentsPage() {
 
   const daysInMonth = getDaysInMonth(currentDate)
   const firstDay = getFirstDayOfMonth(currentDate)
-  const monthName = currentDate.toLocaleString("default", { month: "long", year: "numeric" })
+  const monthName = currentDate.toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  })
 
   const calendarDays = []
   for (let i = 0; i < firstDay; i++) {
@@ -661,6 +677,8 @@ export default function AppointmentsPage() {
         return "bg-blue-100 text-blue-800"
       case "closed":
         return "bg-gray-100 text-gray-800"
+      case "refer_back": // add refer_back status color
+        return "bg-orange-100 text-orange-800"
       default:
         return "bg-yellow-100 text-yellow-800"
     }
@@ -687,8 +705,7 @@ export default function AppointmentsPage() {
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <main className="flex-1 overflow-auto md:pt-0  ">
           <div className="p-3 sm:p-4 md:p-6 lg:p-8 ">
-           
-              <div className="mb-4 sm:mb-6 md:mb-8 mt-16 sm:mt-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+            <div className="mb-4 sm:mb-6 md:mb-8 mt-16 sm:mt-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
               <div className="hidden md:block">
                 <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
                   Appointments Calendar
@@ -789,7 +806,9 @@ export default function AppointmentsPage() {
                           key={idx}
                           onClick={() => day && !loading.appointments && handleDateClick(day)}
                           className={`aspect-square p-1 sm:p-1.5 md:p-2 rounded-lg border-2 transition-colors text-xs sm:text-xs md:text-sm ${
-                            day && !loading.appointments ? "cursor-pointer hover:border-primary/50" : "cursor-not-allowed"
+                            day && !loading.appointments
+                              ? "cursor-pointer hover:border-primary/50"
+                              : "cursor-not-allowed"
                           } ${
                             isSelected
                               ? "border-accent bg-accent/20"
@@ -802,7 +821,9 @@ export default function AppointmentsPage() {
                         >
                           {day && (
                             <div className="h-full flex flex-col items-center justify-center">
-                              <span className={`font-semibold ${isSelected ? "text-accent-foreground" : "text-foreground"}`}>
+                              <span
+                                className={`font-semibold ${isSelected ? "text-accent-foreground" : "text-foreground"}`}
+                              >
                                 {day}
                               </span>
                               {dayAppointments.length > 0 && (
@@ -819,7 +840,7 @@ export default function AppointmentsPage() {
                 </div>
               </div>
 
-              <div className="space-y-3 sm:space-y-4 md:space-y-6">
+              <div className="space-y-3 sm:space-y-4 md:space-3">
                 {/* Action Buttons */}
                 <div className="flex flex-col xs:flex-row lg:flex-col gap-2 sm:gap-3">
                   <button
@@ -911,8 +932,15 @@ export default function AppointmentsPage() {
                                         : "Referred In"}
                                     </span>
                                   )}
+                                  {apt.status === "refer_back" && ( // show refer_back status badge
+                                    <span className="text-xs rounded bg-orange-100 text-orange-800 px-1.5 py-0.5 inline-block mt-1">
+                                      Refer Back Pending
+                                    </span>
+                                  )}
                                 </div>
-                                <span className={`text-xs px-2 py-1 rounded flex-shrink-0 ${getStatusColor(apt.status)}`}>
+                                <span
+                                  className={`text-xs px-2 py-1 rounded flex-shrink-0 ${getStatusColor(apt.status)}`}
+                                >
                                   {apt.status}
                                 </span>
                               </div>
@@ -920,7 +948,7 @@ export default function AppointmentsPage() {
                                 {apt.time} - {apt.type}
                               </p>
                               <p className="text-xs text-muted-foreground">Room: {apt.roomNumber}</p>
-                              
+
                               {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
                                 <div className="flex items-center gap-1 mt-1">
                                   {hasReport ? (
@@ -936,19 +964,25 @@ export default function AppointmentsPage() {
                                   )}
                                 </div>
                               )}
-                              
+
                               {/* Action Buttons */}
                               <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2 text-xs">
-                                {user?.role !== "doctor" && apt.status !== "completed" && apt.status !== "closed" && (
-                                  <button
-                                    onClick={() => handleEditAppointment(apt)}
-                                    disabled={loading.addAppointment || loading.updateAppointment || loading.deleteAppointment}
-                                    className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1"
-                                  >
-                                    Edit
-                                  </button>
-                                )}
-                                
+                                {(user?.role !== "doctor" ||
+                                  (user?.role === "doctor" &&
+                                    String(apt.createdBy) === String(user?.userId || user?.id))) &&
+                                  apt.status !== "completed" &&
+                                  apt.status !== "closed" && (
+                                    <button
+                                      onClick={() => handleEditAppointment(apt)}
+                                      disabled={
+                                        loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                      }
+                                      className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1"
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
+
                                 {user?.role !== "doctor" && (
                                   <>
                                     <button
@@ -1111,6 +1145,11 @@ export default function AppointmentsPage() {
                                       : "Referred In"}
                                   </span>
                                 )}
+                                {apt.status === "refer_back" && ( // show refer_back status badge
+                                  <span className="text-xs rounded bg-orange-100 text-orange-800 px-1.5 py-0.5 inline-block mt-1">
+                                    Refer Back Pending
+                                  </span>
+                                )}
                               </div>
                               <div className="flex flex-col gap-1 items-end">
                                 <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
@@ -1121,8 +1160,10 @@ export default function AppointmentsPage() {
                                 </span>
                               </div>
                             </div>
-                            <p className="text-xs text-muted-foreground">{apt.type} • Room: {apt.roomNumber}</p>
-                            
+                            <p className="text-xs text-muted-foreground">
+                              {apt.type} • Room: {apt.roomNumber}
+                            </p>
+
                             {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
                               <div className="flex items-center gap-1 mt-1">
                                 {hasReport ? (
@@ -1138,19 +1179,25 @@ export default function AppointmentsPage() {
                                 )}
                               </div>
                             )}
-                            
+
                             {/* Action Buttons */}
                             <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2 text-xs">
-                              {user?.role !== "doctor" && apt.status !== "completed" && apt.status !== "closed" && (
-                                <button
-                                  onClick={() => handleEditAppointment(apt)}
-                                  disabled={loading.addAppointment || loading.updateAppointment || loading.deleteAppointment}
-                                  className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                              
+                              {(user?.role !== "doctor" ||
+                                (user?.role === "doctor" &&
+                                  String(apt.createdBy) === String(user?.userId || user?.id))) &&
+                                apt.status !== "completed" &&
+                                apt.status !== "closed" && (
+                                  <button
+                                    onClick={() => handleEditAppointment(apt)}
+                                    disabled={
+                                      loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                    }
+                                    className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+
                               {user?.role !== "doctor" && (
                                 <>
                                   <button
@@ -1265,7 +1312,6 @@ export default function AppointmentsPage() {
                   </div>
                 </div>
               </div>
-           
             </div>
 
             {/* Appointment Form Modal */}
@@ -1287,7 +1333,7 @@ export default function AppointmentsPage() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  
+
                   <form onSubmit={handleAddAppointment} className="space-y-3 sm:space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">Patient *</label>
@@ -1380,6 +1426,7 @@ export default function AppointmentsPage() {
                           <option value="Cleaning">Cleaning</option>
                           <option value="Filling">Filling</option>
                           <option value="Root Canal">Root Canal</option>
+                          <option value="Other">Other</option>
                         </select>
                       </div>
 
@@ -1408,7 +1455,10 @@ export default function AppointmentsPage() {
                         placeholder="Room 1"
                         value={formData.roomNumber}
                         onChange={(e) => {
-                          setFormData({ ...formData, roomNumber: e.target.value })
+                          setFormData({
+                            ...formData,
+                            roomNumber: e.target.value,
+                          })
                           setFormErrors({ ...formErrors, roomNumber: "" })
                         }}
                         disabled={loading.addAppointment || loading.updateAppointment}
@@ -1467,7 +1517,7 @@ export default function AppointmentsPage() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  
+
                   <form onSubmit={handleCreateReport} className="space-y-3 sm:space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">Procedures *</label>
@@ -1538,14 +1588,29 @@ export default function AppointmentsPage() {
 
                     <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Next Visit</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Next Visit Date</label>
                         <input
                           type="date"
-                          value={reportData.nextVisit}
+                          value={reportData.nextVisitDate}
                           onChange={(e) =>
                             setReportData({
                               ...reportData,
-                              nextVisit: e.target.value,
+                              nextVisitDate: e.target.value,
+                            })
+                          }
+                          disabled={loading.createReport}
+                          className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer disabled:cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Next Visit Time</label>
+                        <input
+                          type="time"
+                          value={reportData.nextVisitTime}
+                          onChange={(e) =>
+                            setReportData({
+                              ...reportData,
+                              nextVisitTime: e.target.value,
                             })
                           }
                           disabled={loading.createReport}

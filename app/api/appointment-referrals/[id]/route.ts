@@ -24,7 +24,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Action is required" }, { status: 400 })
     }
 
-    console.log(`[DEBUG] Referral update attempt:`, {
+    console.log(`[v0] Referral update attempt:`, {
       referralId: id,
       action,
       notes,
@@ -36,7 +36,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Referral not found" }, { status: 404 })
     }
 
-    console.log(`[DEBUG] Found referral:`, {
+    console.log(`[v0] Found referral:`, {
       currentStatus: referral.status,
       toDoctorId: referral.toDoctorId,
       fromDoctorId: referral.fromDoctorId,
@@ -75,18 +75,26 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
       }
 
+      // The appointment status changes to "refer_back" to indicate pending original doctor review
+      // The referred doctor still sees it with a "Refer Back Pending" status
       await Appointment.findByIdAndUpdate(referral.appointmentId, {
-        doctorId: appointment.originalDoctorId,
-        doctorName: appointment.originalDoctorName,
-        isReferred: false,
-        originalDoctorId: null,
-        originalDoctorName: null,
-        currentReferralId: null,
+        status: "refer_back",
+        referralNotes: notes || "",
+        lastReferBackDate: new Date(),
+        awaitingOriginalDoctorAction: true,
+        updatedAt: new Date(),
       })
 
       referral.status = "referred_back"
       referral.notes = notes || ""
       referral.updatedAt = new Date()
+
+      console.log("[v0] Appointment marked as refer_back:", {
+        appointmentId: referral.appointmentId,
+        referredDoctorId: payload.userId,
+        referredDoctorName: payload.name,
+        notes: notes,
+      })
     } else if (action === "complete") {
       if (String(referral.toDoctorId) !== String(payload.userId)) {
         return NextResponse.json({ error: "Only the doctor currently assigned can mark as complete" }, { status: 403 })
@@ -105,7 +113,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         )
       }
 
-      // Only allow rejection of pending referrals
       if (referral.status !== "pending") {
         return NextResponse.json(
           {
@@ -114,7 +121,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           { status: 400 },
         )
       }
-       const appointment = await Appointment.findById(referral.appointmentId)
+
+      const appointment = await Appointment.findById(referral.appointmentId)
       if (!appointment) {
         return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
       }
@@ -127,6 +135,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         originalDoctorName: null,
         currentReferralId: null,
       })
+
       referral.status = "rejected"
       referral.notes = notes || "Referral rejected"
       referral.updatedAt = new Date()
@@ -134,11 +143,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }
 
-    console.log(`[DEBUG] Saving referral with new status:`, referral.status)
+    console.log(`[v0] Saving referral with new status:`, referral.status)
 
     await referral.save()
 
-    console.log("[DEBUG] Referral updated successfully:", {
+    console.log("[v0] Referral updated successfully:", {
       referralId: id,
       action,
       newStatus: referral.status,
@@ -147,7 +156,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json({ success: true, referral })
   } catch (error) {
-    console.error("PUT appointment referral error details:", {
+    console.error("[v0] PUT appointment referral error:", {
       name: error.name,
       message: error.message,
       stack: error.stack,
