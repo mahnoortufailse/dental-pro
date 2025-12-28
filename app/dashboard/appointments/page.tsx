@@ -917,180 +917,182 @@ export default function AppointmentsPage() {
 
                           return (
                             <div key={apt._id || apt.id} className="p-2 sm:p-3 bg-muted rounded-lg">
-                              <div className="flex justify-between items-start gap-2 mb-1 sm:mb-2">
-                                <div className="min-w-0 flex-1">
-                                  <p className="font-medium text-foreground text-xs sm:text-sm truncate">
-                                    {apt.patientName}
-                                  </p>
-                                  {user?.role !== "doctor" && (
-                                    <p className="text-xs text-muted-foreground truncate"> {apt.doctorName}</p>
-                                  )}
-                                  {apt.isReferred && (
-                                    <span className="text-xs rounded bg-purple-100 text-purple-800 px-1.5 py-0.5 inline-block mt-1">
-                                      {String(apt.originalDoctorId) === String(currentUserId)
-                                        ? `Referred to ${apt.doctorName}`
-                                        : "Referred In"}
-                                    </span>
-                                  )}
-                                  {apt.status === "refer_back" && ( // show refer_back status badge
-                                    <span className="text-xs rounded bg-orange-100 text-orange-800 px-1.5 py-0.5 inline-block mt-1">
-                                      Refer Back Pending
-                                    </span>
-                                  )}
-                                </div>
-                                <span
-                                  className={`text-xs px-2 py-1 rounded flex-shrink-0 ${getStatusColor(apt.status)}`}
-                                >
+                            <div className="flex justify-between items-start gap-2 mb-1 sm:mb-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-foreground text-[12px] truncate">
+                                  {apt.patientName}
+                                </p>
+                                {user?.role !== "doctor" && (
+                                  <p className="text-[11px] text-muted-foreground truncate">{apt.doctorName}</p>
+                                )}
+                                {apt.isReferred && (
+                                  <span className=" rounded bg-purple-200 text-purple-800 px-1.5 py-0.3 inline-block mt-1 text-[10px]">
+                                    {String(apt.originalDoctorId) === String(currentUserId)
+                                      ? `Referred to ${apt.doctorName}`
+                                      : "Referred In"}
+                                  </span>
+                                )}
+                                {apt.status === "refer_back" && ( // show refer_back status badge
+                                  <span className=" rounded bg-orange-200 text-orange-800 px-1.5 py-0.3 inline-block mt-1 text-[10px]">
+                                    Refer Back Pending
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-col gap-1 items-end">
+                                <span className={`text-[11px] px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
                                   {apt.status}
                                 </span>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                {apt.time} - {apt.type}
-                              </p>
-                              <p className="text-xs text-muted-foreground">Room: {apt.roomNumber}</p>
-
-                              {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  {hasReport ? (
-                                    <span className="text-xs text-green-600 flex items-center gap-1">
-                                      <CheckCircle className="w-3 h-3" />
-                                      Report
-                                    </span>
-                                  ) : (
-                                    <span className="text-xs text-amber-600 flex items-center gap-1">
-                                      <AlertCircle className="w-3 h-3" />
-                                      No Report
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Action Buttons */}
-                              <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2 text-xs">
-                                {(user?.role !== "doctor" ||
-                                  (user?.role === "doctor" &&
-                                    String(apt.createdBy) === String(user?.userId || user?.id))) &&
-                                  apt.status !== "completed" &&
-                                  apt.status !== "closed" && (
-                                    <button
-                                      onClick={() => handleEditAppointment(apt)}
-                                      disabled={
-                                        loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
-                                      }
-                                      className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1"
-                                    >
-                                      Edit
-                                    </button>
-                                  )}
-
-                                {user?.role !== "doctor" && (
-                                  <>
-                                    <button
-                                      onClick={() => {
-                                        setAppointmentToDelete(apt)
-                                        setShowDeleteModal(true)
-                                      }}
-                                      disabled={loading.deleteAppointment}
-                                      className="text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer px-1"
-                                    >
-                                      Delete
-                                    </button>
-                                    <button
-                                      onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
-                                      disabled={loading.appointments}
-                                      className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1"
-                                    >
-                                      Details
-                                    </button>
-                                  </>
-                                )}
-
-                                {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
-                                  <>
-                                    {!isOriginalDoctorWithReferral && (
-                                      <>
-                                        {hasReport ? (
-                                          <button
-                                            onClick={() => router.push("/dashboard/medical-reports")}
-                                            disabled={loading.createReport}
-                                            className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1"
-                                          >
-                                            <FileText className="w-3 h-3" />
-                                            Report
-                                          </button>
-                                        ) : (
-                                          <button
-                                            onClick={() => {
-                                              setSelectedAppointment(apt)
-                                              setShowReportForm(true)
-                                              setReportErrors({})
-                                            }}
-                                            disabled={loading.createReport}
-                                            className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1"
-                                          >
-                                            <FileText className="w-3 h-3" />
-                                            Create
-                                          </button>
-                                        )}
-                                      </>
-                                    )}
-
-                                    {canReferAppointment && (
-                                      <button
-                                        onClick={() => handleOpenReferModal(apt)}
-                                        disabled={loading.completeAppointment}
-                                        className="text-accent hover:underline disabled:text-accent/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1"
-                                      >
-                                        <FileText className="w-3 h-3" />
-                                        Refer
-                                      </button>
-                                    )}
-
-                                    {!isOriginalDoctorWithReferral && !isReferredDoctor && (
-                                      <>
-                                        <button
-                                          onClick={() => {
-                                            if (!canClose) {
-                                              toast.error("Create a medical report before closing")
-                                              return
-                                            }
-                                            setAppointmentActionModal({
-                                              isOpen: true,
-                                              action: "close",
-                                              appointmentId: apt._id || apt.id,
-                                            })
-                                          }}
-                                          disabled={loading.completeAppointment || !canClose}
-                                          className={`hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 ${
-                                            canClose
-                                              ? "text-green-600 disabled:text-green-600/50"
-                                              : "text-muted-foreground"
-                                          }`}
-                                        >
-                                          <CheckCircle className="w-3 h-3" />
-                                          Close
-                                        </button>
-
-                                        <button
-                                          onClick={() =>
-                                            setAppointmentActionModal({
-                                              isOpen: true,
-                                              action: "cancel",
-                                              appointmentId: apt._id || apt.id,
-                                            })
-                                          }
-                                          disabled={loading.cancelAppointment}
-                                          className="text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1"
-                                        >
-                                          <X className="w-3 h-3" />
-                                          Cancel
-                                        </button>
-                                      </>
-                                    )}
-                                  </>
-                                )}
+                                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                                  {apt.date} {apt.time}
+                                </span>
                               </div>
                             </div>
+                            <p className="text-[11px] text-muted-foreground ">
+                              {apt.type} • Room: {apt.roomNumber}
+                            </p>
+
+                            {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
+                              <div className="flex items-center gap-1 mt-1">
+                                {hasReport ? (
+                                  <span className="text-[10px] text-green-600 flex items-center gap-1">
+                                    <CheckCircle className="w-3 h-3" />
+                                    Report
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-amber-600 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    No Report
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2 text-[11px]">
+                              {(user?.role !== "doctor" ||
+                                (user?.role === "doctor" &&
+                                  String(apt.createdBy) === String(user?.userId || user?.id))) &&
+                                apt.status !== "completed" &&
+                                apt.status !== "closed" && (
+                                  <button
+                                    onClick={() => handleEditAppointment(apt)}
+                                    disabled={
+                                      loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
+                                    }
+                                    className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1 text-[11px]"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+
+                              {user?.role !== "doctor" && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setAppointmentToDelete(apt)
+                                      setShowDeleteModal(true)
+                                    }}
+                                    disabled={loading.deleteAppointment}
+                                    className="text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer px-1 text-[11px]"
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
+                                    disabled={loading.appointments}
+                                    className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1 text-[11px]"
+                                  >
+                                    Details
+                                  </button>
+                                </>
+                              )}
+
+                              {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
+                                <>
+                                  {!isOriginalDoctorWithReferral && (
+                                    <>
+                                      {hasReport ? (
+                                        <button
+                                          onClick={() => router.push("/dashboard/medical-reports")}
+                                          disabled={loading.createReport}
+                                          className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
+                                        >
+                                          <FileText className="w-3 h-3" />
+                                          Report
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            setSelectedAppointment(apt)
+                                            setShowReportForm(true)
+                                            setReportErrors({})
+                                          }}
+                                          disabled={loading.createReport}
+                                          className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
+                                        >
+                                          <FileText className="w-3 h-3" />
+                                          Create
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+
+                                  {canReferAppointment && (
+                                    <button
+                                      onClick={() => handleOpenReferModal(apt)}
+                                      disabled={loading.completeAppointment}
+                                      className="text-accent hover:underline disabled:text-accent/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      Refer
+                                    </button>
+                                  )}
+
+                                  {!isOriginalDoctorWithReferral && !isReferredDoctor && (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          if (!canClose) {
+                                            toast.error("Create a medical report before closing")
+                                            return
+                                          }
+                                          setAppointmentActionModal({
+                                            isOpen: true,
+                                            action: "close",
+                                            appointmentId: apt._id || apt.id,
+                                          })
+                                        }}
+                                        disabled={loading.completeAppointment || !canClose}
+                                        className={`hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px] ${
+                                          canClose
+                                            ? "text-green-600 disabled:text-green-600/50"
+                                            : "text-muted-foreground"
+                                        }`}
+                                      >
+                                        <CheckCircle className="w-3 h-3" />
+                                        Close
+                                      </button>
+
+                                      <button
+                                        onClick={() =>
+                                          setAppointmentActionModal({
+                                            isOpen: true,
+                                            action: "cancel",
+                                            appointmentId: apt._id || apt.id,
+                                          })
+                                        }
+                                        disabled={loading.cancelAppointment}
+                                        className="text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
+                                      >
+                                        <X className="w-3 h-3" />
+                                        Cancel
+                                      </button>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
                           )
                         })
                       )}
@@ -1132,47 +1134,47 @@ export default function AppointmentsPage() {
                           <div key={apt._id || apt.id} className="p-2 sm:p-3 bg-muted rounded-lg">
                             <div className="flex justify-between items-start gap-2 mb-1 sm:mb-2">
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium text-foreground text-xs sm:text-sm truncate">
+                                <p className="font-medium text-foreground text-[12px] truncate">
                                   {apt.patientName}
                                 </p>
                                 {user?.role !== "doctor" && (
-                                  <p className="text-xs text-muted-foreground truncate">{apt.doctorName}</p>
+                                  <p className="text-[11px] text-muted-foreground truncate">{apt.doctorName}</p>
                                 )}
                                 {apt.isReferred && (
-                                  <span className="text-xs rounded bg-purple-100 text-purple-800 px-1.5 py-0.5 inline-block mt-1">
+                                  <span className=" rounded bg-purple-200 text-purple-800 px-1.5 py-0.3 inline-block mt-1 text-[10px]">
                                     {String(apt.originalDoctorId) === String(currentUserId)
                                       ? `Referred to ${apt.doctorName}`
                                       : "Referred In"}
                                   </span>
                                 )}
                                 {apt.status === "refer_back" && ( // show refer_back status badge
-                                  <span className="text-xs rounded bg-orange-100 text-orange-800 px-1.5 py-0.5 inline-block mt-1">
+                                  <span className=" rounded bg-orange-200 text-orange-800 px-1.3 py-0.5 inline-block mt-1 text-[10px]">
                                     Refer Back Pending
                                   </span>
                                 )}
                               </div>
                               <div className="flex flex-col gap-1 items-end">
-                                <span className={`text-xs px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
+                                <span className={`text-[11px] px-2 py-1 rounded ${getStatusColor(apt.status)}`}>
                                   {apt.status}
                                 </span>
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
                                   {apt.date} {apt.time}
                                 </span>
                               </div>
                             </div>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-[11px] text-muted-foreground ">
                               {apt.type} • Room: {apt.roomNumber}
                             </p>
 
                             {user?.role === "doctor" && apt.status !== "cancelled" && apt.status !== "closed" && (
                               <div className="flex items-center gap-1 mt-1">
                                 {hasReport ? (
-                                  <span className="text-xs text-green-600 flex items-center gap-1">
+                                  <span className="text-[10px] text-green-600 flex items-center gap-1">
                                     <CheckCircle className="w-3 h-3" />
                                     Report
                                   </span>
                                 ) : (
-                                  <span className="text-xs text-amber-600 flex items-center gap-1">
+                                  <span className="text-[10px] text-amber-600 flex items-center gap-1">
                                     <AlertCircle className="w-3 h-3" />
                                     No Report
                                   </span>
@@ -1181,7 +1183,7 @@ export default function AppointmentsPage() {
                             )}
 
                             {/* Action Buttons */}
-                            <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2 text-xs">
+                            <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2 text-[11px]">
                               {(user?.role !== "doctor" ||
                                 (user?.role === "doctor" &&
                                   String(apt.createdBy) === String(user?.userId || user?.id))) &&
@@ -1192,7 +1194,7 @@ export default function AppointmentsPage() {
                                     disabled={
                                       loading.addAppointment || loading.updateAppointment || loading.deleteAppointment
                                     }
-                                    className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1"
+                                    className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1 text-[11px]"
                                   >
                                     Edit
                                   </button>
@@ -1206,14 +1208,14 @@ export default function AppointmentsPage() {
                                       setShowDeleteModal(true)
                                     }}
                                     disabled={loading.deleteAppointment}
-                                    className="text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer px-1"
+                                    className="text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer px-1 text-[11px]"
                                   >
                                     Delete
                                   </button>
                                   <button
                                     onClick={() => router.push(`/dashboard/appointments/${apt._id || apt.id}`)}
                                     disabled={loading.appointments}
-                                    className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1"
+                                    className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer px-1 text-[11px]"
                                   >
                                     Details
                                   </button>
@@ -1228,7 +1230,7 @@ export default function AppointmentsPage() {
                                         <button
                                           onClick={() => router.push("/dashboard/medical-reports")}
                                           disabled={loading.createReport}
-                                          className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1"
+                                          className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
                                         >
                                           <FileText className="w-3 h-3" />
                                           Report
@@ -1241,7 +1243,7 @@ export default function AppointmentsPage() {
                                             setReportErrors({})
                                           }}
                                           disabled={loading.createReport}
-                                          className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1"
+                                          className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
                                         >
                                           <FileText className="w-3 h-3" />
                                           Create
@@ -1254,7 +1256,7 @@ export default function AppointmentsPage() {
                                     <button
                                       onClick={() => handleOpenReferModal(apt)}
                                       disabled={loading.completeAppointment}
-                                      className="text-accent hover:underline disabled:text-accent/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1"
+                                      className="text-accent hover:underline disabled:text-accent/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
                                     >
                                       <FileText className="w-3 h-3" />
                                       Refer
@@ -1276,7 +1278,7 @@ export default function AppointmentsPage() {
                                           })
                                         }}
                                         disabled={loading.completeAppointment || !canClose}
-                                        className={`hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 ${
+                                        className={`hover:underline disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px] ${
                                           canClose
                                             ? "text-green-600 disabled:text-green-600/50"
                                             : "text-muted-foreground"
@@ -1295,7 +1297,7 @@ export default function AppointmentsPage() {
                                           })
                                         }
                                         disabled={loading.cancelAppointment}
-                                        className="text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1"
+                                        className="text-destructive hover:underline disabled:text-destructive/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
                                       >
                                         <X className="w-3 h-3" />
                                         Cancel
