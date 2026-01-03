@@ -70,11 +70,12 @@ export async function getAppointmentPermissions(appointmentId: string, doctorId:
   const isOriginalDoctor = String(appointment.originalDoctorId || appointment.doctorId) === String(doctorId)
   const isCurrentDoctor = String(appointment.doctorId) === String(doctorId)
   const isReferred = appointment.isReferred
+  const isReferBack = appointment.status === "refer_back"
 
   return {
     canCreateReport: isCurrentDoctor && !isReferred ? true : isReferred && isCurrentDoctor ? true : false,
     canViewAppointment: isOriginalDoctor || isCurrentDoctor,
-    canReferAppointment: isCurrentDoctor && !isReferred,
+    canReferAppointment: isReferBack && isOriginalDoctor ? true : isCurrentDoctor && !isReferred,
     canReferBack: isCurrentDoctor && isReferred,
     canCloseAppointment: isOriginalDoctor || isCurrentDoctor,
     canCancelAppointment: isCurrentDoctor && !isReferred,

@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect, useRef } from "react"
 import { toast } from "react-hot-toast"
-import { Plus, Loader2, FileText, CheckCircle, X, Edit, Trash2, Eye, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CalendarDays, User, Stethoscope, Clock, AlertCircle } from "lucide-react"
+import { Plus, FileText, CheckCircle, X, Edit, Trash2, Eye, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CalendarDays, User, Stethoscope, Clock, AlertCircle } from "lucide-react"
 import { AppointmentActionModal } from "@/components/appointment-action-modal"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { SearchableDropdown } from "@/components/searchable-dropdown"
@@ -22,10 +22,8 @@ function useAppointmentPermissions(user, currentUserId) {
   const canCloseOrCancelAppointment = (appointment) => {
     if (user?.role !== "doctor") return false
 
-    const isOriginalDoctor =
-      String(appointment.originalDoctorId) === String(currentUserId)
-    const isCurrentDoctor =
-      String(appointment.doctorId) === String(currentUserId)
+    const isOriginalDoctor = String(appointment.originalDoctorId) === String(currentUserId)
+    const isCurrentDoctor = String(appointment.doctorId) === String(currentUserId)
     const isReferred = appointment.isReferred
     const isReferBack = appointment.status === "refer_back"
 
@@ -50,10 +48,8 @@ function useAppointmentPermissions(user, currentUserId) {
     if (user?.role !== "doctor") return false
 
     const currentUserId = user?.userId || user?.id
-    const isOriginalDoctor =
-      String(appointment.originalDoctorId) === String(currentUserId)
-    const isCurrentDoctor =
-      String(appointment.doctorId) === String(currentUserId)
+    const isOriginalDoctor = String(appointment.originalDoctorId) === String(currentUserId)
+    const isCurrentDoctor = String(appointment.doctorId) === String(currentUserId)
     const isReferred = appointment.isReferred
     const isReferBack = appointment.status === "refer_back"
 
@@ -80,11 +76,15 @@ function useAppointmentPermissions(user, currentUserId) {
     const currentUserId = user?.userId || user?.id
     const isCurrentDoctor =
       String(appointment.doctorId) === String(currentUserId)
+    const isOriginalDoctor =
+      String(appointment.originalDoctorId) === String(currentUserId)
     const isReferred = appointment.isReferred
     const isReferBack = appointment.status === "refer_back"
 
-    // When appointment is in refer_back status, no one can refer it
-    if (isReferBack) return false
+    // When appointment is in refer_back status, original doctor can refer to another doctor
+    if (isReferBack && isOriginalDoctor) return true
+    
+    if (isReferBack && !isOriginalDoctor) return false
 
     // Can refer if: current doctor, not already referred, not cancelled/completed/closed
     return (
@@ -98,11 +98,7 @@ function useAppointmentPermissions(user, currentUserId) {
 
   const canEditAppointment = (appointment) => {
     const currentUserId = user?.userId || user?.id
-    if (
-      appointment.status === "cancelled" ||
-      appointment.status === "closed" ||
-      appointment.status === "completed"
-    ) {
+    if (appointment.status === "cancelled" || appointment.status === "closed" || appointment.status === "completed") {
       return false
     }
 
@@ -382,7 +378,7 @@ function TableLoadingSkeleton() {
           </div>
         </div>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -407,20 +403,14 @@ function TableLoadingSkeleton() {
           </tbody>
         </table>
       </div>
-      
+
       <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
         <div className="flex items-center justify-center py-8">
           <div className="flex flex-col items-center justify-center gap-3">
             <div className="flex justify-center items-center gap-2">
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-              <div
-                className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
-                style={{ animationDelay: "0.1s" }}
-              ></div>
-              <div
-                className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
-                style={{ animationDelay: "0.2s" }}
-              ></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
             </div>
             <span className="text-gray-500 text-sm">Loading appointments...</span>
           </div>
@@ -562,8 +552,8 @@ function AppointmentsTableView({
               const currentUserId = userId
 
               return (
-                <tr 
-                  key={appointmentId} 
+                <tr
+                  key={appointmentId}
                   className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors duration-150 group"
                 >
                   <td className="p-4">
@@ -601,18 +591,19 @@ function AppointmentsTableView({
                     </div>
                     {appointment.isReferred && (
                       <div className="mt-2">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor("refer_back")}`}>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor("refer_back")}`}
+                        >
                           {appointment.isReferred &&
                             appointment.status !== "completed" &&
-                            appointment.status !== "closed"
-                             && appointment.status !== "cancelled" && (
+                            appointment.status !== "closed" &&
+                            appointment.status !== "cancelled" && (
                               <span className="text-xs">
-                               {appointment.status === "refer_back"
-                                          ? ""
-                                          : String(appointment.originalDoctorId) ===
-                                            String(currentUserId)
-                                          ? `Referred to ${appointment.doctorName}`
-                                          : "Referred In"}
+                                {appointment.status === "refer_back"
+                                  ? ""
+                                  : String(appointment.originalDoctorId) === String(currentUserId)
+                                    ? `Referred to ${appointment.doctorName}`
+                                    : "Referred In"}
                               </span>
                             )}
                         </span>
@@ -733,7 +724,7 @@ function AppointmentsTableView({
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              
+
               <div className="flex items-center gap-1 mx-2">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum
@@ -875,16 +866,12 @@ export default function AppointmentsTablePage() {
       const reportChecks: Record<string, boolean> = {}
 
       for (const apt of appointments) {
-        const res = await fetch(
-          `/api/appointment-reports?appointmentId=${apt._id || apt.id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        )
+        const res = await fetch(`/api/appointment-reports?appointmentId=${apt._id || apt.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (res.ok) {
           const data = await res.json()
-          reportChecks[apt._id || apt.id] =
-            data.reports && data.reports.length > 0
+          reportChecks[apt._id || apt.id] = data.reports && data.reports.length > 0
         }
       }
 
@@ -1105,10 +1092,8 @@ export default function AppointmentsTablePage() {
     }
 
     setEditingId(appointment._id || appointment.id)
-    const doctorId =
-      user?.role === "doctor" ? user.userId : appointment.doctorId
-    const doctorName =
-      user?.role === "doctor" ? user.name : appointment.doctorName
+    const doctorId = user?.role === "doctor" ? user.userId : appointment.doctorId
+    const doctorName = user?.role === "doctor" ? user.name : appointment.doctorName
 
     setFormData({
       patientId: appointment.patientId,
@@ -1119,10 +1104,7 @@ export default function AppointmentsTablePage() {
       time: appointment.time,
       type: appointment.type,
       roomNumber: appointment.roomNumber,
-      duration:
-        appointment.duration && !isNaN(appointment.duration)
-          ? appointment.duration
-          : 30,
+      duration: appointment.duration && !isNaN(appointment.duration) ? appointment.duration : 30,
     })
     setShowForm(true)
   }
@@ -1286,9 +1268,7 @@ export default function AppointmentsTablePage() {
       if (res.ok) {
         const data = await res.json()
         if (editingId) {
-          setAppointments(
-            appointments.map((a) => (a._id === editingId || a.id === editingId ? data.appointment : a)),
-          )
+          setAppointments(appointments.map((a) => (a._id === editingId || a.id === editingId ? data.appointment : a)))
           toast.success("Appointment updated successfully")
           setEditingId(null)
         } else {
@@ -1411,13 +1391,8 @@ export default function AppointmentsTablePage() {
   }
 
   const handleOpenReferModal = (appointment: any) => {
-    if (
-      appointment.isReferred &&
-      String(appointment.originalDoctorId) !== String(currentUserId)
-    ) {
-      toast.error(
-        "This appointment is currently referred to another doctor and cannot be referred again by you."
-      )
+    if (appointment.isReferred && String(appointment.originalDoctorId) !== String(currentUserId)) {
+      toast.error("This appointment is currently referred to another doctor and cannot be referred again by you.")
       return
     }
 
@@ -1432,20 +1407,22 @@ export default function AppointmentsTablePage() {
 
   // Calculate total pages
   const totalPages = Math.ceil(
-    appointments.filter((apt) => {
-      if (user?.role !== "doctor") return true
-      const isCurrentDoctor = String(apt.doctorId) === String(user?.id)
-      const isOriginalDoctor = String(apt.originalDoctorId) === String(user?.id)
-      return isCurrentDoctor || isOriginalDoctor
-    }).filter(
-      (apt) =>
-        !searchQuery ||
-        apt.patientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        apt.doctorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        apt.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        apt.roomNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        apt.status?.toLowerCase().includes(searchQuery.toLowerCase()),
-    ).length / itemsPerPage,
+    appointments
+      .filter((apt) => {
+        if (user?.role !== "doctor") return true
+        const isCurrentDoctor = String(apt.doctorId) === String(user?.id)
+        const isOriginalDoctor = String(apt.originalDoctorId) === String(user?.id)
+        return isCurrentDoctor || isOriginalDoctor
+      })
+      .filter(
+        (apt) =>
+          !searchQuery ||
+          apt.patientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          apt.doctorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          apt.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          apt.roomNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          apt.status?.toLowerCase().includes(searchQuery.toLowerCase()),
+      ).length / itemsPerPage,
   )
 
   return (
@@ -1463,10 +1440,10 @@ export default function AppointmentsTablePage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <StatCard 
-                  label="Total Appointments" 
-                  value={totalAppointments} 
-                  icon={<CalendarDays className="w-5 h-5" />} 
+                <StatCard
+                  label="Total Appointments"
+                  value={totalAppointments}
+                  icon={<CalendarDays className="w-5 h-5" />}
                   loading={loading.appointments}
                 />
                 <StatCard
@@ -1727,9 +1704,7 @@ export default function AppointmentsTablePage() {
                           formErrors.roomNumber ? "border-red-300" : "border-gray-300"
                         }`}
                       />
-                      {formErrors.roomNumber && (
-                        <p className="text-xs text-red-600 mt-1">{formErrors.roomNumber}</p>
-                      )}
+                      {formErrors.roomNumber && <p className="text-xs text-red-600 mt-1">{formErrors.roomNumber}</p>}
                     </div>
 
                     <div>
@@ -1851,9 +1826,7 @@ export default function AppointmentsTablePage() {
                         }`}
                         rows={3}
                       />
-                      {reportErrors.findings && (
-                        <p className="text-xs text-red-600 mt-1">{reportErrors.findings}</p>
-                      )}
+                      {reportErrors.findings && <p className="text-xs text-red-600 mt-1">{reportErrors.findings}</p>}
                     </div>
 
                     <div>
