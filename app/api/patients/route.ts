@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const {
       name,
-      phone,
+      phones,
       email,
       dob,
       insuranceProvider,
@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
     // Validate critical credentials
     const missingCriticalCredentials = []
     if (!name?.trim()) missingCriticalCredentials.push("Name")
-    if (!phone?.trim()) missingCriticalCredentials.push("Phone")
+    const validPhones = phones?.filter((p: any) => p.number?.trim()) || []
+    if (validPhones.length === 0) missingCriticalCredentials.push("Phone Number")
     if (!dob?.trim()) missingCriticalCredentials.push("Date of Birth")
     if (!idNumber?.trim()) missingCriticalCredentials.push("ID Number")
 
@@ -73,6 +74,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    for (const phone of validPhones) {
+      const phoneStr = String(phone.number).trim()
+      const phoneDigits = phoneStr.slice(1)
+
+      if (!/^\d+$/.test(phoneDigits)) {
+        return NextResponse.json({ error: "Phone number must contain only digits after +" }, { status: 400 })
+      }
+      if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+        return NextResponse.json({ error: "Phone number must be 10-15 digits after +" }, { status: 400 })
+      }
+    }
+
     // Check if ID number already exists
     const existingPatientWithId = await Patient.findOne({ idNumber: idNumber.trim() })
     if (existingPatientWithId) {
@@ -82,22 +95,6 @@ export async function POST(request: NextRequest) {
         },
         { status: 409 },
       )
-    }
-
-    // Phone validation
-    const phoneStr = String(phone).trim()
-
-    if (phoneStr === "") {
-      return NextResponse.json({ error: "Phone number is required" }, { status: 400 })
-    }
-
-    const phoneDigits = phoneStr.slice(1)
-    if (!/^\d+$/.test(phoneDigits)) {
-      return NextResponse.json({ error: "Phone number must contain only digits after +" }, { status: 400 })
-    }
-
-    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
-      return NextResponse.json({ error: "Phone number must be 10-15 digits after +" }, { status: 400 })
     }
 
     // Handle email properly - convert empty string to null
@@ -149,12 +146,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Selected user is not a doctor" }, { status: 400 })
     }
 
-    const formattedPhone = formatPhoneForDatabase(phone)
+    const formattedPhones = validPhones.map((p: any) => ({
+      number: formatPhoneForDatabase(p.number),
+      isPrimary: p.isPrimary || false,
+    }))
+
+    // Ensure at least one phone is marked as primary
+    if (!formattedPhones.some((p: any) => p.isPrimary)) {
+      formattedPhones[0].isPrimary = true
+    }
 
     // Create patient data object
     const patientData: any = {
       name,
-      phone: formattedPhone,
+      phones: formattedPhones,
       dob,
       idNumber: idNumber.trim(),
       address: address || "",

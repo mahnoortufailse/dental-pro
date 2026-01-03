@@ -23,7 +23,9 @@ export function BillingPatientList({ patients }: any) {
               <h3 className="text-lg sm:text-xl font-bold text-foreground group-hover:text-accent transition-colors">
                 {patient.name}
               </h3>
-              <p className="text-sm text-muted-foreground mt-1">{patient.phone}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {patient.phones?.find((p: any) => p.isPrimary)?.number || patient.phone}
+              </p>
             </div>
             <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
           </div>

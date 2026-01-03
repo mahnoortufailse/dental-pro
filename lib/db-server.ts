@@ -44,7 +44,13 @@ userSchema.pre("save", async function (next) {
 
 const patientSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  phone: { type: String, required: true },
+  phones: [
+    {
+      number: { type: String, required: true },
+      isPrimary: { type: Boolean, default: false },
+    },
+  ],
+
   email: {
     type: String,
     required: false,
@@ -128,6 +134,8 @@ const appointmentSchema = new mongoose.Schema({
   referralNotes: { type: String, default: "" },
   lastReferBackDate: { type: Date, default: null },
   awaitingOriginalDoctorAction: { type: Boolean, default: false },
+  createdBy: { type: String, default: null }, // Add this field
+  createdByName: { type: String, default: null }, // Add this field
   createdAt: { type: Date, default: Date.now },
 })
 
@@ -274,7 +282,12 @@ const patientReferralSchema = new mongoose.Schema({
   doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   doctorName: { type: String, required: true },
   patientName: { type: String, required: true },
-  phone: { type: String, required: true },
+  phones: [
+    {
+      number: { type: String, required: true },
+      isPrimary: { type: Boolean, default: false },
+    },
+  ],
   email: { type: String, default: null },
   dob: { type: String, required: true },
   idNumber: { type: String, default: "" },
@@ -298,11 +311,18 @@ const patientReferralRequestSchema = new mongoose.Schema({
   doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   doctorName: { type: String, required: true },
   patientName: { type: String, required: true },
-  patientPhone: { type: String, required: true },
+  patientPhones: [
+    {
+      number: { type: String, required: true },
+      isPrimary: { type: Boolean, default: false },
+    },
+  ],
   patientEmail: { type: String, default: "" },
   patientDob: { type: String, required: true },
   patientIdNumber: { type: String, default: "" },
   patientAddress: { type: String, default: "" },
+  patientInsuranceProvider: { type: String, default: "" },
+  patientInsuranceNumber: { type: String, default: "" },
   patientAllergies: { type: [String], default: [] },
   patientMedicalConditions: { type: [String], default: [] },
   referralReason: { type: String, required: true },
@@ -348,8 +368,12 @@ export const AppointmentReport =
   mongoose.models.AppointmentReport || mongoose.model("AppointmentReport", appointmentReportSchema)
 export const PatientReferral =
   mongoose.models.PatientReferral || mongoose.model("PatientReferral", patientReferralSchema)
-export const PatientReferralRequest =
-  mongoose.models.PatientReferralRequest || mongoose.model("PatientReferralRequest", patientReferralRequestSchema)
+
+if (mongoose.models.PatientReferralRequest) {
+  delete mongoose.models.PatientReferralRequest
+}
+export const PatientReferralRequest = mongoose.model("PatientReferralRequest", patientReferralRequestSchema)
+
 export const AppointmentReferral =
   mongoose.models.AppointmentReferral || mongoose.model("AppointmentReferral", appointmentReferralSchema)
 
@@ -443,7 +467,12 @@ export async function initializeDB() {
         if (!patientExists) {
           await Patient.create({
             name: "John Doe",
-            phone: "9876543210",
+            phones: [
+              {
+                number: "9876543210",
+                isPrimary: true,
+              },
+            ],
             email: "john@example.com",
             dob: "1990-05-15",
             idNumber: "ID123456",

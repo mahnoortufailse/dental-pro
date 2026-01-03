@@ -1,98 +1,99 @@
-"use client";
+//@ts-nocheck
+"use client"
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/components/auth-context";
-import { toast } from "react-hot-toast";
-import {
-  ArrowLeft,
-  Plus,
-  Loader2,
-  CreditCard,
-  FileText,
-  DollarSign,
-  User,
-  Phone,
-  Calendar,
-  PieChart as PieChartIcon,
-  ChevronRight,
-} from "lucide-react";
-import { AddDebtModal } from "@/components/add-debt-modal";
-import { AddPaymentModal } from "@/components/add-payment-modal";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Legend,
-  Tooltip,
-} from "recharts";
-import { PaymentHistory } from "./payment-history";
-import { BillingChart } from "./billing-chart";
+import { useState, useEffect } from "react"
+import { useAuth } from "@/components/auth-context"
+import { toast } from "react-hot-toast"
+import { ArrowLeft, Plus, Loader2, CreditCard, FileText, DollarSign, User, Phone, Eye } from "lucide-react"
+import { AddDebtModal } from "@/components/add-debt-modal"
+import { AddPaymentModal } from "@/components/add-payment-modal"
+import { ToothChartVisual } from "@/components/tooth-chart-visual"
+import { PaymentHistory } from "./payment-history"
+import { BillingChart } from "./billing-chart"
 
 export function BillingDetailPage({ patient, onBack }: any) {
-  const { token } = useAuth();
-  const [billings, setBillings] = useState([]);
+  const { token } = useAuth()
+  const [billings, setBillings] = useState([])
   const [stats, setStats] = useState({
     totalPaid: 0,
     totalDebt: 0,
     remainingBalance: 0,
-  });
-  const [loading, setLoading] = useState(false);
-  const [showAddDebt, setShowAddDebt] = useState(false);
-  const [showAddPayment, setShowAddPayment] = useState(false);
+  })
+  const [loading, setLoading] = useState(false)
+  const [showAddDebt, setShowAddDebt] = useState(false)
+  const [showAddPayment, setShowAddPayment] = useState(false)
+  const [showToothChart, setShowToothChart] = useState(false)
+  const [toothChartData, setToothChartData] = useState(null)
+  const [toothChartLoading, setToothChartLoading] = useState(false)
 
   useEffect(() => {
     if (patient?.patientId) {
-      fetchTransactions();
+      fetchTransactions()
     }
-  }, [token, patient?.patientId]);
+  }, [token, patient?.patientId])
 
   const fetchTransactions = async () => {
     if (!patient?.patientId) {
-      console.error("[v0] No patientId available");
-      return;
+      console.error("[v0] No patientId available")
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
-      console.log("[v0] Fetching transactions for patient:", patient.patientId);
-      const res = await fetch(
-        `/api/billing/${patient.patientId}/transactions`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      console.log("[v0] Fetching transactions for patient:", patient.patientId)
+      const res = await fetch(`/api/billing/${patient.patientId}/transactions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       if (res.ok) {
-        const data = await res.json();
-        console.log("[v0] Received billing data:", data);
-        setBillings(data.billings || []);
-        setStats(
-          data.stats || { totalPaid: 0, totalDebt: 0, remainingBalance: 0 }
-        );
+        const data = await res.json()
+        console.log("[v0] Received billing data:", data)
+        setBillings(data.billings || [])
+        setStats(data.stats || { totalPaid: 0, totalDebt: 0, remainingBalance: 0 })
       } else {
-        const errorData = await res.json();
-        console.error("[v0] Failed to fetch transactions:", errorData);
-        toast.error("Failed to load billing data");
+        const errorData = await res.json()
+        console.error("[v0] Failed to fetch transactions:", errorData)
+        toast.error("Failed to load billing data")
       }
     } catch (error) {
-      console.error("[v0] Failed to fetch transactions:", error);
-      toast.error("Failed to load billing data");
+      console.error("[v0] Failed to fetch transactions:", error)
+      toast.error("Failed to load billing data")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleDebtAdded = () => {
-    setShowAddDebt(false);
-    fetchTransactions();
-    toast.success("Debt added successfully");
-  };
+    setShowAddDebt(false)
+    fetchTransactions()
+    toast.success("Debt added successfully")
+  }
 
   const handlePaymentAdded = () => {
-    setShowAddPayment(false);
-    fetchTransactions();
-    toast.success("Payment recorded successfully");
-  };
+    setShowAddPayment(false)
+    fetchTransactions()
+    toast.success("Payment recorded successfully")
+  }
+
+  const handleViewToothChart = async () => {
+    setToothChartLoading(true)
+    try {
+      const res = await fetch(`/api/tooth-chart?patientId=${patient.patientId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setToothChartData(data.toothChart)
+        setShowToothChart(true)
+      } else {
+        toast.error("Failed to load tooth chart")
+      }
+    } catch (error) {
+      console.error("Error fetching tooth chart:", error)
+      toast.error("Error loading tooth chart")
+    } finally {
+      setToothChartLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -110,6 +111,14 @@ export function BillingDetailPage({ patient, onBack }: any) {
 
             {/* Action Buttons in Header */}
             <div className="flex items-center gap-3">
+              <button
+                onClick={handleViewToothChart}
+                disabled={toothChartLoading}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md active:scale-95 cursor-pointer"
+              >
+                <Eye className="w-4 h-4" />
+                {toothChartLoading ? "Loading..." : "View Tooth Chart"}
+              </button>
               <button
                 onClick={() => setShowAddDebt(true)}
                 className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md active:scale-95 cursor-pointer"
@@ -134,13 +143,11 @@ export function BillingDetailPage({ patient, onBack }: any) {
                 <User className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                  {patient?.name || "Unknown Patient"}
-                </h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{patient?.name || "Unknown Patient"}</h1>
                 <div className="flex flex-wrap items-center gap-3 mt-2">
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Phone className="w-3.5 h-3.5" />
-                    {patient?.phone || "No phone"}
+                    {patient?.phones?.find((p: any) => p.isPrimary)?.number || patient?.phone || "No phone"}
                   </div>
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <span className="text-xs font-medium px-2 py-1 bg-muted rounded">
@@ -157,9 +164,7 @@ export function BillingDetailPage({ patient, onBack }: any) {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 bg-card rounded-xl border border-border">
             <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-            <p className="text-muted-foreground font-medium">
-              Loading billing information...
-            </p>
+            <p className="text-muted-foreground font-medium">Loading billing information...</p>
           </div>
         ) : (
           <>
@@ -179,12 +184,8 @@ export function BillingDetailPage({ patient, onBack }: any) {
                         <DollarSign className="w-5 h-5 text-accent" />
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Total Paid
-                        </p>
-                        <p className="text-2xl font-bold text-accent">
-                          ${(stats?.totalPaid || 0).toFixed(2)}
-                        </p>
+                        <p className="text-sm text-muted-foreground">Total Paid</p>
+                        <p className="text-2xl font-bold text-accent">${(stats?.totalPaid || 0).toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
@@ -192,14 +193,7 @@ export function BillingDetailPage({ patient, onBack }: any) {
                     <div
                       className="h-full bg-accent rounded-full transition-all duration-700 ease-out"
                       style={{
-                        width: `${
-                          stats?.totalDebt
-                            ? Math.min(
-                                100,
-                                (stats.totalPaid / stats.totalDebt) * 100
-                              )
-                            : 0
-                        }%`,
+                        width: `${stats?.totalDebt ? Math.min(100, (stats.totalPaid / stats.totalDebt) * 100) : 0}%`,
                       }}
                     ></div>
                   </div>
@@ -212,12 +206,8 @@ export function BillingDetailPage({ patient, onBack }: any) {
                         <FileText className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Total Debt
-                        </p>
-                        <p className="text-2xl font-bold text-foreground">
-                          ${(stats?.totalDebt || 0).toFixed(2)}
-                        </p>
+                        <p className="text-sm text-muted-foreground">Total Debt</p>
+                        <p className="text-2xl font-bold text-foreground">${(stats?.totalDebt || 0).toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
@@ -225,37 +215,27 @@ export function BillingDetailPage({ patient, onBack }: any) {
 
                 <div
                   className={`bg-card rounded-xl border p-5 hover:border-primary/50 transition-colors duration-200 ${
-                    (stats?.remainingBalance || 0) > 0
-                      ? "border-destructive/20"
-                      : "border-accent/20"
+                    (stats?.remainingBalance || 0) > 0 ? "border-destructive/20" : "border-accent/20"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div
                         className={`p-2 rounded-lg ${
-                          (stats?.remainingBalance || 0) > 0
-                            ? "bg-destructive/10"
-                            : "bg-accent/10"
+                          (stats?.remainingBalance || 0) > 0 ? "bg-destructive/10" : "bg-accent/10"
                         }`}
                       >
                         <CreditCard
                           className={`w-5 h-5 ${
-                            (stats?.remainingBalance || 0) > 0
-                              ? "text-destructive"
-                              : "text-accent"
+                            (stats?.remainingBalance || 0) > 0 ? "text-destructive" : "text-accent"
                           }`}
                         />
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Remaining Balance
-                        </p>
+                        <p className="text-sm text-muted-foreground">Remaining Balance</p>
                         <p
                           className={`text-2xl font-bold ${
-                            (stats?.remainingBalance || 0) > 0
-                              ? "text-destructive"
-                              : "text-accent"
+                            (stats?.remainingBalance || 0) > 0 ? "text-destructive" : "text-accent"
                           }`}
                         >
                           ${(stats?.remainingBalance || 0).toFixed(2)}
@@ -266,19 +246,12 @@ export function BillingDetailPage({ patient, onBack }: any) {
                   <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-700 ease-out ${
-                        (stats?.remainingBalance || 0) > 0
-                          ? "bg-destructive"
-                          : "bg-accent"
+                        (stats?.remainingBalance || 0) > 0 ? "bg-destructive" : "bg-accent"
                       }`}
                       style={{
                         width: `${
                           stats?.totalDebt
-                            ? Math.min(
-                                100,
-                                (Math.abs(stats.remainingBalance) /
-                                  stats.totalDebt) *
-                                  100
-                              )
+                            ? Math.min(100, (Math.abs(stats.remainingBalance) / stats.totalDebt) * 100)
                             : 0
                         }%`,
                       }}
@@ -293,6 +266,36 @@ export function BillingDetailPage({ patient, onBack }: any) {
               <PaymentHistory billings={billings} patient={patient} />
             </div>
           </>
+        )}
+
+        {showToothChart && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-card rounded-lg border border-border p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-lg">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-foreground">Tooth Chart - {patient?.name}</h2>
+                <button
+                  onClick={() => setShowToothChart(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {toothChartData ? (
+                <div className="space-y-4">
+                  <ToothChartVisual teeth={toothChartData.teeth || {}} onToothClick={() => {}} readOnly={true} />
+                  {toothChartData.overallNotes && (
+                    <div className="bg-muted p-4 rounded-lg">
+                      <h3 className="font-semibold text-foreground mb-2">Overall Notes</h3>
+                      <p className="text-muted-foreground">{toothChartData.overallNotes}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">No tooth chart available for this patient</div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Modals */}
@@ -315,5 +318,5 @@ export function BillingDetailPage({ patient, onBack }: any) {
         )}
       </main>
     </div>
-  );
+  )
 }

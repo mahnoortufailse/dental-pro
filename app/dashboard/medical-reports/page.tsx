@@ -19,6 +19,15 @@ import {
   Edit2,
   Search,
   User,
+  Calendar,
+  Clock,
+  Stethoscope,
+  AlertCircle,
+  Building,
+  UserCircle,
+  Clock4,
+  Type,
+  Hash,
 } from "lucide-react"
 
 function MedicalReportsContent() {
@@ -30,13 +39,14 @@ function MedicalReportsContent() {
   const [patientReportStatus, setPatientReportStatus] = useState({})
   const [loading, setLoading] = useState(false)
   const [selectedReport, setSelectedReport] = useState(null)
+  const [selectedReportAppointment, setSelectedReportAppointment] = useState(null)
   const [showReportModal, setShowReportModal] = useState(false)
   const [filterPatient, setFilterPatient] = useState("")
   const [patients, setPatients] = useState([])
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [reportToDelete, setReportToDelete] = useState<any>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [patientSearch, setPatientSearch] = useState("") // Only patient search
+  const [patientSearch, setPatientSearch] = useState("")
   const [showPatientDropdown, setShowPatientDropdown] = useState(false)
   const [selectedPatientName, setSelectedPatientName] = useState("")
 
@@ -63,11 +73,7 @@ function MedicalReportsContent() {
     if (token) {
       fetchReports()
       fetchPatients()
-      if (user?.role === "doctor") {
-        fetchReportsAndPatients()
-      } else {
-        fetchReportsAndPatients()
-      }
+      fetchReportsAndPatients()
     }
   }, [token, user])
 
@@ -213,6 +219,19 @@ function MedicalReportsContent() {
 
   const handleViewReport = (report: any) => {
     setSelectedReport(report)
+    
+    // Find the appointment related to this report
+    const appointmentId = report.appointmentId?._id || report.appointmentId
+    if (appointmentId) {
+      const appointment = appointments.find((apt: any) => {
+        const aptId = apt._id || apt.id
+        return String(aptId) === String(appointmentId)
+      })
+      setSelectedReportAppointment(appointment || null)
+    } else {
+      setSelectedReportAppointment(null)
+    }
+    
     setShowReportModal(true)
   }
 
@@ -411,6 +430,28 @@ function MedicalReportsContent() {
     setCurrentPage(1)
   }, [patientSearch, itemsPerPage, filterPatient])
 
+  // Function to get appointment status badge color
+  const getAppointmentStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      case 'no-show':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
+      case 'refer_back':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
+      case 'closed':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
+    }
+  }
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
@@ -514,15 +555,6 @@ function MedicalReportsContent() {
                     </div>
                   )}
                 </div>
-
-                {/* Help text */}
-                {/* <p className="text-xs text-muted-foreground mt-2 ml-1">
-                  {filterPatient
-                    ? `Filtering by patient: ${selectedPatientName}`
-                    : patientSearch
-                      ? `Searching patients for: "${patientSearch}"`
-                      : "Type to search patients"}
-                </p> */}
               </div>
 
               {/* Controls */}
@@ -669,7 +701,6 @@ function MedicalReportsContent() {
                       </div>
                     ))
                   ) : (
-                    // This is the section to be updated with the new report card
                     reports.length > 0 && (
                       <div className="space-y-3">
                         {currentReports.map((report) => (
@@ -774,7 +805,6 @@ function MedicalReportsContent() {
                         ))}
                       </div>
                     )
-                    // </CHANGE>
                   )}
                 </div>
 
@@ -834,10 +864,10 @@ function MedicalReportsContent() {
             )}
           </div>
 
-          {/* View Report Modal */}
+          {/* View Report Modal - WITH COMPLETE APPOINTMENT DETAILS */}
           {showReportModal && selectedReport && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200">
-              <div className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-3xl max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+              <div className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-4xl max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-200">
                 {/* Modal Header */}
                 <div className="flex justify-between items-start p-6 sm:p-8 border-b border-border sticky top-0 bg-gradient-to-r from-card to-muted/30">
                   <div className="min-w-0 pr-4">
@@ -853,7 +883,10 @@ function MedicalReportsContent() {
                     </p>
                   </div>
                   <button
-                    onClick={() => setShowReportModal(false)}
+                    onClick={() => {
+                      setShowReportModal(false)
+                      setSelectedReportAppointment(null)
+                    }}
                     className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-2 hover:bg-muted rounded-lg flex-shrink-0"
                   >
                     <X className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -861,10 +894,236 @@ function MedicalReportsContent() {
                 </div>
 
                 <div className="p-6 sm:p-8 space-y-6 sm:space-y-8">
+                  {/* Appointment Information - COMPREHENSIVE DETAILS */}
+                  {selectedReportAppointment && (
+                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/10 rounded-xl p-5 sm:p-6 border border-indigo-200 dark:border-indigo-800">
+                      <h3 className="font-bold text-foreground mb-4 text-base sm:text-lg flex items-center gap-2">
+                        <span className="w-1 h-6 bg-indigo-600 rounded-full"></span>
+                        <Calendar className="w-4 h-4" />
+                        Appointment Details
+                      </h3>
+                      
+                      <div className="space-y-6">
+                        {/* Main Appointment Info Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Left Column - Date, Time, Duration */}
+                          <div className="space-y-4">
+                            {/* Date */}
+                            <div className="flex items-start gap-3">
+                              <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-lg">
+                                <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                                  Appointment Date
+                                </p>
+                                <p className="text-foreground font-semibold mt-1 text-sm sm:text-base">
+                                  {selectedReportAppointment.date ? new Date(selectedReportAppointment.date).toLocaleDateString("en-US", {
+                                    weekday: "long",
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric",
+                                  }) : "N/A"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Time */}
+                            <div className="flex items-start gap-3">
+                              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+                                <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                                  Time Slot
+                                </p>
+                                <p className="text-foreground font-semibold mt-1 text-sm sm:text-base">
+                                  {selectedReportAppointment.time ? new Date(`2000-01-01T${selectedReportAppointment.time}`).toLocaleTimeString("en-US", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  }) : "N/A"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Duration */}
+                            <div className="flex items-start gap-3">
+                              <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
+                                <Clock4 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                                  Duration
+                                </p>
+                                <p className="text-foreground font-semibold mt-1 text-sm sm:text-base">
+                                  {selectedReportAppointment.duration || 30} minutes
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right Column - Type, Room, Status */}
+                          <div className="space-y-4">
+                            {/* Appointment Type */}
+                            <div className="flex items-start gap-3">
+                              <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
+                                <Type className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                                  Appointment Type
+                                </p>
+                                <p className="text-foreground font-semibold mt-1 text-sm sm:text-base">
+                                  {selectedReportAppointment.type || "Consultation"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Room Number */}
+                            <div className="flex items-start gap-3">
+                              <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+                                <Hash className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                                  Room Number
+                                </p>
+                                <p className="text-foreground font-semibold mt-1 text-sm sm:text-base">
+                                  {selectedReportAppointment.roomNumber || "N/A"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Status */}
+                            <div className="flex items-start gap-3">
+                              <div className="bg-rose-100 dark:bg-rose-900/30 p-2 rounded-lg">
+                                <Stethoscope className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                                  Appointment Status
+                                </p>
+                                <div className="mt-1">
+                                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${getAppointmentStatusColor(selectedReportAppointment.status)}`}>
+                                    {selectedReportAppointment.status ? selectedReportAppointment.status.charAt(0).toUpperCase() + selectedReportAppointment.status.slice(1) : "Unknown"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Doctor Information */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-indigo-200 dark:border-indigo-800">
+                          {/* Current Doctor */}
+                          <div className="flex items-start gap-3">
+                            <div className="bg-cyan-100 dark:bg-cyan-900/30 p-2 rounded-lg">
+                              <UserCircle className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                                Doctor
+                              </p>
+                              <p className="text-foreground font-semibold mt-1 text-sm sm:text-base">
+                               {selectedReportAppointment.isReferred ? selectedReportAppointment.originalDoctorName : selectedReportAppointment.doctorName || "N/A"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Created Information */}
+                          <div className="flex items-start gap-3">
+                            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg">
+                              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                                Created
+                              </p>
+                              <div className="mt-1">
+                                <p className="text-foreground text-sm">
+                                  {selectedReportAppointment.createdAt ? new Date(selectedReportAppointment.createdAt).toLocaleDateString() : "N/A"}
+                                </p>
+                                {selectedReportAppointment.createdByName && (
+                                  <p className="text-foreground text-xs text-muted-foreground mt-1">
+                                    By: {selectedReportAppointment.createdByName}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Referral Information (if applicable) */}
+                        {selectedReportAppointment.isReferred && (
+                          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 mt-4 border border-purple-200 dark:border-purple-800">
+                            <div className="flex items-center gap-2 mb-3">
+                              <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                              </svg>
+                              <h4 className="font-semibold text-foreground text-sm">Referral Information</h4>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg">
+                                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                                  Original Doctor
+                                </p>
+                                <p className="text-foreground font-medium text-sm mt-1">
+                                   {selectedReportAppointment.originalDoctorName || "N/A"}
+                                </p>
+                              </div>
+                              <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg">
+                                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                                  Referred Doctor
+                                </p>
+                                <p className="text-foreground font-medium text-sm mt-1">
+                                   {selectedReportAppointment.doctorName || "N/A"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Additional Information */}
+                        {(selectedReportAppointment.reason || selectedReportAppointment.notes) && (
+                          <div className="pt-4 border-t border-indigo-200 dark:border-indigo-800">
+                            <h4 className="font-semibold text-foreground mb-3 text-sm">Additional Information</h4>
+                            <div className="space-y-3">
+                              {selectedReportAppointment.reason && (
+                                <div>
+                                  <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-1">
+                                    Appointment Reason
+                                  </p>
+                                  <p className="text-foreground text-sm bg-white/50 dark:bg-black/20 p-3 rounded-lg">
+                                    {selectedReportAppointment.reason}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {selectedReportAppointment.notes && (
+                                <div>
+                                  <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-1">
+                                    Additional Notes
+                                  </p>
+                                  <p className="text-foreground text-sm bg-white/50 dark:bg-black/20 p-3 rounded-lg whitespace-pre-wrap">
+                                    {selectedReportAppointment.notes}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Patient Info */}
                   <div className="bg-gradient-to-br from-blue-50 to-blue-50/50 dark:from-blue-950/20 dark:to-blue-950/10 rounded-xl p-5 sm:p-6 border border-blue-200 dark:border-blue-800">
                     <h3 className="font-bold text-foreground mb-4 text-base sm:text-lg flex items-center gap-2">
                       <span className="w-1 h-6 bg-blue-600 rounded-full"></span>
+                      <UserCircle className="w-4 h-4" />
                       Patient Information
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
@@ -893,6 +1152,7 @@ function MedicalReportsContent() {
                   <div className="bg-gradient-to-br from-green-50 to-green-50/50 dark:from-green-950/20 dark:to-green-950/10 rounded-xl p-5 sm:p-6 border border-green-200 dark:border-green-800">
                     <h3 className="font-bold text-foreground mb-4 text-base sm:text-lg flex items-center gap-2">
                       <span className="w-1 h-6 bg-green-600 rounded-full"></span>
+                      <Stethoscope className="w-4 h-4" />
                       Attending Physician
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -915,6 +1175,7 @@ function MedicalReportsContent() {
                   <div className="space-y-5">
                     <h3 className="font-bold text-foreground text-base sm:text-lg flex items-center gap-2">
                       <span className="w-1 h-6 bg-primary rounded-full"></span>
+                      <FileText className="w-4 h-4" />
                       Clinical Findings
                     </h3>
 
@@ -1007,7 +1268,10 @@ function MedicalReportsContent() {
                     Download Report
                   </button>
                   <button
-                    onClick={() => setShowReportModal(false)}
+                    onClick={() => {
+                      setShowReportModal(false)
+                      setSelectedReportAppointment(null)
+                    }}
                     className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-3 rounded-lg transition-colors font-semibold cursor-pointer text-sm sm:text-base"
                   >
                     Close

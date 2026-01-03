@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Target doctor not found" }, { status: 404 })
     }
 
-    // Create referral record
+    // Create referral record with pending status
     const referral = await AppointmentReferral.create({
       appointmentId,
       patientId: String(appointment.patientId),
@@ -135,6 +135,7 @@ export async function POST(request: NextRequest) {
       referralReason: String(referralReason).trim(),
       status: "pending",
       notes: "",
+      createdAt: new Date(),
     })
 
     await Appointment.findByIdAndUpdate(appointmentId, {
@@ -144,6 +145,7 @@ export async function POST(request: NextRequest) {
       doctorName: targetDoctor.name,
       isReferred: true,
       currentReferralId: referral._id,
+      updatedAt: new Date(),
     })
 
     console.log("[v0] Appointment referred successfully:", {
@@ -153,6 +155,7 @@ export async function POST(request: NextRequest) {
       fromDoctorName: payload.name,
       toDoctor: String(toDoctorId),
       toDoctorName: targetDoctor.name,
+      referralStatus: "pending",
     })
 
     return NextResponse.json({ success: true, referral })

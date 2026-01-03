@@ -1,8 +1,8 @@
 //@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
-import { Appointment, connectDB, User, Patient } from "@/lib/db-server"
+import { Appointment, connectDB, User, Patient, AppointmentReferral } from "@/lib/db-server"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
-import { sendAppointmentConfirmation } from "@/lib/whatsapp-service"
+import { sendAppointmentConfirmationArabic } from "@/lib/whatsapp-service"
 import { validateAppointmentSchedulingServer } from "@/lib/appointment-validation-server"
 import { sendAppointmentConfirmationEmail } from "@/lib/nodemailer-service"
 
@@ -63,9 +63,28 @@ export async function GET(request: NextRequest) {
       })),
     )
 
+    let filteredAppointments = appointments
+    if (payload?.role === "doctor") {
+      filteredAppointments = []
+
+      for (const apt of appointments) {
+        // If this appointment is referred to this doctor and the referral is still pending, exclude it
+        if (apt.isReferred && String(apt.doctorId) === String(payload.userId)) {
+          // Check if there's a pending referral for this appointment
+          const referral = await AppointmentReferral.findById(apt.currentReferralId)
+          if (referral && referral.status === "pending") {
+            console.log("[v0] Excluding appointment with pending referral:", apt._id)
+            continue // Skip this appointment
+          }
+        }
+
+        filteredAppointments.push(apt)
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      appointments: appointments.map((apt) => ({
+      appointments: filteredAppointments.map((apt) => ({
         _id: apt._id.toString(),
         id: apt._id.toString(),
         patientId: apt.patientId,
@@ -82,6 +101,8 @@ export async function GET(request: NextRequest) {
         originalDoctorId: apt.originalDoctorId || null,
         originalDoctorName: apt.originalDoctorName || null,
         currentReferralId: apt.currentReferralId || null,
+        createdBy: apt.createdBy || null, // ADD THIS LINE
+        createdByName: apt.createdByName || null, // ADD THIS LINE
       })),
     })
   } catch (error) {
@@ -186,7 +207,7 @@ export async function POST(request: NextRequest) {
 
     if (patient && patient.phone) {
       const appointmentId = newAppointment._id.toString()
-      console.log("[DEBUG] Sending WhatsApp confirmation for:", {
+      console.log("[DEBUG] Sending WhatsApp Arabic confirmation for:", {
         to: patient?.phone,
         patientName,
         type,
@@ -196,14 +217,14 @@ export async function POST(request: NextRequest) {
         appointmentId,
       })
 
-      const whatsappResult = await sendAppointmentConfirmation(patient?.phone, patientName, date, time, doctorName)
+      const whatsappResult = await sendAppointmentConfirmationArabic(patient?.phone, date, time, doctorName)
 
-      console.log("[v0] ✅ CONFIRMATION TEMPLATE: WhatsApp result:", whatsappResult)
+      console.log("[v0] ✅ ARABIC CONFIRMATION TEMPLATE: WhatsApp result:", whatsappResult)
 
       if (!whatsappResult.success) {
-        console.warn("[v0] ⚠️ CONFIRMATION TEMPLATE FAILED:", whatsappResult.error)
+        console.warn("[v0] ⚠️ ARABIC CONFIRMATION TEMPLATE FAILED:", whatsappResult.error)
       } else {
-        console.log("[v0] ✅ CONFIRMATION TEMPLATE SENT successfully with messageId:", whatsappResult.messageId)
+        console.log("[v0] ✅ ARABIC CONFIRMATION TEMPLATE SENT successfully with messageId:", whatsappResult.messageId)
       }
     } else {
       console.warn("[DEBUG] Patient phone missing — WhatsApp message skipped")

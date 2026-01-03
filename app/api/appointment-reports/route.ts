@@ -154,16 +154,57 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
     }
 
+    // Multi-report logic - determine doctor role and check permissions
     let doctorRole = "original"
     let referralId = null
     let previousReportId = null
 
-    // If appointment is referred and this doctor is the referred doctor, they are the referred role
-    if (appointmentExists.isReferred && String(appointmentExists.doctorId) === String(payload.userId)) {
+    // Check if doctor already created a report for this appointment
+    const existingReport = await AppointmentReport.findOne({
+      appointmentId: appointmentId,
+      doctorId: payload.userId,
+    })
+
+    if (existingReport) {
+      return NextResponse.json(
+        {
+          error: "You have already created a report for this appointment. One report per doctor maximum.",
+          details: "You cannot create another report for the same appointment.",
+        },
+        { status: 403 },
+      )
+    }
+
+    // Original doctor creating report after referral back
+    // CRITICAL RULE: Only if they didn't create one before
+    if (appointmentExists.status === "refer_back") {
+      const originalReportBeforeReferral = await AppointmentReport.findOne({
+        appointmentId: appointmentId,
+        doctorId: payload.userId,
+        doctorRole: "original",
+      })
+
+      if (originalReportBeforeReferral) {
+        return NextResponse.json(
+          {
+            error:
+              "You cannot create another report after referral back. You already created a report before referring this case.",
+            details: "Only one report per doctor is allowed.",
+          },
+          { status: 403 },
+        )
+      }
+
+      // Original doctor can create now since they didn't create before
+      doctorRole = "original"
+      referralId = null
+    }
+    // Referred doctor creating report
+    else if (appointmentExists.isReferred && String(appointmentExists.doctorId) === String(payload.userId)) {
       doctorRole = "referred"
       referralId = appointmentExists.currentReferralId
 
-      // Find the original doctor's report to reference (if exists)
+      // Find the original doctor's report to reference
       const originalReport = await AppointmentReport.findOne({
         appointmentId: appointmentId,
         doctorRole: "original",
@@ -172,8 +213,9 @@ export async function POST(request: NextRequest) {
       if (originalReport) {
         previousReportId = originalReport._id
       }
-    } else if (String(appointmentExists.originalDoctorId || appointmentExists.doctorId) === String(payload.userId)) {
-      // This is the original doctor
+    }
+    // Original doctor creating first report
+    else if (String(appointmentExists.originalDoctorId || appointmentExists.doctorId) === String(payload.userId)) {
       doctorRole = "original"
       referralId = null
     } else {
