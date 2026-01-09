@@ -2,7 +2,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { Appointment, connectDB, User, Patient, AppointmentReferral } from "@/lib/db-server"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
-import { sendAppointmentConfirmationArabic } from "@/lib/whatsapp-service"
+import { sendAppointmentConfirmationArabic, getAllPhoneNumbers } from "@/lib/whatsapp-service"
 import { validateAppointmentSchedulingServer } from "@/lib/appointment-validation-server"
 import { sendAppointmentConfirmationEmail } from "@/lib/nodemailer-service"
 
@@ -203,12 +203,14 @@ export async function POST(request: NextRequest) {
     const patient = await Patient.findById(patientId)
 
     console.log("[DEBUG] Patient found:", patient ? patient.name : "No patient found")
-    console.log("[DEBUG] Patient phone:", patient?.phone)
 
-    if (patient && patient.phone) {
+    const allPhoneNumbers = getAllPhoneNumbers(patient)
+    console.log("[DEBUG] Patient all phone numbers:", allPhoneNumbers)
+
+    if (patient && allPhoneNumbers.length > 0) {
       const appointmentId = newAppointment._id.toString()
-      console.log("[DEBUG] Sending WhatsApp Arabic confirmation for:", {
-        to: patient?.phone,
+      console.log("[DEBUG] Sending WhatsApp Arabic confirmation to all numbers:", {
+        phones: allPhoneNumbers,
         patientName,
         type,
         date,
@@ -217,7 +219,13 @@ export async function POST(request: NextRequest) {
         appointmentId,
       })
 
-      const whatsappResult = await sendAppointmentConfirmationArabic(patient?.phone, date, time, doctorName)
+      const whatsappResult = await sendAppointmentConfirmationArabic(
+        allPhoneNumbers,
+        date,
+        time,
+        doctorName,
+        patientName,
+      )
 
       console.log("[v0] ✅ ARABIC CONFIRMATION TEMPLATE: WhatsApp result:", whatsappResult)
 
@@ -227,7 +235,7 @@ export async function POST(request: NextRequest) {
         console.log("[v0] ✅ ARABIC CONFIRMATION TEMPLATE SENT successfully with messageId:", whatsappResult.messageId)
       }
     } else {
-      console.warn("[DEBUG] Patient phone missing — WhatsApp message skipped")
+      console.warn("[DEBUG] Patient phone numbers missing — WhatsApp message skipped")
     }
 
     if (patient && patient.email) {

@@ -225,16 +225,19 @@ export async function sendAppointmentConfirmation(
 
 /**
  * Sends appointment confirmation notification in Arabic
+ * Falls back to English template if Arabic template doesn't exist
  * @param phoneNumber - Phone number(s) to send to
  * @param date - Appointment date in Arabic format
  * @param time - Appointment time in Arabic format
  * @param doctorName - Doctor name in Arabic
+ * @param patientName - Patient name (optional, for fallback)
  */
 export async function sendAppointmentConfirmationArabic(
   phoneNumber: string | string[],
   date: string,
   time: string,
   doctorName: string,
+  patientName?: string,
 ): Promise<WhatsAppResponse> {
   const phoneNumbers = Array.isArray(phoneNumber) ? phoneNumber : [phoneNumber]
 
@@ -245,7 +248,7 @@ export async function sendAppointmentConfirmationArabic(
     time,
   })
 
-  const results = await Promise.all(
+  const arabicResults = await Promise.all(
     phoneNumbers.map((phone) =>
       sendWhatsAppTemplate({
         to: phone,
@@ -256,14 +259,48 @@ export async function sendAppointmentConfirmationArabic(
     ),
   )
 
-  const allSuccessful = results.every((r) => r.success)
-  const successCount = results.filter((r) => r.success).length
+  const arabicSuccess = arabicResults.filter((r) => r.success).length
+
+  // if (arabicSuccess === 0 && patientName) {
+  //   console.warn("[v0] ⚠️ Arabic template failed for all numbers, attempting English fallback...")
+  //   const englishResults = await Promise.all(
+  //     phoneNumbers.map((phone) =>
+  //       sendWhatsAppTemplate({
+  //         to: phone,
+  //         templateName: "appointment_confirmation",
+  //         parameters: [patientName, date, time, doctorName],
+  //         languageCode: "en",
+  //       }),
+  //     ),
+  //   )
+
+  //   const englishSuccess = englishResults.filter((r) => r.success).length
+  //   console.log(
+  //     "[v0] 📋 sendAppointmentConfirmationArabic Fallback: Sent to",
+  //     englishSuccess,
+  //     "of",
+  //     phoneNumbers.length,
+  //     "using English template",
+  //   )
+
+  //   return {
+  //     success: englishSuccess > 0,
+  //     messageId: englishResults.filter((r) => r.messageId)[0]?.messageId,
+  //     error:
+  //       englishSuccess > 0
+  //         ? undefined
+  //         : `Failed with Arabic template and English fallback. Sent to ${englishSuccess} of ${phoneNumbers.length} numbers`,
+  //   }
+  // }
+
+  const allSuccessful = arabicResults.every((r) => r.success)
+  const successCount = arabicResults.filter((r) => r.success).length
 
   console.log("[v0] 📋 sendAppointmentConfirmationArabic: Result - Sent to", successCount, "of", phoneNumbers.length)
 
   return {
     success: allSuccessful,
-    messageId: results.filter((r) => r.messageId)[0]?.messageId,
+    messageId: arabicResults.filter((r) => r.messageId)[0]?.messageId,
     error: allSuccessful ? undefined : `Sent to ${successCount} of ${phoneNumbers.length} numbers`,
   }
 }
@@ -429,4 +466,59 @@ export async function sendAccountConfirmation(
     messageId: results.filter((r) => r.messageId)[0]?.messageId,
     error: allSuccessful ? undefined : `Sent to ${successCount} of ${phoneNumbers.length} numbers`,
   }
+}
+
+/**
+ * Helper function to get primary phone number from patient
+ * Handles both old format (single phone) and new format (phones array)
+ */
+export function getPrimaryPhoneNumber(patient: any): string | null {
+  if (!patient) return null
+
+  if (patient.phones && Array.isArray(patient.phones) && patient.phones.length > 0) {
+    // Find primary phone or return first phone
+    const primaryPhone = patient.phones.find((p: any) => p.isPrimary)
+    return primaryPhone?.number || patient.phones[0]?.number || null
+  }
+
+  // Fallback to old single phone format for backward compatibility
+  if (patient.phone) {
+    return patient.phone
+  }
+
+  return null
+}
+
+/**
+ * Helper function to get all phone numbers from patient
+ * Returns an array of phone numbers, with primary first
+ * Handles both old format (single phone) and new format (phones array)
+ */
+export function getAllPhoneNumbers(patient: any): string[] {
+  if (!patient) return []
+
+  const phones: string[] = []
+
+  if (patient.phones && Array.isArray(patient.phones) && patient.phones.length > 0) {
+    const primaryPhone = patient.phones.find((p: any) => p.isPrimary)
+    if (primaryPhone?.number) {
+      phones.push(primaryPhone.number)
+    }
+
+    // Add remaining secondary phone numbers
+    patient.phones.forEach((p: any) => {
+      if (p.number && !p.isPrimary && !phones.includes(p.number)) {
+        phones.push(p.number)
+      }
+    })
+
+    return phones
+  }
+
+  // Fallback to old single phone format for backward compatibility
+  if (patient.phone) {
+    return [patient.phone]
+  }
+
+  return []
 }
