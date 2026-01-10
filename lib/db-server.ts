@@ -282,6 +282,7 @@ const patientReferralSchema = new mongoose.Schema({
   doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   doctorName: { type: String, required: true },
   patientName: { type: String, required: true },
+  patientPhone: { type: String, default: null },
   phones: [
     {
       number: { type: String, required: true },

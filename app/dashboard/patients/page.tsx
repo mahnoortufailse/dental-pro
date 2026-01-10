@@ -221,13 +221,69 @@ export default function PatientsPage() {
     })
   }
 
+  const validatePhoneInput = (phone: string): { valid: boolean; error?: string } => {
+    if (!phone) {
+      return { valid: false, error: "Phone number is required" }
+    }
+
+    const phoneStr = String(phone).trim()
+
+    if (phoneStr === "") {
+      return { valid: false, error: "Phone number is required" }
+    }
+
+    // Check if it starts with +
+    if (!phoneStr.startsWith("+")) {
+      return {
+        valid: false,
+        error: "Phone must start with + (country code, e.g., +1234567890)",
+      }
+    }
+
+    // Get digits after +
+    const digitsOnly = phoneStr.slice(1)
+
+    // Check if contains only digits
+    if (!/^\d+$/.test(digitsOnly)) {
+      return { valid: false, error: "Phone must contain only digits after +" }
+    }
+
+    return { valid: true }
+  }
+
+  const validatePhoneInputStrict = (phone: string): { valid: boolean; error?: string } => {
+    const basicValidation = validatePhoneInput(phone)
+    if (!basicValidation.valid) {
+      return basicValidation
+    }
+
+    const phoneStr = String(phone).trim()
+    const digitsOnly = phoneStr.slice(1)
+
+    // Check length only on form submission
+    if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+      return { valid: false, error: "Phone must be 10-15 digits after +" }
+    }
+
+    return { valid: true }
+  }
+
   const validatePatientCredentials = (data: any) => {
     const criticalCredentials: string[] = []
     const warningCredentials: string[] = []
 
     if (!data.idNumber?.trim()) criticalCredentials.push("ID Number")
-    const hasValidPhone = data.phones && data.phones.some((p: any) => p.number?.trim())
+    
+    // Check if phones array exists and has at least one valid phone
+    const hasValidPhone = data.phones && 
+      Array.isArray(data.phones) && 
+      data.phones.some((p: any) => {
+        const phoneNumber = p?.number?.trim()
+        return phoneNumber && phoneNumber !== "" && validatePhoneInputStrict(phoneNumber).valid
+      })
+    
     if (!hasValidPhone) criticalCredentials.push("Phone Number")
+    
     if (!data.dob?.trim()) criticalCredentials.push("Date of Birth")
     if (!data.name?.trim()) criticalCredentials.push("Name")
 
@@ -285,6 +341,10 @@ export default function PatientsPage() {
       ...formData,
     })
 
+    // Log for debugging
+    console.log("Form data before validation:", formData)
+    console.log("Validation result:", validation)
+
     // Block if critical credentials are missing
     if (validation.criticalCredentials.length > 0) {
       toast.error(`Missing critical credentials: ${validation.criticalCredentials.join(", ")}`)
@@ -321,9 +381,19 @@ export default function PatientsPage() {
   // Separate function to handle the actual submission
   const submitPatientData = async (loadingKey: string) => {
     try {
-      // Filter out empty phones
+      // Filter out empty phones and validate each phone
       const validPhones = formData.phones
-        .filter((p) => p.number?.trim())
+        .filter((p) => {
+          const phoneNumber = p.number?.trim()
+          if (!phoneNumber) return false
+          
+          const validation = validatePhoneInputStrict(phoneNumber)
+          if (!validation.valid) {
+            toast.error(`Invalid phone number: ${validation.error}`)
+            return false
+          }
+          return true
+        })
         .map((p) => ({
           number: formatPhoneForDatabase(p.number),
           isPrimary: p.isPrimary || false,
@@ -331,7 +401,7 @@ export default function PatientsPage() {
 
       // Ensure at least one phone
       if (validPhones.length === 0) {
-        toast.error("At least one phone number is required")
+        toast.error("At least one valid phone number is required")
         setLoading((prev) => ({ ...prev, [loadingKey]: false }))
         return
       }
@@ -442,53 +512,6 @@ export default function PatientsPage() {
     setShowCredentialWarning(false)
     setPendingSubmit(null)
     setCredentialWarnings([])
-  }
-
-  const validatePhoneInput = (phone: string): { valid: boolean; error?: string } => {
-    if (!phone) {
-      return { valid: false, error: "Phone number is required" }
-    }
-
-    const phoneStr = String(phone).trim()
-
-    if (phoneStr === "") {
-      return { valid: false, error: "Phone number is required" }
-    }
-
-    // Check if it starts with +
-    if (!phoneStr.startsWith("+")) {
-      return {
-        valid: false,
-        error: "Phone must start with + (country code, e.g., +1234567890)",
-      }
-    }
-
-    // Get digits after +
-    const digitsOnly = phoneStr.slice(1)
-
-    // Check if contains only digits
-    if (!/^\d+$/.test(digitsOnly)) {
-      return { valid: false, error: "Phone must contain only digits after +" }
-    }
-
-    return { valid: true }
-  }
-
-  const validatePhoneInputStrict = (phone: string): { valid: boolean; error?: string } => {
-    const basicValidation = validatePhoneInput(phone)
-    if (!basicValidation.valid) {
-      return basicValidation
-    }
-
-    const phoneStr = String(phone).trim()
-    const digitsOnly = phoneStr.slice(1)
-
-    // Check length only on form submission
-    if (digitsOnly.length < 10 || digitsOnly.length > 15) {
-      return { valid: false, error: "Phone must be 10-15 digits after +" }
-    }
-
-    return { valid: true }
   }
 
   const handleDeletePatient = async (patientId: string) => {
