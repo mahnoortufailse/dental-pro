@@ -1,6 +1,6 @@
 export interface PatientCredentials {
   idNumber?: string
-  phone?: string
+  phones?: Array<{ number?: string; isPrimary?: boolean }> // Updated to accept phones array
   email?: string
   insuranceProvider?: string
   insuranceNumber?: string
@@ -26,12 +26,14 @@ export function validatePatientCredentials(credentials: PatientCredentials): Cre
     missingCredentials.push("ID Number")
   }
   
-  // For phone, check if it exists and is valid
-  const phone = credentials.phone?.trim()
-  if (!phone || phone === "") {
+  // For phones, check if array exists and has at least one valid phone
+  const validPhones = credentials.phones?.filter((p) => {
+    const phoneNumber = p?.number?.trim()
+    return phoneNumber && phoneNumber !== "" && validatePhone(phoneNumber)
+  }) || []
+  
+  if (validPhones.length === 0) {
     missingCredentials.push("Phone Number")
-  } else if (!validatePhone(phone)) {
-    missingCredentials.push("Valid Phone Number")
   }
   
   if (!credentials.dob?.trim()) {

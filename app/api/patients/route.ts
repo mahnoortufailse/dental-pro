@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { Patient, User, connectDB } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
 import { Types } from "mongoose"
-import { formatPhoneForDatabase } from "@/lib/validation"
+import { formatPhoneForDatabase, validatePhoneWithDetails } from "@/lib/validation"
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,8 +60,19 @@ export async function POST(request: NextRequest) {
     // Validate critical credentials
     const missingCriticalCredentials = []
     if (!name?.trim()) missingCriticalCredentials.push("Name")
+    
+    // Validate phones array
     const validPhones = phones?.filter((p: any) => p.number?.trim()) || []
     if (validPhones.length === 0) missingCriticalCredentials.push("Phone Number")
+    
+    // Validate each phone
+    for (const phone of validPhones) {
+      const validation = validatePhoneWithDetails(phone.number)
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 400 })
+      }
+    }
+    
     if (!dob?.trim()) missingCriticalCredentials.push("Date of Birth")
     if (!idNumber?.trim()) missingCriticalCredentials.push("ID Number")
 
@@ -72,18 +83,6 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 },
       )
-    }
-
-    for (const phone of validPhones) {
-      const phoneStr = String(phone.number).trim()
-      const phoneDigits = phoneStr.slice(1)
-
-      if (!/^\d+$/.test(phoneDigits)) {
-        return NextResponse.json({ error: "Phone number must contain only digits after +" }, { status: 400 })
-      }
-      if (phoneDigits.length < 10 || phoneDigits.length > 15) {
-        return NextResponse.json({ error: "Phone number must be 10-15 digits after +" }, { status: 400 })
-      }
     }
 
     // Check if ID number already exists
@@ -226,8 +225,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { id } = params
     const updateData = await request.json()
 
+    // Check if patient exists
+    const patient = await Patient.findById(id)
+    if (!patient) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 404 })
+    }
+
     // Check if idNumber is being updated and if it's unique
-    if (updateData.idNumber) {
+    if (updateData.idNumber && updateData.idNumber !== patient.idNumber) {
       const existingPatientWithId = await Patient.findOne({
         idNumber: updateData.idNumber.trim(),
         _id: { $ne: id }, // Exclude the current patient from the check
@@ -240,6 +245,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           { status: 409 },
         )
       }
+      updateData.idNumber = updateData.idNumber.trim()
     }
 
     // Handle email in update data - convert empty strings to null
@@ -247,7 +253,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       updateData.email = updateData.email?.trim() || null
 
       // Check for email uniqueness only if email is provided and not null/empty
-      if (updateData.email && updateData.email !== "") {
+      if (updateData.email && updateData.email !== "" && updateData.email !== patient.email) {
         const existingPatient = await Patient.findOne({
           email: updateData.email.toLowerCase(),
           _id: { $ne: id },
@@ -261,35 +267,133 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    // Validate critical credentials if they're being updated
-    if (updateData.phone || updateData.dob || updateData.idNumber) {
-      const patient = await Patient.findById(id)
-      if (!patient) {
-        return NextResponse.json({ error: "Patient not found" }, { status: 404 })
-      }
-
-      const mergedData = { ...patient.toObject(), ...updateData }
-
-      const missingCriticalCredentials = []
-      if (!mergedData.name?.trim()) missingCriticalCredentials.push("Name")
-      if (!mergedData.phone?.trim()) missingCriticalCredentials.push("Phone")
-      if (!mergedData.dob?.trim()) missingCriticalCredentials.push("Date of Birth")
-      if (!mergedData.idNumber?.trim()) missingCriticalCredentials.push("ID Number")
-
-      if (missingCriticalCredentials.length > 0) {
+    // Validate phones if they're being updated
+    if (updateData.phones && Array.isArray(updateData.phones)) {
+      // Filter out empty phone numbers
+      const validPhones = updateData.phones.filter((p: any) => p.number?.trim()) || []
+      
+      if (validPhones.length === 0) {
         return NextResponse.json(
-          {
-            error: `Cannot update: Missing critical patient credentials: ${missingCriticalCredentials.join(", ")}`,
-          },
-          { status: 400 },
+          { error: "At least one phone number is required" },
+          { status: 400 }
         )
       }
+      
+      // Validate each phone
+      for (const phone of validPhones) {
+        const validation = validatePhoneWithDetails(phone.number)
+        if (!validation.valid) {
+          return NextResponse.json({ error: validation.error }, { status: 400 })
+        }
+      }
+
+      // Format phones for database
+      updateData.phones = validPhones.map((p: any) => ({
+        number: formatPhoneForDatabase(p.number),
+        isPrimary: p.isPrimary || false,
+      }))
+
+      // Ensure at least one phone is marked as primary
+      if (!updateData.phones.some((p: any) => p.isPrimary)) {
+        updateData.phones[0].isPrimary = true
+      }
+    }
+
+    // Merge existing patient data with update data for validation
+    const mergedData = { 
+      ...patient.toObject(), 
+      ...updateData,
+      // If phones weren't updated, use existing phones
+      phones: updateData.phones || patient.phones
+    }
+    
+    // Validate critical credentials
+    const missingCriticalCredentials = []
+    
+    // Check name
+    if (!mergedData.name?.trim()) missingCriticalCredentials.push("Name")
+    
+    // Check phones - ensure we have at least one valid phone
+    const hasValidPhone = mergedData.phones && 
+      Array.isArray(mergedData.phones) && 
+      mergedData.phones.some((p: any) => p.number?.trim())
+    if (!hasValidPhone) missingCriticalCredentials.push("Phone Number")
+    
+    // Check date of birth
+    if (!mergedData.dob?.trim()) missingCriticalCredentials.push("Date of Birth")
+    
+    // Check ID number
+    if (!mergedData.idNumber?.trim()) missingCriticalCredentials.push("ID Number")
+
+    if (missingCriticalCredentials.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Cannot update: Missing critical patient credentials: ${missingCriticalCredentials.join(", ")}`,
+        },
+        { status: 400 },
+      )
     }
 
     // Prepare update data - ensure email is properly handled
     const updateDataToUse: any = { ...updateData }
     if (updateDataToUse.email === "") {
       updateDataToUse.email = null
+    }
+
+    // Handle doctor assignment update
+    if (updateDataToUse.assignedDoctorId && updateDataToUse.assignedDoctorId !== patient.assignedDoctorId?.toString()) {
+      if (!Types.ObjectId.isValid(updateDataToUse.assignedDoctorId)) {
+        return NextResponse.json({ error: "Invalid doctor ID format" }, { status: 400 })
+      }
+
+      const doctor = await User.findById(updateDataToUse.assignedDoctorId)
+      if (!doctor) {
+        return NextResponse.json({ error: "Selected doctor not found" }, { status: 404 })
+      }
+
+      if (doctor.role !== "doctor") {
+        return NextResponse.json({ error: "Selected user is not a doctor" }, { status: 400 })
+      }
+
+      // Add to doctor history if doctor is changing
+      const doctorHistoryEntry = {
+        doctorId: doctor._id,
+        doctorName: doctor.name,
+        startDate: new Date(),
+      }
+      
+      updateDataToUse.doctorHistory = [
+        ...(patient.doctorHistory || []),
+        doctorHistoryEntry,
+      ]
+    }
+
+    // Handle allergies - convert string to array if needed
+    if (updateDataToUse.allergies !== undefined) {
+      if (typeof updateDataToUse.allergies === 'string') {
+        updateDataToUse.allergies = updateDataToUse.allergies
+          .split(',')
+          .map((a: string) => a.trim())
+          .filter(Boolean)
+      } else if (Array.isArray(updateDataToUse.allergies)) {
+        updateDataToUse.allergies = updateDataToUse.allergies
+          .map((a: any) => typeof a === 'string' ? a.trim() : a)
+          .filter(Boolean)
+      }
+    }
+
+    // Handle medical conditions - convert string to array if needed
+    if (updateDataToUse.medicalConditions !== undefined) {
+      if (typeof updateDataToUse.medicalConditions === 'string') {
+        updateDataToUse.medicalConditions = updateDataToUse.medicalConditions
+          .split(',')
+          .map((c: string) => c.trim())
+          .filter(Boolean)
+      } else if (Array.isArray(updateDataToUse.medicalConditions)) {
+        updateDataToUse.medicalConditions = updateDataToUse.medicalConditions
+          .map((c: any) => typeof c === 'string' ? c.trim() : c)
+          .filter(Boolean)
+      }
     }
 
     const updatedPatient = await Patient.findByIdAndUpdate(id, updateDataToUse, {
@@ -349,3 +453,4 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ error: "Failed to delete patient" }, { status: 500 })
   }
 }
+
