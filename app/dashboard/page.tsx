@@ -1035,8 +1035,7 @@ export default function DashboardPage() {
                       Phone Number
                     </p>
                     <p className="text-foreground font-medium">
-                      {console.log("Patient DATA SEXY MAHNOOR NUDE:", selectedPatientReferral)}
-                      {selectedPatientReferral?.patientPhones?.find(
+                     {selectedPatientReferral?.patientPhones?.find(
                         (phone) => phone.isPrimary
                       )?.number || "N/A"}
                     </p>
