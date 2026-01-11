@@ -1035,7 +1035,11 @@ export default function DashboardPage() {
                       Phone Number
                     </p>
                     <p className="text-foreground font-medium">
-                      {selectedPatientReferral.patientPhone}
+                      {selectedPatientReferral.patientPhones.find(
+                        (phone) => phone.isPrimary
+                      )?.number ||
+                        referral.patientPhones?.[0]?.number ||
+                        "N/A"}
                     </p>
                   </div>
                   <div>
