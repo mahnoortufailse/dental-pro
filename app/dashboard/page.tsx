@@ -1035,11 +1035,10 @@ export default function DashboardPage() {
                       Phone Number
                     </p>
                     <p className="text-foreground font-medium">
-                      {selectedPatientReferral.patientPhones.find(
+                      {console.log("Patient DATA SEXY MAHNOOR NUDE:", selectedPatientReferral)}
+                      {selectedPatientReferral?.patientPhones?.find(
                         (phone) => phone.isPrimary
-                      )?.number ||
-                        referral.patientPhones?.[0]?.number ||
-                        "N/A"}
+                      )?.number || "N/A"}
                     </p>
                   </div>
                   <div>
