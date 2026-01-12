@@ -109,30 +109,33 @@ export function BillingDetailPage({ patient, onBack }: any) {
               Back to Patients
             </button>
 
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={handleViewToothChart}
-                disabled={toothChartLoading}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md active:scale-95"
-              >
-                <Eye className="w-4 h-4" />
-                {toothChartLoading ? "Loading..." : "View Tooth Chart"}
-              </button>
-              <button
-                onClick={() => setShowAddDebt(true)}
-                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                Add Debt
-              </button>
-              <button
-                onClick={() => setShowAddPayment(true)}
-                className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2.5 rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                Add Payment
-              </button>
-            </div>
+            <div className="flex flex-col sm:flex-row sm:gap-3 gap-2 w-full">
+  <button
+    onClick={handleViewToothChart}
+    disabled={toothChartLoading}
+    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
+  >
+    <Eye className="w-4 h-4" />
+    {toothChartLoading ? "Loading..." : "View Tooth Chart"}
+  </button>
+
+  <button
+    onClick={() => setShowAddDebt(true)}
+    className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
+  >
+    <Plus className="w-4 h-4" />
+    Add Debt
+  </button>
+
+  <button
+    onClick={() => setShowAddPayment(true)}
+    className="flex-1 flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
+  >
+    <Plus className="w-4 h-4" />
+    Add Payment
+  </button>
+</div>
+
           </div>
 
           {/* Patient Info */}
