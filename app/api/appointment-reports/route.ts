@@ -27,11 +27,13 @@ export async function GET(request: NextRequest) {
 
     if (appointmentId) {
       query.appointmentId = appointmentId
+    } else if (queryPatientId) {
+      query.patientId = queryPatientId
+    } else if (payload?.role === "admin" || payload?.role === "receptionist") {
+      // Admin and receptionist see all reports
     } else if (payload?.role === "doctor") {
       // Doctor sees all reports for their appointments
       console.log("[v0] Fetching all appointment reports for doctor view")
-    } else if (payload?.role === "admin" || payload?.role === "receptionist") {
-      // Admin and receptionist see all reports
     } else if (patientId) {
       query.patientId = patientId
     }
