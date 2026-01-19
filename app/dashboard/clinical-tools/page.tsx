@@ -1,6 +1,8 @@
 //@ts-nocheck
 "use client"
 
+import React from "react"
+
 import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
@@ -58,6 +60,20 @@ export default function ClinicalToolsPage() {
   const [patientSearch, setPatientSearch] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const PATIENTS_PER_PAGE = 10
+  const [showCreateReportModal, setShowCreateReportModal] = useState(false)
+  const [patientAppointments, setPatientAppointments] = useState<any[]>([])
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>("")
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false)
+  const [reportFormData, setReportFormData] = useState({
+    procedures: [] as string[],
+    findings: "",
+    notes: "",
+    nextVisitDate: "",
+    nextVisitTime: "",
+    followUpDetails: "",
+  })
+  const [reportFormErrors, setReportFormErrors] = useState<Record<string, string>>({})
+  const [reportLoading, setReportLoading] = useState(false)
 
   useEffect(() => {
     if (token) {
@@ -105,12 +121,179 @@ export default function ClinicalToolsPage() {
     }
   }
 
+  // Fetch appointments for the selected patient with the current doctor
+  // Filters: only active appointments without reports and with valid status
+  const fetchPatientAppointments = async (patientId: string) => {
+    setAppointmentsLoading(true)
+    try {
+      // First, fetch all appointments for this patient
+      const res = await fetch(`/api/appointments?patientId=${patientId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        let appointments = data.appointments || []
+
+        // Filter by status: exclude completed, cancelled, closed, and refer_back appointments
+        const activeAppointments = appointments.filter((apt: any) => {
+          const status = (apt.status || "").toLowerCase().trim()
+          return status !== "completed" && status !== "cancelled" && status !== "closed" && status !== "refer_back"
+        })
+
+        // Now, fetch existing reports to filter out appointments that already have reports
+        // Only fetch reports created by the current doctor to allow multiple doctors to create reports for same appointment
+        const doctorFilter = user?.role === "doctor" ? `&doctorId=${user.id}` : ""
+        const reportsRes = await fetch(`/api/appointment-reports?patientId=${patientId}${doctorFilter}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        if (reportsRes.ok) {
+          const reportsData = await reportsRes.json()
+          const reports = reportsData.reports || []
+
+          // Extract appointment IDs that already have reports
+          const appointmentIdsWithReports = new Set(
+            reports
+              .filter((report: any) => report.appointmentId) // Only consider reports with appointmentId
+              .map((report: any) => String(report.appointmentId._id || report.appointmentId))
+          )
+
+          // Filter appointments: only show those WITHOUT reports
+          const filteredAppointments = activeAppointments.filter((apt: any) => {
+            const appointmentId = String(apt._id || apt.id)
+            return !appointmentIdsWithReports.has(appointmentId)
+          })
+
+          setPatientAppointments(filteredAppointments)
+        } else {
+          setPatientAppointments(activeAppointments)
+        }
+      }
+    } catch (error) {
+      console.error("[v0] Failed to fetch appointments:", error)
+      toast.error("Failed to fetch appointments")
+    } finally {
+      setAppointmentsLoading(false)
+    }
+  }
+
+  // Create clinical reports directly from Clinical Tools
+  // Reports are linked to the selected appointment from the dropdown
+  const validateReportForm = (): boolean => {
+    const errors: Record<string, string> = {}
+    if (!reportFormData.procedures || reportFormData.procedures.length === 0 || reportFormData.procedures.every((p) => !p.trim())) {
+      errors.procedures = "At least one procedure is required"
+    }
+    if (!reportFormData.findings.trim()) {
+      errors.findings = "Findings are required"
+    }
+    setReportFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleCreateReport = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedPatient) return toast.error("Please select a patient first")
+
+    if (!selectedAppointmentId || !selectedAppointmentId.trim()) {
+      toast.error("Please select an appointment for this report")
+      return
+    }
+
+    if (!validateReportForm()) {
+      toast.error("Please fix the errors in the form")
+      return
+    }
+
+    setReportLoading(true)
+    try {
+      // Validate appointment selection
+      const appointmentIdTrimmed = selectedAppointmentId ? selectedAppointmentId.trim() : ""
+      if (!appointmentIdTrimmed) {
+        toast.error("Please select a valid appointment")
+        setReportLoading(false)
+        return
+      }
+
+      const proceduresArray = Array.isArray(reportFormData.procedures)
+        ? reportFormData.procedures.filter((p) => p && p.trim())
+        : reportFormData.procedures
+            .split("\n")
+            .map((p) => p.trim())
+            .filter(Boolean)
+
+      const reportPayload: any = {
+        patientId: selectedPatient._id || selectedPatient.id,
+        procedures: proceduresArray,
+        findings: reportFormData.findings.trim(),
+        notes: reportFormData.notes.trim(),
+        nextVisitDate: reportFormData.nextVisitDate || null,
+        nextVisitTime: reportFormData.nextVisitTime || null,
+        followUpDetails: reportFormData.followUpDetails || "",
+      }
+
+      // Add appointmentId only if valid
+      if (appointmentIdTrimmed && appointmentIdTrimmed !== "undefined") {
+        reportPayload.appointmentId = appointmentIdTrimmed
+      }
+
+      console.log("[v0] Creating report with payload:", reportPayload)
+
+      const res = await fetch("/api/appointment-reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(reportPayload),
+      })
+
+      const responseData = await res.json()
+
+      if (res.ok) {
+        toast.success("Report created successfully")
+        setShowCreateReportModal(false)
+        setReportFormErrors({})
+        setSelectedAppointmentId("")
+        setReportFormData({
+          procedures: [],
+          findings: "",
+          notes: "",
+          nextVisitDate: "",
+          nextVisitTime: "",
+          followUpDetails: "",
+        })
+
+        // Refresh the appointments dropdown to remove the appointment that now has a report
+        if (selectedPatient) {
+          await fetchPatientAppointments(selectedPatient._id || selectedPatient.id)
+        }
+      } else {
+        console.error("[v0] Report creation error:", responseData)
+        toast.error(responseData.error || "Failed to create report")
+      }
+    } catch (error) {
+      console.error("[v0] Failed to create report:", error)
+      toast.error("Error creating report")
+    } finally {
+      setReportLoading(false)
+    }
+  }
+
   const handleSelectPatient = async (patientId: string) => {
     const patient = patients.find((p) => (p._id || p.id).toString() === patientId)
     setSelectedPatient(patient)
     setToothChart(null)
     setPatientImages([])
     setDoctorHistory(patient?.doctorHistory || [])
+    setSelectedAppointmentId("") // Reset appointment selection
+    setPatientAppointments([]) // Reset appointments
+
+    // Fetch appointments for this patient
+    if (user?.role === "doctor" && patient) {
+      await fetchPatientAppointments(patientId)
+    }
 
     setLoading((prev) => ({
       ...prev,
@@ -511,12 +694,25 @@ export default function ClinicalToolsPage() {
 
                     {/* Reports Tab */}
                     {activeTab === "reports" && (
-                      <PatientReportsSection
-                        patientId={selectedPatient._id || selectedPatient.id}
-                        token={token}
-                        isDoctor={user?.role === "doctor"}
-                        currentDoctorId={user?.id}
-                      />
+                      <div className="space-y-4 sm:space-y-6">
+                        {user?.role === "doctor" && (
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => setShowCreateReportModal(true)}
+                              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 sm:px-6 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              <FileText className="w-4 h-4" />
+                              Create Report
+                            </button>
+                          </div>
+                        )}
+                        <PatientReportsSection
+                          patientId={selectedPatient._id || selectedPatient.id}
+                          token={token}
+                          isDoctor={user?.role === "doctor"}
+                          currentDoctorId={user?.id}
+                        />
+                      </div>
                     )}
 
                     {/* Images Tab */}
@@ -788,6 +984,207 @@ export default function ClinicalToolsPage() {
           }}
           isLoading={loading.deleteImage}
         />
+
+        {/* Create Report Modal */}
+        {showCreateReportModal && selectedPatient && user?.role === "doctor" && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50">
+            <div className="bg-card rounded-lg shadow-lg border border-border p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto mx-2">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-bold text-foreground">Create Clinical Report</h2>
+                <button
+                  onClick={() => setShowCreateReportModal(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+                Patient: <span className="font-medium text-foreground">{selectedPatient.name}</span>
+              </p>
+
+              <form onSubmit={handleCreateReport} className="space-y-3 sm:space-y-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                    Select Appointment *
+                  </label>
+                  {appointmentsLoading ? (
+                    <div className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg text-xs sm:text-sm text-muted-foreground">
+                      Loading appointments...
+                    </div>
+                  ) : patientAppointments.length === 0 ? (
+                    <div className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg text-xs sm:text-sm text-muted-foreground">
+                      No appointments found for this patient
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedAppointmentId}
+                      onChange={(e) => setSelectedAppointmentId(e.target.value)}
+                      disabled={reportLoading}
+                      className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      <option value="">-- Select an appointment --</option>
+                      {patientAppointments.map((apt) => {
+                        const appointmentDate = apt.date ? new Date(apt.date).toLocaleDateString() : "N/A"
+                        const appointmentType = apt.type || "Consultation"
+                        const appointmentStatus = apt.status || "Scheduled"
+                        return (
+                          <option key={apt._id || apt.id} value={apt._id || apt.id}>
+                            {appointmentDate} at {apt.time} - {appointmentType} ({appointmentStatus})
+                          </option>
+                        )
+                      })}
+                    </select>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                    Procedures *
+                  </label>
+                  <textarea
+                    placeholder="List procedures performed (one per line)..."
+                    value={reportFormData.procedures.join("\n")}
+                    onChange={(e) => {
+                      setReportFormData({
+                        ...reportFormData,
+                        procedures: e.target.value.split("\n").filter(Boolean),
+                      })
+                      setReportFormErrors({ ...reportFormErrors, procedures: "" })
+                    }}
+                    disabled={reportLoading}
+                    className={`w-full px-3 sm:px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text ${
+                      reportFormErrors.procedures ? "border-destructive" : "border-border"
+                    }`}
+                    rows={3}
+                  />
+                  {reportFormErrors.procedures && (
+                    <p className="text-xs text-destructive mt-1">{reportFormErrors.procedures}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                    Findings *
+                  </label>
+                  <textarea
+                    placeholder="Findings..."
+                    value={reportFormData.findings}
+                    onChange={(e) => {
+                      setReportFormData({
+                        ...reportFormData,
+                        findings: e.target.value,
+                      })
+                      setReportFormErrors({ ...reportFormErrors, findings: "" })
+                    }}
+                    disabled={reportLoading}
+                    className={`w-full px-3 sm:px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text ${
+                      reportFormErrors.findings ? "border-destructive" : "border-border"
+                    }`}
+                    rows={3}
+                  />
+                  {reportFormErrors.findings && (
+                    <p className="text-xs text-destructive mt-1">{reportFormErrors.findings}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    placeholder="Additional notes..."
+                    value={reportFormData.notes}
+                    onChange={(e) =>
+                      setReportFormData({
+                        ...reportFormData,
+                        notes: e.target.value,
+                      })
+                    }
+                    disabled={reportLoading}
+                    className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-foreground mb-1">
+                      Next Visit Date
+                    </label>
+                    <input
+                      type="date"
+                      value={reportFormData.nextVisitDate}
+                      onChange={(e) =>
+                        setReportFormData({
+                          ...reportFormData,
+                          nextVisitDate: e.target.value,
+                        })
+                      }
+                      disabled={reportLoading}
+                      className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-foreground mb-1">
+                      Next Visit Time
+                    </label>
+                    <input
+                      type="time"
+                      value={reportFormData.nextVisitTime}
+                      onChange={(e) =>
+                        setReportFormData({
+                          ...reportFormData,
+                          nextVisitTime: e.target.value,
+                        })
+                      }
+                      disabled={reportLoading}
+                      className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                    Follow-up Details
+                  </label>
+                  <textarea
+                    placeholder="Follow-up instructions..."
+                    value={reportFormData.followUpDetails}
+                    onChange={(e) =>
+                      setReportFormData({
+                        ...reportFormData,
+                        followUpDetails: e.target.value,
+                      })
+                    }
+                    disabled={reportLoading}
+                    className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="flex gap-2 sm:gap-3 pt-2 sm:pt-4">
+                  <button
+                    type="submit"
+                    disabled={reportLoading}
+                    className="flex-1 inline-flex justify-center items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {reportLoading && <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />}
+                    {reportLoading ? "Creating..." : "Create Report"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateReportModal(false)}
+                    disabled={reportLoading}
+                    className="flex-1 inline-flex justify-center items-center gap-2 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   )
