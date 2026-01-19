@@ -577,7 +577,7 @@ export function MedicalHistorySection({ patientId, token, isDoctor, currentDocto
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {new Date(entry.date).toLocaleDateString()} •{" "}
+                            {new Date(entry.date).toLocaleDateString()} ��{" "}
                             {new Date(entry.date).toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",

@@ -2,6 +2,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { AppointmentReport, connectDB, Patient, User, Appointment } from "@/lib/db-server"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
+import { sendAppointmentConfirmation, sendAppointmentConfirmationArabic } from "@/lib/whatsapp-service"
+import { getAllPhoneNumbers } from "@/lib/utils" // Import getAllPhoneNumbers
 
 export async function GET(request: NextRequest) {
   try {
@@ -240,6 +242,8 @@ export async function POST(request: NextRequest) {
       nextVisitDateTime = new Date(nextVisitDate)
     }
 
+    let nextVisitAppointmentId: string | null = null
+
     const reportData = {
       appointmentId: String(appointmentId).trim(),
       patientId: String(patientId).trim(),
@@ -282,9 +286,69 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Report created successfully:", reportResponse)
 
-    const patientData = await Patient.findById(patientId)
-    if (patientData && patientData.email) {
-      console.log("[v0] Sending treatment report email to patient:", patientData.email)
+    // If next visit date and time are provided, create an appointment for the next visit
+    if (nextVisitDate && nextVisitDate.trim() && nextVisitTime && nextVisitTime.trim()) {
+      try {
+        console.log("[v0] Creating next visit appointment:", { nextVisitDate, nextVisitTime })
+        
+        // Create the next visit appointment
+        const nextVisitAppointment = await Appointment.create({
+          patientId: String(patientId).trim(),
+          patientName: patientExists?.name || "Patient",
+          doctorId: String(payload.userId),
+          doctorName: doctorExists.name,
+          date: nextVisitDate,
+          time: nextVisitTime,
+          type: "Consultation", // Default type for follow-up visits
+          status: "confirmed",
+          roomNumber: appointmentExists.roomNumber || undefined, // Use same room if available
+          duration: 30, // Standard follow-up duration
+          isReferred: false,
+          originalDoctorId: null,
+          originalDoctorName: null,
+          currentReferralId: null,
+          createdBy: String(payload.userId),
+          createdByName: doctorExists.name,
+        })
+        
+        nextVisitAppointmentId = nextVisitAppointment._id.toString()
+        console.log("[v0] Next visit appointment created successfully:", nextVisitAppointmentId)
+        
+        // Update report with the next visit appointment ID for future updates
+        await AppointmentReport.findByIdAndUpdate(report._id, {
+          nextVisitAppointmentId: nextVisitAppointmentId,
+        })
+        
+        // Send WhatsApp notification for next visit appointment
+        const allPhoneNumbers = patientExists ? getAllPhoneNumbers(patientExists) : []
+        if (allPhoneNumbers && allPhoneNumbers.length > 0) {
+          // Send English template
+          await sendAppointmentConfirmation(
+            allPhoneNumbers,
+            patientExists.name,
+            nextVisitDate,
+            nextVisitTime,
+            doctorExists.name,
+          ).catch(err => console.warn("[v0] Failed to send English WhatsApp for next visit:", err))
+          
+          // Send Arabic template
+          await sendAppointmentConfirmationArabic(
+            allPhoneNumbers,
+            nextVisitDate,
+            nextVisitTime,
+            doctorExists.name,
+            patientExists.name,
+          ).catch(err => console.warn("[v0] Failed to send Arabic WhatsApp for next visit:", err))
+        }
+      } catch (error) {
+        console.error("[v0] Error creating next visit appointment:", error)
+        // Don't fail the entire report creation if next visit appointment creation fails
+      }
+    }
+
+    const patientData_ForEmail = patientExists
+    if (patientData_ForEmail && patientData_ForEmail.email) {
+      console.log("[v0] Sending treatment report email to patient:", patientData_ForEmail.email)
       const { sendTreatmentReportEmail } = await import("@/lib/nodemailer-service")
 
       const procedureNames = proceduresArray.map((p) => p.name)
@@ -297,8 +361,8 @@ export async function POST(request: NextRequest) {
       }
 
       const emailResult = await sendTreatmentReportEmail(
-        patientData.email,
-        patientData.name,
+        patientData_ForEmail.email,
+        patientData_ForEmail.name,
         doctorExists.name,
         procedureNames,
         findings,

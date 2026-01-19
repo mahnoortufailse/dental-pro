@@ -170,8 +170,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 })
     }
 
-    // Use server-side validation (no token needed)
-    const validation = await validateAppointmentSchedulingServer(finalDoctorId, date, time, duration || 30)
+    // Use server-side validation (no token needed) - include roomNumber for room conflict checking
+    const validation = await validateAppointmentSchedulingServer(finalDoctorId, date, time, duration || 30, undefined, roomNumber)
     if (!validation.isValid) {
       console.warn("[DEBUG] Validation failed:", validation.error)
       return NextResponse.json({ error: validation.error }, { status: 409 })
