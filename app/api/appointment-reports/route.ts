@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { AppointmentReport, connectDB, Patient, User, Appointment } from "@/lib/db-server"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
 import { sendAppointmentConfirmation, sendAppointmentConfirmationArabic } from "@/lib/whatsapp-service"
-import { getAllPhoneNumbers } from "@/lib/utils"
+import { getAllPhoneNumbers, formatTimeFor12Hour } from "@/lib/utils"
 
 export async function GET(request: NextRequest) {
   try {
@@ -354,12 +354,14 @@ export async function POST(request: NextRequest) {
         // Send WhatsApp notification for next visit appointment
         const allPhoneNumbers = patientExists ? getAllPhoneNumbers(patientExists) : []
         if (allPhoneNumbers && allPhoneNumbers.length > 0) {
+          const formattedNextVisitTime = formatTimeFor12Hour(nextVisitTime)
+          
           // Send English template
           await sendAppointmentConfirmation(
             allPhoneNumbers,
             patientExists.name,
             nextVisitDate,
-            nextVisitTime,
+            formattedNextVisitTime,
             doctorExists.name,
           ).catch(err => console.warn("[v0] Failed to send English WhatsApp for next visit:", err))
           
@@ -367,7 +369,7 @@ export async function POST(request: NextRequest) {
           await sendAppointmentConfirmationArabic(
             allPhoneNumbers,
             nextVisitDate,
-            nextVisitTime,
+            formattedNextVisitTime,
             doctorExists.name,
             patientExists.name,
           ).catch(err => console.warn("[v0] Failed to send Arabic WhatsApp for next visit:", err))

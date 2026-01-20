@@ -5,6 +5,7 @@ import { verifyToken, verifyPatientToken } from "@/lib/auth"
 import { sendAppointmentConfirmationArabic, getAllPhoneNumbers, sendAppointmentConfirmation } from "@/lib/whatsapp-service"
 import { validateAppointmentSchedulingServer } from "@/lib/appointment-validation-server"
 import { sendAppointmentConfirmationEmail } from "@/lib/nodemailer-service"
+import { formatTimeFor12Hour } from "@/lib/utils"
 
 export async function GET(request: NextRequest) {
   try {
@@ -231,12 +232,13 @@ export async function POST(request: NextRequest) {
 
     if (patient && allPhoneNumbers.length > 0) {
       const appointmentId = newAppointment._id.toString()
+      const formattedTime = formatTimeFor12Hour(time)
       
       console.log("[DEBUG] Sending WhatsApp BILINGUAL confirmation to all numbers:", {
         phones: allPhoneNumbers,
         patientName,
         date,
-        time,
+        time: formattedTime,
         doctorName,
         appointmentId,
       })
@@ -246,7 +248,7 @@ export async function POST(request: NextRequest) {
         allPhoneNumbers,  // Send to all phone numbers, not just primary
         patientName,
         date,
-        time,
+        formattedTime,
         doctorName,
       )
 
@@ -256,7 +258,7 @@ export async function POST(request: NextRequest) {
       const whatsappResultArabic = await sendAppointmentConfirmationArabic(
         allPhoneNumbers,  // Send to all phone numbers
         date,
-        time,
+        formattedTime,
         doctorName,
         patientName,
       )

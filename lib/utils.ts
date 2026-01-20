@@ -28,6 +28,20 @@ export function formatTime(time: string): string {
   return `${displayHour}:${minutes} ${ampm}`
 }
 
+export function formatTimeFor12Hour(time: string): string {
+  if (!time || time.trim() === "") return ""
+  try {
+    const [hours, minutes] = time.split(":")
+    const hour = Number.parseInt(hours)
+    if (isNaN(hour)) return time
+    const ampm = hour >= 12 ? "PM" : "AM"
+    const displayHour = hour % 12 || 12
+    return `${displayHour}:${minutes} ${ampm}`
+  } catch {
+    return time
+  }
+}
+
 export function getAllPhoneNumbers(patientData: any): string[] {
   const phoneNumbers: string[] = []
   
