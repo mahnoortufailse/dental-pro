@@ -2,7 +2,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { Appointment, connectDB, User, Patient, AppointmentReferral } from "@/lib/db-server"
 import { verifyToken, verifyPatientToken } from "@/lib/auth"
-import { sendAppointmentConfirmationArabic, getAllPhoneNumbers, sendAppointmentConfirmation } from "@/lib/whatsapp-service"
+import { sendAppointmentConfirmationArabic, getAllPhoneNumbers, sendAppointmentConfirmation, sendAppointmentReschedule } from "@/lib/whatsapp-service"
 import { validateAppointmentSchedulingServer } from "@/lib/appointment-validation-server"
 import { sendAppointmentConfirmationEmail } from "@/lib/nodemailer-service"
 import { formatTimeFor12Hour } from "@/lib/utils"
@@ -336,159 +336,219 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
-  try {
-    await connectDB()
-    console.log("[DEBUG] Database connected")
+// export async function PUT(request: NextRequest) {
+//   try {
+//     await connectDB()
+//     console.log("[DEBUG] Database connected")
 
-    const token = request.headers.get("authorization")?.split(" ")[1]
-    console.log("[DEBUG] Token received:", token ? "Yes" : "No")
+//     const token = request.headers.get("authorization")?.split(" ")[1]
+//     console.log("[DEBUG] Token received:", token ? "Yes" : "No")
 
-    if (!token) {
-      console.warn("[DEBUG] No token found")
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+//     if (!token) {
+//       console.warn("[DEBUG] No token found")
+//       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+//     }
 
-    const payload = verifyToken(token)
-    console.log("[DEBUG] Token payload:", payload)
+//     const payload = verifyToken(token)
+//     console.log("[DEBUG] Token payload:", payload)
 
-    if (!payload) {
-      console.warn("[DEBUG] Invalid token")
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    }
+//     if (!payload) {
+//       console.warn("[DEBUG] Invalid token")
+//       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+//     }
 
-    const { appointmentId, patientId, patientName, doctorId, doctorName, date, time, type, roomNumber, duration } =
-      await request.json()
-    console.log("[DEBUG] Appointment data:", {
-      appointmentId,
-      patientId,
-      patientName,
-      doctorId,
-      doctorName,
-      date,
-      time,
-      type,
-    })
+//     const { appointmentId, patientId, patientName, doctorId, doctorName, date, time, type, roomNumber, duration } =
+//       await request.json()
+//     console.log("[DEBUG] Appointment data:", {
+//       appointmentId,
+//       patientId,
+//       patientName,
+//       doctorId,
+//       doctorName,
+//       date,
+//       time,
+//       type,
+//     })
 
-    if (!appointmentId || !String(appointmentId).trim()) {
-      console.warn("[DEBUG] Appointment ID is missing")
-      return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 })
-    }
+//     if (!appointmentId || !String(appointmentId).trim()) {
+//       console.warn("[DEBUG] Appointment ID is missing")
+//       return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 })
+//     }
 
-    const appointment = await Appointment.findById(appointmentId)
-    console.log("[DEBUG] Appointment found:", appointment ? appointment._id.toString() : "No appointment found")
+//     const appointment = await Appointment.findById(appointmentId)
+//     console.log("[DEBUG] Appointment found:", appointment ? appointment._id.toString() : "No appointment found")
 
-    if (!appointment) {
-      console.warn("[DEBUG] Appointment not found with ID:", appointmentId)
-      return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
-    }
+//     if (!appointment) {
+//       console.warn("[DEBUG] Appointment not found with ID:", appointmentId)
+//       return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+//     }
 
-    if (payload?.role === "doctor" && String(appointment.createdBy) !== String(payload.userId)) {
-      console.warn("[DEBUG] Doctor trying to edit appointment they did not create")
-      return NextResponse.json({ error: "Unauthorized - you can only edit appointments you created" }, { status: 403 })
-    }
+//     if (payload?.role === "doctor" && String(appointment.createdBy) !== String(payload.userId)) {
+//       console.warn("[DEBUG] Doctor trying to edit appointment they did not create")
+//       return NextResponse.json({ error: "Unauthorized - you can only edit appointments you created" }, { status: 403 })
+//     }
 
-    const updatedAppointment = await Appointment.findByIdAndUpdate(
-      appointmentId,
-      {
-        patientId,
-        patientName,
-        doctorId: String(doctorId),
-        doctorName,
-        date,
-        time,
-        type,
-        roomNumber,
-        duration: duration || 30,
-      },
-      { new: true },
-    )
-    console.log("[DEBUG] Appointment updated:", updatedAppointment._id.toString())
+//     const updatedAppointment = await Appointment.findByIdAndUpdate(
+//       appointmentId,
+//       {
+//         patientId,
+//         patientName,
+//         doctorId: String(doctorId),
+//         doctorName,
+//         date,
+//         time,
+//         type,
+//         roomNumber,
+//         duration: duration || 30,
+//       },
+//       { new: true },
+//     )
+//     console.log("[DEBUG] Appointment updated:", updatedAppointment._id.toString())
 
-    return NextResponse.json({
-      success: true,
-      appointment: {
-        _id: updatedAppointment._id.toString(),
-        id: updatedAppointment._id.toString(),
-        patientId: updatedAppointment.patientId,
-        patientName: updatedAppointment.patientName,
-        doctorId: updatedAppointment.doctorId,
-        doctorName: updatedAppointment.doctorName,
-        date: updatedAppointment.date,
-        time: updatedAppointment.time,
-        type: updatedAppointment.type,
-        status: updatedAppointment.status,
-        roomNumber: updatedAppointment.roomNumber,
-        duration: updatedAppointment.duration,
-        isReferred: updatedAppointment.isReferred,
-        originalDoctorId: updatedAppointment.originalDoctorId,
-        originalDoctorName: updatedAppointment.originalDoctorName,
-        currentReferralId: updatedAppointment.currentReferralId,
-        createdBy: updatedAppointment.createdBy,
-        createdByName: updatedAppointment.createdByName,
-      },
-    })
-  } catch (error) {
-    console.error("  Update appointment error:", error)
-    return NextResponse.json({ error: "Failed to update appointment" }, { status: 500 })
-  }
-}
+//     // Check if appointment details were changed (reschedule case)
+//     const dateChanged = String(appointment.date) !== String(date)
+//     const timeChanged = String(appointment.time) !== String(time)
+    
+//     if (dateChanged || timeChanged) {
+//       console.log("[DEBUG] Appointment rescheduled - sending WhatsApp notification")
+//       console.log("[DEBUG] Date changed:", dateChanged, "Time changed:", timeChanged)
+      
+//       // Fetch patient to get phone numbers
+//       const patient = await Patient.findById(patientId)
+//       console.log("[DEBUG] Patient found for reschedule:", patient ? patient.name : "No patient found")
+      
+//       const allPhoneNumbers = patient ? getAllPhoneNumbers(patient) : []
+//       console.log("[DEBUG] Phone numbers for reschedule:", allPhoneNumbers)
+      
+//       if (allPhoneNumbers && allPhoneNumbers.length > 0) {
+//         const formattedTime = formatTimeFor12Hour(time)
+//         console.log("[DEBUG] Formatted time for reschedule:", { original: time, formatted: formattedTime })
+        
+//         try {
+//           // Send English reschedule template
+//           console.log("[v0] Sending English WhatsApp reschedule notification")
+//           const rescheduleResultEnglish = await sendAppointmentReschedule(
+//             allPhoneNumbers,
+//             patientName,
+//             date,
+//             formattedTime,
+//             doctorName,
+//           )
+//           console.log("[v0] English reschedule result:", rescheduleResultEnglish)
+          
+//           // Send confirmation templates as well (for complete information)
+//           console.log("[v0] Sending English WhatsApp confirmation for rescheduled appointment")
+//           const confirmResultEnglish = await sendAppointmentConfirmation(
+//             allPhoneNumbers,
+//             patientName,
+//             date,
+//             formattedTime,
+//             doctorName,
+//           )
+//           console.log("[v0] English confirmation result:", confirmResultEnglish)
+          
+//           // Send Arabic template
+//           console.log("[v0] Sending Arabic WhatsApp confirmation for rescheduled appointment")
+//           const confirmResultArabic = await sendAppointmentConfirmationArabic(
+//             allPhoneNumbers,
+//             date,
+//             formattedTime,
+//             doctorName,
+//             patientName,
+//           )
+//           console.log("[v0] Arabic confirmation result:", confirmResultArabic)
+//         } catch (whatsappError) {
+//           console.error("[v0] Error sending WhatsApp reschedule notifications:", whatsappError)
+//         }
+//       } else {
+//         console.warn("[DEBUG] No phone numbers found for reschedule notification")
+//       }
+//     }
 
-export async function DELETE(request: NextRequest) {
-  try {
-    await connectDB()
-    console.log("[DEBUG] Database connected")
+//     return NextResponse.json({
+//       success: true,
+//       appointment: {
+//         _id: updatedAppointment._id.toString(),
+//         id: updatedAppointment._id.toString(),
+//         patientId: updatedAppointment.patientId,
+//         patientName: updatedAppointment.patientName,
+//         doctorId: updatedAppointment.doctorId,
+//         doctorName: updatedAppointment.doctorName,
+//         date: updatedAppointment.date,
+//         time: updatedAppointment.time,
+//         type: updatedAppointment.type,
+//         status: updatedAppointment.status,
+//         roomNumber: updatedAppointment.roomNumber,
+//         duration: updatedAppointment.duration,
+//         isReferred: updatedAppointment.isReferred,
+//         originalDoctorId: updatedAppointment.originalDoctorId,
+//         originalDoctorName: updatedAppointment.originalDoctorName,
+//         currentReferralId: updatedAppointment.currentReferralId,
+//         createdBy: updatedAppointment.createdBy,
+//         createdByName: updatedAppointment.createdByName,
+//       },
+//     })
+//   } catch (error) {
+//     console.error("  Update appointment error:", error)
+//     return NextResponse.json({ error: "Failed to update appointment" }, { status: 500 })
+//   }
+// }
 
-    const token = request.headers.get("authorization")?.split(" ")[1]
-    console.log("[DEBUG] Token received:", token ? "Yes" : "No")
+// export async function DELETE(request: NextRequest) {
+//   try {
+//     await connectDB()
+//     console.log("[DEBUG] Database connected")
 
-    if (!token) {
-      console.warn("[DEBUG] No token found")
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+//     const token = request.headers.get("authorization")?.split(" ")[1]
+//     console.log("[DEBUG] Token received:", token ? "Yes" : "No")
 
-    const payload = verifyToken(token)
-    console.log("[DEBUG] Token payload:", payload)
+//     if (!token) {
+//       console.warn("[DEBUG] No token found")
+//       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+//     }
 
-    if (!payload) {
-      console.warn("[DEBUG] Invalid token")
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    }
+//     const payload = verifyToken(token)
+//     console.log("[DEBUG] Token payload:", payload)
 
-    const { searchParams } = new URL(request.url)
-    const appointmentId = searchParams.get("id")
-    console.log("[DEBUG] Appointment ID to delete:", appointmentId)
+//     if (!payload) {
+//       console.warn("[DEBUG] Invalid token")
+//       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+//     }
 
-    if (!appointmentId || !String(appointmentId).trim()) {
-      console.warn("[DEBUG] Appointment ID is missing")
-      return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 })
-    }
+//     const { searchParams } = new URL(request.url)
+//     const appointmentId = searchParams.get("id")
+//     console.log("[DEBUG] Appointment ID to delete:", appointmentId)
 
-    const appointment = await Appointment.findById(appointmentId)
-    console.log("[DEBUG] Appointment found:", appointment ? appointment._id.toString() : "No appointment found")
+//     if (!appointmentId || !String(appointmentId).trim()) {
+//       console.warn("[DEBUG] Appointment ID is missing")
+//       return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 })
+//     }
 
-    if (!appointment) {
-      console.warn("[DEBUG] Appointment not found with ID:", appointmentId)
-      return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
-    }
+//     const appointment = await Appointment.findById(appointmentId)
+//     console.log("[DEBUG] Appointment found:", appointment ? appointment._id.toString() : "No appointment found")
 
-    if (payload?.role === "doctor" && String(appointment.createdBy) !== String(payload.userId)) {
-      console.warn("[DEBUG] Doctor trying to delete appointment they did not create")
-      return NextResponse.json(
-        { error: "Unauthorized - you can only delete appointments you created" },
-        { status: 403 },
-      )
-    }
+//     if (!appointment) {
+//       console.warn("[DEBUG] Appointment not found with ID:", appointmentId)
+//       return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+//     }
 
-    await Appointment.findByIdAndDelete(appointmentId)
-    console.log("[DEBUG] Appointment deleted:", appointmentId)
+//     if (payload?.role === "doctor" && String(appointment.createdBy) !== String(payload.userId)) {
+//       console.warn("[DEBUG] Doctor trying to delete appointment they did not create")
+//       return NextResponse.json(
+//         { error: "Unauthorized - you can only delete appointments you created" },
+//         { status: 403 },
+//       )
+//     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Appointment deleted successfully",
-    })
-  } catch (error) {
-    console.error("  Delete appointment error:", error)
-    return NextResponse.json({ error: "Failed to delete appointment" }, { status: 500 })
-  }
-}
+//     await Appointment.findByIdAndDelete(appointmentId)
+//     console.log("[DEBUG] Appointment deleted:", appointmentId)
+
+//     return NextResponse.json({
+//       success: true,
+//       message: "Appointment deleted successfully",
+//     })
+//   } catch (error) {
+//     console.error("  Delete appointment error:", error)
+//     return NextResponse.json({ error: "Failed to delete appointment" }, { status: 500 })
+//   }
+// }
