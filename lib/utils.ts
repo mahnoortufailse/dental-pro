@@ -45,20 +45,31 @@ export function formatTimeFor12Hour(time: string): string {
 export function getAllPhoneNumbers(patientData: any): string[] {
   const phoneNumbers: string[] = []
   
-  // Collect all available phone numbers from patient data
-  if (patientData.phone && patientData.phone.trim()) {
-    phoneNumbers.push(patientData.phone.trim())
-  }
-  if (patientData.alternatePhone && patientData.alternatePhone.trim()) {
-    phoneNumbers.push(patientData.alternatePhone.trim())
-  }
-  if (patientData.phoneNumber && patientData.phoneNumber.trim()) {
-    phoneNumbers.push(patientData.phoneNumber.trim())
-  }
-  if (patientData.mobileNumber && patientData.mobileNumber.trim()) {
-    phoneNumbers.push(patientData.mobileNumber.trim())
+  // Handle the phones array structure (phones: [{ number, isPrimary }])
+  if (patientData.phones && Array.isArray(patientData.phones)) {
+    patientData.phones.forEach((phoneObj: any) => {
+      if (phoneObj.number && typeof phoneObj.number === "string" && phoneObj.number.trim()) {
+        phoneNumbers.push(phoneObj.number.trim())
+      }
+    })
   }
   
-  // Remove duplicates
-  return [...new Set(phoneNumbers)]
+  // Fallback to legacy phone number formats if no phones array
+  if (phoneNumbers.length === 0) {
+    if (patientData.phone && patientData.phone.trim()) {
+      phoneNumbers.push(patientData.phone.trim())
+    }
+    if (patientData.alternatePhone && patientData.alternatePhone.trim()) {
+      phoneNumbers.push(patientData.alternatePhone.trim())
+    }
+    if (patientData.phoneNumber && patientData.phoneNumber.trim()) {
+      phoneNumbers.push(patientData.phoneNumber.trim())
+    }
+    if (patientData.mobileNumber && patientData.mobileNumber.trim()) {
+      phoneNumbers.push(patientData.mobileNumber.trim())
+    }
+  }
+  
+  // Remove duplicates and empty values
+  return [...new Set(phoneNumbers.filter(Boolean))]
 }
