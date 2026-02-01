@@ -7,17 +7,22 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { Sidebar } from "@/components/sidebar"
 import { useAuth } from "@/components/auth-context"
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { toast } from "react-hot-toast"
 import { AlertCircle, History, Trash2, Loader2, FileText } from "lucide-react"
 import { ToothChartVisual } from "@/components/tooth-chart-visual"
+import { ToothChartModal } from "@/components/tooth-chart-modal"
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
 import { XrayFileUpload } from "@/components/xray-file-upload"
 import { XrayDisplayViewer } from "@/components/xray-display-viewer"
 import { MedicalHistorySection } from "@/components/medical-history-section"
 import { PatientReportsSection } from "@/components/patient-reports-section"
+import { ToothChartResultsTable } from "@/components/tooth-chart-results-table"
 
 export default function ClinicalToolsPage() {
   const { user, token } = useAuth()
+  const searchParams = useSearchParams()
+  const patientIdFromQuery = searchParams?.get('patientId')
   const [patients, setPatients] = useState([])
   const [selectedPatient, setSelectedPatient] = useState(null)
   const [toothChart, setToothChart] = useState(null)
@@ -74,6 +79,8 @@ export default function ClinicalToolsPage() {
   })
   const [reportFormErrors, setReportFormErrors] = useState<Record<string, string>>({})
   const [reportLoading, setReportLoading] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalToothNumber, setModalToothNumber] = useState<number | null>(null)
 
   useEffect(() => {
     if (token) {
@@ -84,6 +91,16 @@ export default function ClinicalToolsPage() {
       }
     }
   }, [token, user])
+
+  // Auto-select patient from query parameter
+  useEffect(() => {
+    if (patientIdFromQuery && patients.length > 0) {
+      const patient = patients.find((p) => (p._id || p.id).toString() === patientIdFromQuery)
+      if (patient) {
+        handleSelectPatient(patientIdFromQuery)
+      }
+    }
+  }, [patientIdFromQuery, patients.length])
 
   const fetchPatientsWithAppointments = async () => {
     setLoading((prev) => ({ ...prev, patients: true }))
@@ -370,53 +387,41 @@ export default function ClinicalToolsPage() {
   }
 
   const handleToothClick = (toothNumber: number) => {
-    if (!toothChart) return
-    const statuses = ["healthy", "cavity", "filling", "implant", "missing", "root_canal", "treated", "crown"]
-    const currentTeeth = toothChart.teeth || {}
-    const currentStatus = currentTeeth[toothNumber]?.status || "healthy"
-
-    const normalizedStatus = currentStatus.replace("-", "_")
-    const currentIndex = statuses.indexOf(normalizedStatus)
-
-    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % statuses.length
-    const nextStatus = statuses[nextIndex]
-
-    console.log("[v0] Tooth click debug:", {
-      toothNumber,
-      currentStatus,
-      normalizedStatus,
-      currentIndex,
-      nextIndex,
-      nextStatus,
-      availableStatuses: statuses,
-    })
-
-    setToothChart({
-      ...toothChart,
-      teeth: {
-        ...currentTeeth,
-        [toothNumber]: {
-          ...(currentTeeth[toothNumber] || {}),
-          status: nextStatus,
-          lastUpdated: new Date(),
-        },
-      },
-    })
+    setModalToothNumber(toothNumber)
+    setIsModalOpen(true)
   }
 
-  const handleToothStatusChange = (toothNumber: number, newStatus: string) => {
+  const handleModalSave = (data: {
+    toothNumber: number
+    sides: string[]
+    procedure: string
+    diagnosis: string
+    comments: string
+    date: string
+    fillingType?: string
+  }) => {
     if (!toothChart) return
+    
     setToothChart({
       ...toothChart,
       teeth: {
         ...(toothChart.teeth || {}),
-        [toothNumber]: {
-          ...(toothChart.teeth?.[toothNumber] || {}),
-          status: newStatus,
+        [data.toothNumber]: {
+          ...(toothChart.teeth?.[data.toothNumber] || {}),
+          sides: data.sides,
+          procedure: data.procedure,
+          diagnosis: data.diagnosis,
+          notes: data.comments,
+          date: data.date,
+          fillingType: data.fillingType || "",
+          status: "filling",
           lastUpdated: new Date(),
         },
       },
     })
+    setIsModalOpen(false)
+    setModalToothNumber(null)
+    toast.success("Tooth procedure saved")
   }
 
   const handleSaveToothChart = async () => {
@@ -656,8 +661,10 @@ export default function ClinicalToolsPage() {
                             <ToothChartVisual
                               teeth={toothChart.teeth || {}}
                               onToothClick={handleToothClick}
-                              onToothStatusChange={handleToothStatusChange}
+                              readOnly={false}
                             />
+
+                            <ToothChartResultsTable teeth={toothChart.teeth || {}} />
 
                             <div className="mt-4 sm:mt-6">
                               <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
@@ -681,6 +688,28 @@ export default function ClinicalToolsPage() {
                         )}
                       </>
                     )}
+
+                    {/* Tooth Chart Modal */}
+                    <ToothChartModal
+                      isOpen={isModalOpen}
+                      toothNumber={modalToothNumber}
+                      existingData={
+                        modalToothNumber && toothChart?.teeth?.[modalToothNumber]
+                          ? {
+                              sides: toothChart.teeth[modalToothNumber].sides,
+                              procedure: toothChart.teeth[modalToothNumber].procedure,
+                              diagnosis: toothChart.teeth[modalToothNumber].diagnosis,
+                              comments: toothChart.teeth[modalToothNumber].notes,
+                              date: toothChart.teeth[modalToothNumber].date,
+                            }
+                          : undefined
+                      }
+                      onClose={() => {
+                        setIsModalOpen(false)
+                        setModalToothNumber(null)
+                      }}
+                      onSave={handleModalSave}
+                    />
 
                     {/* Medical History Tab */}
                     {activeTab === "history" && (

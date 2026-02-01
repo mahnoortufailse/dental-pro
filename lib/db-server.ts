@@ -57,6 +57,8 @@ const patientSchema = new mongoose.Schema({
     default: null,
   },
   dob: { type: String, required: true },
+  age: { type: Number, default: null }, // Auto-calculated from DOB
+  nationality: { type: String, default: "", required: false }, // Optional nationality field
   idNumber: { type: String, default: "" },
   address: { type: String, default: "" },
   insuranceProvider: {
@@ -326,6 +328,8 @@ const patientReferralRequestSchema = new mongoose.Schema({
   ],
   patientEmail: { type: String, default: "" },
   patientDob: { type: String, required: true },
+  patientAge: { type: Number, default: null },
+  patientNationality: { type: String, default: "" },
   patientIdNumber: { type: String, default: "" },
   patientAddress: { type: String, default: "" },
   patientInsuranceProvider: { type: String, default: "" },

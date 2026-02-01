@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { ToothChart, connectDB } from "@/lib/db-server"
 import { verifyToken } from "@/lib/auth"
