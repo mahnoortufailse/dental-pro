@@ -46,13 +46,6 @@ export default function AppointmentsPage() {
       appointments: any[];
       isAvailable: boolean;
       endTime: string;
-      exactAppointment?: {
-        startTime: string;
-        endTime: string;
-        patientName: string;
-        type: string;
-        roomNumber: string;
-      } | null;
     }>
   >([]);
   const [appointmentReports, setAppointmentReports] = useState<
@@ -268,80 +261,43 @@ export default function AppointmentsPage() {
     return false;
   };
 
-  // Helper function to convert time string to minutes
-  function timeToMinutes(time: string): number {
-    const [hours, minutes] = time.split(":").map(Number);
-    return hours * 60 + minutes;
-  }
-
-  // Helper function to convert minutes to time string
-  function minutesToTime(minutes: number): string {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
-  }
-
-  // Generate time slots for a specific date
   const generateTimeSlots = (date: string) => {
     if (!date) return [];
 
     const slots = [];
-    const startHour = 9; // 9 AM
-    const endHour = 17; // 5 PM
-    const slotDuration = 30; // minutes
 
     // Get all appointments for the selected date
     const appointmentsForDate = appointments.filter(
-      (apt) => apt.date === date && apt.status !== "cancelled"
+      (apt) =>
+        apt.date === date &&
+        apt.status !== "cancelled" &&
+        apt.status !== "closed" &&
+        apt.status !== "completed"
     );
 
-    // Create slots for each 30-minute interval
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += slotDuration) {
-        const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-        const slotStartMin = timeToMinutes(time);
-        const slotEndMin = slotStartMin + slotDuration;
+    // Create slots based on actual appointment times
+    appointmentsForDate.forEach((apt) => {
+      const startTime = apt.time;
+      const duration = apt.duration || 30;
+      const startMinutes = timeToMinutes(startTime);
+      const endMinutes = startMinutes + duration;
 
-        // Find appointments that overlap with this slot
-        const overlappingAppointments = appointmentsForDate.filter((apt) => {
-          const aptStartMin = timeToMinutes(apt.time);
-          const aptDuration = apt.duration || 30;
-          const aptEndMin = aptStartMin + aptDuration;
+      // Calculate end time string
+      const endHour = Math.floor(endMinutes / 60);
+      const endMinute = endMinutes % 60;
+      const endTime = `${String(endHour).padStart(2, "0")}:${String(endMinute).padStart(2, "0")}`;
 
-          // Check if appointment overlaps with this slot
-          return aptStartMin < slotEndMin && slotStartMin < aptEndMin;
-        });
+      slots.push({
+        time: startTime,
+        duration: duration,
+        appointments: [apt], // This slot has this specific appointment
+        isAvailable: false, // Always false since it's booked
+        endTime: endTime,
+      });
+    });
 
-        // Determine exact appointment time if there's an appointment
-        let exactAppointment = null;
-        if (overlappingAppointments.length > 0) {
-          const apt = overlappingAppointments[0]; // Take the first appointment
-          const aptStartMin = timeToMinutes(apt.time);
-          const aptDuration = apt.duration || 30;
-          const aptEndMin = aptStartMin + aptDuration;
-          
-          exactAppointment = {
-            startTime: apt.time,
-            endTime: minutesToTime(aptEndMin),
-            patientName: apt.patientName,
-            type: apt.type,
-            roomNumber: apt.roomNumber,
-          };
-        }
-
-        // Calculate end time for the slot
-        const endTime = minutesToTime(slotEndMin);
-
-        slots.push({
-          time,
-          duration: slotDuration,
-          appointments: overlappingAppointments,
-          isAvailable: overlappingAppointments.length === 0,
-          endTime,
-          exactAppointment,
-        });
-      }
-    }
+    // Sort slots by time
+    slots.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
     return slots;
   };
@@ -356,7 +312,7 @@ export default function AppointmentsPage() {
           `/api/appointment-reports?appointmentId=${apt._id || apt.id}`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          },
+          }
         );
         if (res.ok) {
           const data = await res.json();
@@ -488,13 +444,13 @@ export default function AppointmentsPage() {
 
   const handlePreviousMonth = () => {
     setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1),
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)
     );
   };
 
   const handleNextMonth = () => {
     setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1),
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)
     );
   };
 
@@ -509,7 +465,7 @@ export default function AppointmentsPage() {
     const date = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
-      day,
+      day
     );
     const dateStr = formatDateToLocalString(date);
 
@@ -531,8 +487,8 @@ export default function AppointmentsPage() {
       if (res.ok) {
         setAppointments(
           appointments.filter(
-            (a) => a._id !== appointmentId && a.id !== appointmentId,
-          ),
+            (a) => a._id !== appointmentId && a.id !== appointmentId
+          )
         );
         toast.success("Appointment deleted successfully");
       } else {
@@ -565,8 +521,8 @@ export default function AppointmentsPage() {
           appointments.map((a) =>
             a._id === appointmentId || a.id === appointmentId
               ? data.appointment
-              : a,
-          ),
+              : a
+          )
         );
         toast.success("Appointment cancelled successfully");
         setAppointmentActionModal({
@@ -604,8 +560,8 @@ export default function AppointmentsPage() {
           appointments.map((a) =>
             a._id === appointmentId || a.id === appointmentId
               ? data.appointment
-              : a,
-          ),
+              : a
+          )
         );
         toast.success("Appointment marked as completed");
         setAppointmentActionModal({
@@ -718,7 +674,7 @@ export default function AppointmentsPage() {
 
     if (!finalDoctorId) {
       toast.error(
-        "Doctor information is missing. Please try logging in again.",
+        "Doctor information is missing. Please try logging in again."
       );
       return;
     }
@@ -816,7 +772,7 @@ export default function AppointmentsPage() {
         const newEndTime = `${String(newEndHours).padStart(2, "0")}:${String(newEndMins).padStart(2, "0")}`;
 
         toast.error(
-          `Doctor ${submissionData.doctorName} has another appointment from ${conflictingApt.time} to ${aptEndTime} on ${submissionData.date}. Please choose a different time.`,
+          `Doctor ${submissionData.doctorName} has another appointment from ${conflictingApt.time} to ${aptEndTime} on ${submissionData.date}. Please choose a different time.`
         );
       }
       return;
@@ -845,8 +801,8 @@ export default function AppointmentsPage() {
         if (editingId) {
           setAppointments(
             appointments.map((a) =>
-              a._id === editingId || a.id === editingId ? data.appointment : a,
-            ),
+              a._id === editingId || a.id === editingId ? data.appointment : a
+            )
           );
           toast.success("Appointment updated successfully");
           setEditingId(null);
@@ -871,7 +827,7 @@ export default function AppointmentsPage() {
         const errorData = await res.json();
         if (res.status === 409) {
           toast.error(
-            errorData.error || "Time slot is already booked for this doctor",
+            errorData.error || "Time slot is already booked for this doctor"
           );
         } else {
           toast.error(errorData.error || "Failed to save appointment");
@@ -972,7 +928,7 @@ export default function AppointmentsPage() {
       String(appointment.originalDoctorId) !== String(currentUserId)
     ) {
       toast.error(
-        "This appointment is currently referred to another doctor and cannot be referred again by you.",
+        "This appointment is currently referred to another doctor and cannot be referred again by you."
       );
       return;
     }
@@ -1019,21 +975,21 @@ export default function AppointmentsPage() {
 
   const totalAppointments = appointments.length;
   const confirmedAppointments = appointments.filter(
-    (apt) => apt.status === "confirmed",
+    (apt) => apt.status === "confirmed"
   ).length;
   const completedAppointments = appointments.filter(
-    (apt) => apt.status === "completed",
+    (apt) => apt.status === "completed"
   ).length;
   const cancelledAppointments = appointments.filter(
-    (apt) => apt.status === "cancelled",
+    (apt) => apt.status === "cancelled"
   ).length;
 
   return (
     <ProtectedRoute>
       <div className="flex h-screen bg-background">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 overflow-auto md:pt-0  ">
-          <div className="p-3 sm:p-4 md:p-6 lg:p-8 ">
+        <main className="flex-1 overflow-auto md:pt-0">
+          <div className="p-3 sm:p-4 md:p-6 lg:p-8">
             <div className="mb-4 sm:mb-6 md:mb-8 mt-16 sm:mt-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
               <div className="hidden md:block">
                 <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
@@ -1139,8 +1095,8 @@ export default function AppointmentsPage() {
                             new Date(
                               currentDate.getFullYear(),
                               currentDate.getMonth(),
-                              day,
-                            ),
+                              day
+                            )
                           )
                         : [];
                       const dateStr = day
@@ -1148,8 +1104,8 @@ export default function AppointmentsPage() {
                             new Date(
                               currentDate.getFullYear(),
                               currentDate.getMonth(),
-                              day,
-                            ),
+                              day
+                            )
                           )
                         : null;
                       const isSelected = dateStr === selectedDate;
@@ -1168,16 +1124,20 @@ export default function AppointmentsPage() {
                             isSelected
                               ? "border-accent bg-accent/20"
                               : day
-                                ? dayAppointments.length > 0
-                                  ? "border-primary/50 bg-primary/10"
-                                  : "border-border"
-                                : "border-transparent"
+                              ? dayAppointments.length > 0
+                                ? "border-primary/50 bg-primary/10"
+                                : "border-border"
+                              : "border-transparent"
                           } ${loading.appointments ? "opacity-50" : ""}`}
                         >
                           {day && (
                             <div className="h-full flex flex-col items-center justify-center">
                               <span
-                                className={`font-semibold ${isSelected ? "text-accent-foreground" : "text-foreground"}`}
+                                className={`font-semibold ${
+                                  isSelected
+                                    ? "text-accent-foreground"
+                                    : "text-foreground"
+                                }`}
                               >
                                 {day}
                               </span>
@@ -1194,18 +1154,14 @@ export default function AppointmentsPage() {
                   </div>
 
                   {/* Time Slots Section */}
-                  {selectedDate && (
+                  {selectedDate && selectedDateSlots.length > 0 && (
                     <div className="mt-4 sm:mt-6">
                       <div className="flex items-center justify-between mb-2 sm:mb-3">
                         <h3 className="font-bold text-foreground text-sm sm:text-base flex items-center gap-2">
                           <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                          Time Slots for {formatDateDisplay(selectedDate)}
+                          Booked Time Slots for {formatDateDisplay(selectedDate)}
                         </h3>
                         <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 text-xs">
-                            <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
-                            <span>Available</span>
-                          </div>
                           <div className="flex items-center gap-1 text-xs">
                             <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
                             <span>Booked</span>
@@ -1217,21 +1173,7 @@ export default function AppointmentsPage() {
                         {selectedDateSlots.map((slot, index) => (
                           <div
                             key={index}
-                            onClick={() => {
-                              if (slot.isAvailable) {
-                                setFormData({
-                                  ...formData,
-                                  time: slot.time,
-                                  date: selectedDate,
-                                });
-                                setShowForm(true);
-                              }
-                            }}
-                            className={`p-2 sm:p-3 rounded-lg border transition-all ${
-                              slot.isAvailable
-                                ? "bg-green-50 border-green-200 hover:bg-green-100 hover:border-green-300 cursor-pointer"
-                                : "bg-red-50 border-red-200 cursor-not-allowed"
-                            }`}
+                            className="p-2 sm:p-3 rounded-lg border border-red-200 bg-red-50"
                           >
                             <div className="flex flex-col items-center text-center">
                               <div className="font-semibold text-xs sm:text-sm text-foreground">
@@ -1241,58 +1183,54 @@ export default function AppointmentsPage() {
                                 {slot.endTime}
                               </div>
 
-                              {slot.exactAppointment ? (
-                                <div className="mt-2 space-y-1">
-                                  <div className="text-[9px] xs:text-[10px] p-1 bg-white/50 rounded border border-red-100">
-                                    <div className="font-medium truncate">
-                                      {slot.exactAppointment.patientName}
-                                    </div>
-                                    <div className="text-muted-foreground truncate">
-                                      {slot.exactAppointment.startTime} - {slot.exactAppointment.endTime}
-                                    </div>
-                                    <div className="text-muted-foreground truncate">
-                                      {slot.exactAppointment.type} • {slot.exactAppointment.roomNumber}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center justify-center gap-1">
-                                    <Users className="w-3 h-3 text-red-600" />
-                                    <span className="text-[10px] xs:text-xs font-medium text-red-700">
-                                      Booked
-                                    </span>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="mt-2 flex flex-col">
-                                  <span className="text-[10px] xs:text-xs font-medium text-green-700">
-                                    Available
+                              {slot.appointments.length > 0 && (
+                                <div className="mt-2 flex flex-col items-center justify-center gap-0">
+                                  <Users className="w-3 h-3 text-red-600" />
+                                  <span className="text-[10px] xs:text-xs font-medium text-red-700">
+                                    Booked
                                   </span>
-                                  <span className="text-[9px] ">Click here</span>
-                                </div>
-                              )}
-
-                              {/* Show multiple appointments if there are more than one */}
-                              {slot.appointments.length > 1 && (
-                                <div className="mt-1 text-[9px] text-muted-foreground text-center">
-                                  +{slot.appointments.length - 1} more
+                                  {slot.appointments.map((apt, aptIndex) => (
+                                    <div
+                                      key={aptIndex}
+                                      className="text-[9px] xs:text-[10px] p-1 bg-white/50 rounded border border-red-100 mt-1"
+                                    >
+                                      <div className="font-medium truncate">
+                                        {apt.patientName}
+                                      </div>
+                                      <div className="text-muted-foreground truncate">
+                                        {apt.type}
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
 
-                      {selectedDateSlots.length === 0 && (
-                        <div className="text-center py-6 bg-muted/30 rounded-lg">
-                          <p className="text-muted-foreground text-sm">
-                            No time slots available for this date
-                          </p>
-                        </div>
-                      )}
+                  {/* Show message if no booked slots */}
+                  {selectedDate && selectedDateSlots.length === 0 && (
+                    <div className="mt-4 sm:mt-6">
+                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                        <h3 className="font-bold text-foreground text-sm sm:text-base flex items-center gap-2">
+                          <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                          Booked Time Slots for {formatDateDisplay(selectedDate)}
+                        </h3>
+                      </div>
+                      <div className="text-center py-6 bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground text-sm">
+                          No booked time slots for this date
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
+              {/* Right Sidebar Section */}
               <div className="space-y-3 sm:space-y-4 md:space-3">
                 {/* Action Buttons */}
                 <div className="flex flex-col xs:flex-row lg:flex-col gap-2 sm:gap-3">
@@ -1376,7 +1314,7 @@ export default function AppointmentsPage() {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         router.push(
-                                          `/dashboard/patients/${apt.patientId}`,
+                                          `/dashboard/patients/${apt.patientId}`
                                         );
                                       }}
                                       className="font-medium text-foreground text-[12px] truncate hover:underline hover:text-primary transition-colors cursor-pointer text-left"
@@ -1407,15 +1345,17 @@ export default function AppointmentsPage() {
                                         {apt.status === "refer_back"
                                           ? ""
                                           : String(apt.originalDoctorId) ===
-                                              String(currentUserId)
-                                            ? `Referred to ${apt.doctorName}`
-                                            : "Referred In"}
+                                            String(currentUserId)
+                                          ? `Referred to ${apt.doctorName}`
+                                          : "Referred In"}
                                       </span>
                                     )}
                                 </div>
                                 <div className="flex flex-col gap-1 items-end">
                                   <span
-                                    className={`text-[11px] px-2 py-1 rounded ${getStatusColor(apt.status)}`}
+                                    className={`text-[11px] px-2 py-1 rounded ${getStatusColor(
+                                      apt.status
+                                    )}`}
                                   >
                                     {apt.status}
                                   </span>
@@ -1484,7 +1424,7 @@ export default function AppointmentsPage() {
                                 <button
                                   onClick={() =>
                                     router.push(
-                                      `/dashboard/appointments/${apt._id || apt.id}`,
+                                      `/dashboard/appointments/${apt._id || apt.id}`
                                     )
                                   }
                                   disabled={loading.appointments}
@@ -1501,22 +1441,20 @@ export default function AppointmentsPage() {
                                       {/* Report Actions */}
                                       {canCreateOrViewReport(apt) && (
                                         <>
-                                          {
-                                            hasReport ? (
-                                              <button
-                                                onClick={() =>
-                                                  router.push(
-                                                    "/dashboard/medical-reports",
-                                                  )
-                                                }
-                                                disabled={loading.createReport}
-                                                className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
-                                              >
-                                                <FileText className="w-3 h-3" />
-                                                View Report
-                                              </button>
-                                            ) : null
-                                          }
+                                          {hasReport ? (
+                                            <button
+                                              onClick={() =>
+                                                router.push(
+                                                  "/dashboard/medical-reports"
+                                                )
+                                              }
+                                              disabled={loading.createReport}
+                                              className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
+                                            >
+                                              <FileText className="w-3 h-3" />
+                                              View Report
+                                            </button>
+                                          ) : null}
                                         </>
                                       )}
 
@@ -1541,7 +1479,7 @@ export default function AppointmentsPage() {
                                             onClick={() => {
                                               if (!canClose) {
                                                 toast.error(
-                                                  "Create a medical report before closing",
+                                                  "Create a medical report before closing"
                                                 );
                                                 return;
                                               }
@@ -1625,7 +1563,7 @@ export default function AppointmentsPage() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       router.push(
-                                        `/dashboard/patients/${apt.patientId}`,
+                                        `/dashboard/patients/${apt.patientId}`
                                       );
                                     }}
                                     className="font-medium text-foreground text-[12px] truncate hover:underline hover:text-primary transition-colors cursor-pointer text-left"
@@ -1656,15 +1594,17 @@ export default function AppointmentsPage() {
                                       {apt.status === "refer_back"
                                         ? ""
                                         : String(apt.originalDoctorId) ===
-                                            String(currentUserId)
-                                          ? `Referred to ${apt.doctorName}`
-                                          : "Referred In"}
+                                          String(currentUserId)
+                                        ? `Referred to ${apt.doctorName}`
+                                        : "Referred In"}
                                     </span>
                                   )}
                               </div>
                               <div className="flex flex-col gap-1 items-end">
                                 <span
-                                  className={`text-[11px] px-2 py-1 rounded ${getStatusColor(apt.status)}`}
+                                  className={`text-[11px] px-2 py-1 rounded ${getStatusColor(
+                                    apt.status
+                                  )}`}
                                 >
                                   {apt.status}
                                 </span>
@@ -1732,7 +1672,7 @@ export default function AppointmentsPage() {
                               <button
                                 onClick={() =>
                                   router.push(
-                                    `/dashboard/appointments/${apt._id || apt.id}`,
+                                    `/dashboard/appointments/${apt._id || apt.id}`
                                   )
                                 }
                                 disabled={loading.appointments}
@@ -1749,22 +1689,20 @@ export default function AppointmentsPage() {
                                     {/* Report Actions */}
                                     {canCreateOrViewReport(apt) && (
                                       <>
-                                        {
-                                          hasReport ? (
-                                            <button
-                                              onClick={() =>
-                                                router.push(
-                                                  "/dashboard/medical-reports",
-                                                )
-                                              }
-                                              disabled={loading.createReport}
-                                              className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
-                                            >
-                                              <FileText className="w-3 h-3" />
-                                              view Report
-                                            </button>
-                                          ) : null
-                                        }
+                                        {hasReport ? (
+                                          <button
+                                            onClick={() =>
+                                              router.push(
+                                                "/dashboard/medical-reports"
+                                              )
+                                            }
+                                            disabled={loading.createReport}
+                                            className="text-primary hover:underline disabled:text-primary/50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 px-1 text-[11px]"
+                                          >
+                                            <FileText className="w-3 h-3" />
+                                            view Report
+                                          </button>
+                                        ) : null}
                                       </>
                                     )}
 
@@ -1789,7 +1727,7 @@ export default function AppointmentsPage() {
                                           onClick={() => {
                                             if (!canClose) {
                                               toast.error(
-                                                "Create a medical report before closing",
+                                                "Create a medical report before closing"
                                               );
                                               return;
                                             }
@@ -2090,17 +2028,17 @@ export default function AppointmentsPage() {
               appointmentPatientName={
                 appointments.find(
                   (a) =>
-                    (a._id || a.id) === appointmentActionModal.appointmentId,
+                    (a._id || a.id) === appointmentActionModal.appointmentId
                 )?.patientName
               }
               onConfirm={() => {
                 if (appointmentActionModal.action === "close") {
                   handleCompleteAppointment(
-                    appointmentActionModal.appointmentId!,
+                    appointmentActionModal.appointmentId!
                   );
                 } else if (appointmentActionModal.action === "cancel") {
                   handleCancelAppointment(
-                    appointmentActionModal.appointmentId!,
+                    appointmentActionModal.appointmentId!
                   );
                 }
               }}
@@ -2127,7 +2065,7 @@ export default function AppointmentsPage() {
               }
               onConfirm={() => {
                 handleDeleteAppointment(
-                  appointmentToDelete._id || appointmentToDelete.id,
+                  appointmentToDelete._id || appointmentToDelete.id
                 );
                 setShowDeleteModal(false);
                 setAppointmentToDelete(null);
@@ -2172,6 +2110,12 @@ export default function AppointmentsPage() {
       </div>
     </ProtectedRoute>
   );
+}
+
+function timeToMinutes(time: string): number {
+  if (!time) return 0;
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + (minutes || 0);
 }
 
 function formatDateDisplay(dateStr: string): string {
