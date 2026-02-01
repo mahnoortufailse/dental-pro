@@ -240,11 +240,11 @@ export function ToothChartVisual({
                 </div>
 
                 {/* Tooth number label - always visible */}
-                {/* <div className="absolute -bottom-5 sm:-bottom-6 md:-bottom-7 left-1/2 transform -translate-x-1/2 text-center">
-                  <div className="font-bold text-gray-700 text-xs sm:text-sm">
+                <div className="absolute -bottom-5 sm:-bottom-3 md:-bottom-4 left-1/2 transform -translate-x-1/2 text-center">
+                  <div className="font-bold text-gray-700 text-xs sm:text-xs">
                     {toothNum}
                   </div>
-                </div> */}
+                </div>
               </button>
             </div>
           </div>
