@@ -1,3 +1,4 @@
+//@ts-nocheck
 "use client"
 
 import React from "react"
@@ -25,6 +26,7 @@ interface ToothModalProps {
   isOpen: boolean
   toothNumber: number | null
   existingData?: {
+    _id?: string
     sides?: string[]
     procedure?: string
     diagnosis?: string
@@ -60,24 +62,64 @@ export function ToothChartModal({
   onClose,
   onSave,
 }: ToothModalProps) {
-  const [selectedSides, setSelectedSides] = useState<string[]>(existingData?.sides || [])
-  const [procedure, setProcedure] = useState(existingData?.procedure || "")
+  const [selectedSides, setSelectedSides] = useState<string[]>([])
+  const [procedure, setProcedure] = useState("")
   const [customProcedure, setCustomProcedure] = useState("")
-  const [diagnosis, setDiagnosis] = useState(existingData?.diagnosis || "")
-  const [comments, setComments] = useState(existingData?.comments || "")
-  const [fillingType, setFillingType] = useState(existingData?.fillingType || "")
+  const [diagnosis, setDiagnosis] = useState("")
+  const [comments, setComments] = useState("")
+  const [fillingType, setFillingType] = useState("")
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [showCustom, setShowCustom] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
 
   // Update form state when modal opens with new data
   useEffect(() => {
-    if (isOpen && existingData) {
-      setSelectedSides(existingData.sides || [])
-      setProcedure(existingData.procedure || "")
-      setDiagnosis(existingData.diagnosis || "")
-      setComments(existingData.comments || "")
-      setFillingType(existingData.fillingType || "")
-      setCustomProcedure("")
-      setShowCustom(false)
+    if (isOpen) {
+      if (existingData && existingData._id) {
+        // Editing mode - load procedure data
+        setIsEditing(true)
+        setSelectedSides(existingData.sides || [])
+        setDiagnosis(existingData.diagnosis || "")
+        setComments(existingData.comments || "")
+        setFillingType(existingData.fillingType || "")
+        // Handle date - ensure it's in YYYY-MM-DD format
+        let formattedDate = new Date().toISOString().split("T")[0]
+        if (existingData.date) {
+          if (typeof existingData.date === 'string') {
+            formattedDate = existingData.date.split('T')[0] // Remove time part if present
+          } else if (existingData.date instanceof Date) {
+            formattedDate = existingData.date.toISOString().split("T")[0]
+          }
+        }
+        setDate(formattedDate)
+        
+        // Handle procedure - check if it's custom or predefined
+        const proc = existingData.procedure || ""
+        if (COMMON_PROCEDURES.some(p => p.toLowerCase() === proc.toLowerCase())) {
+          setProcedure(proc)
+          setCustomProcedure("")
+          setShowCustom(false)
+        } else if (proc) {
+          setProcedure("")
+          setCustomProcedure(proc)
+          setShowCustom(true)
+        } else {
+          setProcedure("")
+          setCustomProcedure("")
+          setShowCustom(false)
+        }
+      } else {
+        // New procedure mode - reset form
+        setIsEditing(false)
+        setSelectedSides([])
+        setProcedure("")
+        setCustomProcedure("")
+        setDiagnosis("")
+        setComments("")
+        setFillingType("")
+        setDate(new Date().toISOString().split("T")[0])
+        setShowCustom(false)
+      }
     }
   }, [isOpen, existingData])
 
@@ -121,12 +163,10 @@ export function ToothChartModal({
       procedure: finalProcedure,
       diagnosis,
       comments,
-      date: new Date().toISOString().split("T")[0],
+      date,
       fillingType,
     })
-
-    // Reset form and close modal
-    resetForm()
+    // Don't reset form here - let the parent component close the modal
   }
 
   const resetForm = () => {
@@ -136,6 +176,7 @@ export function ToothChartModal({
     setDiagnosis("")
     setComments("")
     setFillingType("")
+    setDate(new Date().toISOString().split("T")[0])
     setShowCustom(false)
   }
 
@@ -160,7 +201,7 @@ export function ToothChartModal({
                 <button
                   key={side}
                   onClick={() => handleSidToggle(side)}
-                  className={`py-2 px-1 text-xs font-medium rounded border transition-colors ${
+                  className={`py-2 px-1 text-xs font-medium cursor-pointer  rounded border transition-colors ${
                     selectedSides.includes(side)
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-muted border-border hover:bg-input"
@@ -246,6 +287,20 @@ export function ToothChartModal({
             </div>
           )}
 
+          {/* Date */}
+          <div className="space-y-2">
+            <Label htmlFor="date" className="text-sm font-medium">
+              Date of Procedure
+            </Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+
           {/* Comments */}
           <div className="space-y-2">
             <Label htmlFor="comments" className="text-sm font-medium">
@@ -263,11 +318,11 @@ export function ToothChartModal({
 
           {/* Buttons */}
           <div className="flex gap-2 pt-4">
-            <Button variant="outline" onClick={handleClose} className="flex-1 bg-transparent">
+            <Button variant="outline" onClick={handleClose} className="flex-1 bg-transparent cursor-pointer ">
               Cancel
             </Button>
-            <Button onClick={handleSave} className="flex-1">
-              Save
+            <Button onClick={handleSave} className="flex-1 cursor-pointer ">
+              {isEditing ? "Update" : "Save"}
             </Button>
           </div>
         </div>

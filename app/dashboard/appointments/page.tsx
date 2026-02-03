@@ -1300,7 +1300,7 @@ export default function AppointmentsPage() {
                         selectedDateAppointments.map((apt) => {
                           const hasReport =
                             appointmentReports[apt._id || apt.id];
-                          const canClose = hasReport || apt.status === "closed";
+                          const canClose = apt.status !== "closed";
 
                           return (
                             <div
@@ -1477,12 +1477,6 @@ export default function AppointmentsPage() {
                                         <>
                                           <button
                                             onClick={() => {
-                                              if (!canClose) {
-                                                toast.error(
-                                                  "Create a medical report before closing"
-                                                );
-                                                return;
-                                              }
                                               setAppointmentActionModal({
                                                 isOpen: true,
                                                 action: "close",
@@ -1549,7 +1543,7 @@ export default function AppointmentsPage() {
                     ) : (
                       appointments.slice(0, 5).map((apt) => {
                         const hasReport = appointmentReports[apt._id || apt.id];
-                        const canClose = hasReport || apt.status === "closed";
+                        const canClose = apt.status !== "closed";
 
                         return (
                           <div
@@ -1725,12 +1719,6 @@ export default function AppointmentsPage() {
                                       <>
                                         <button
                                           onClick={() => {
-                                            if (!canClose) {
-                                              toast.error(
-                                                "Create a medical report before closing"
-                                              );
-                                              return;
-                                            }
                                             setAppointmentActionModal({
                                               isOpen: true,
                                               action: "close",

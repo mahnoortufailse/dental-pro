@@ -73,10 +73,11 @@ export function ToothChartVisual({
   }
 
   const getToothColor = (status: string) => {
-    // Single color for all treated teeth (has procedure)
+    // Blue (#3b82f6) for all treated teeth (has procedure)
+    // Gray for healthy/no procedure
     const hasProcedure = status !== "healthy" && status !== "missing"
     if (hasProcedure) {
-      return "#6366f1" // Indigo color for all procedures
+      return "#3b82f6" // Blue color for all procedures
     }
     return "#d1d5db" // Light gray for healthy/no procedure
   }
@@ -190,6 +191,13 @@ export function ToothChartVisual({
                   borderColor: getToothColor(toothStatus),
                 }}
               >
+                {/* Tooth number label - placed in top left corner */}
+                <div className="absolute top-0 left-0 transform -translate-y-1/2 -translate-x-1/4 z-10">
+                  <div className="font-bold text-gray-700 bg-white rounded-full w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 flex items-center justify-center text-xs sm:text-xs shadow-sm border border-gray-300">
+                    {toothNum}
+                  </div>
+                </div>
+
                 {/* Tooth image */}
                 <div className="w-full h-full">
                   <ToothImage toothNumber={toothNum} status={toothStatus} />
@@ -215,34 +223,10 @@ export function ToothChartVisual({
                     ) : isTreated ? (
                       <>
                         <div className="font-medium text-indigo-600 mb-1">Status: Procedure Done</div>
-                        {/* {teeth[toothNum]?.procedure && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            Procedure: {teeth[toothNum].procedure}
-                          </div>
-                        )}
-                        {teeth[toothNum]?.diagnosis && (
-                          <div className="text-xs text-gray-500">
-                            Diagnosis: {teeth[toothNum].diagnosis}
-                          </div>
-                        )} */}
                       </>
                     ) : (
                       <div className="font-medium text-green-600">Status: Healthy</div>
                     )}
-                    
-                    {/* Show notes if available */}
-                    {/* {teeth[toothNum]?.notes && (
-                      <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 italic">
-                        "{teeth[toothNum].notes}"
-                      </div>
-                    )} */}
-                  </div>
-                </div>
-
-                {/* Tooth number label - always visible */}
-                <div className="absolute -bottom-5 sm:-bottom-3 md:-bottom-4 left-1/2 transform -translate-x-1/2 text-center">
-                  <div className="font-bold text-gray-700 text-xs sm:text-xs">
-                    {toothNum}
                   </div>
                 </div>
               </button>

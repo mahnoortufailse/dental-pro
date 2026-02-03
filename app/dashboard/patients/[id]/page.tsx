@@ -1,13 +1,13 @@
 // @ts-nocheck
-"use client"
+"use client";
 
-import React from "react"
-import { ProtectedRoute } from "@/components/protected-route"
-import { Sidebar } from "@/components/sidebar"
-import { useAuth } from "@/components/auth-context"
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { toast } from "react-hot-toast"
+import React from "react";
+import { ProtectedRoute } from "@/components/protected-route";
+import { Sidebar } from "@/components/sidebar";
+import { useAuth } from "@/components/auth-context";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 import {
   AlertCircle,
   History,
@@ -23,7 +23,7 @@ import {
   CreditCard,
   Eye,
   Plus,
-  Image as ImageIcon,
+  ImageIcon,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -38,25 +38,26 @@ import {
   UserCircle,
   X,
   RefreshCw,
-} from "lucide-react"
-import { ToothChartVisual } from "@/components/tooth-chart-visual"
-import { ToothChartModal } from "@/components/tooth-chart-modal"
-import { ConfirmDeleteModal } from "@/components/confirm-delete-modal"
-import { XrayFileUpload } from "@/components/xray-file-upload"
-import { XrayDisplayViewer } from "@/components/xray-display-viewer"
-import { MedicalHistorySection } from "@/components/medical-history-section"
-import { PatientReportsSection } from "@/components/patient-reports-section"
-import { ToothChartResultsTable } from "@/components/tooth-chart-results-table"
-import {generateReportPDF} from "@/lib/pdf-generator"
+} from "lucide-react";
+import { ToothChartVisual } from "@/components/tooth-chart-visual";
+import { ToothChartModal } from "@/components/tooth-chart-modal";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { XrayFileUpload } from "@/components/xray-file-upload";
+import { XrayDisplayViewer } from "@/components/xray-display-viewer";
+import { MedicalHistorySection } from "@/components/medical-history-section";
+import { PatientReportsSection } from "@/components/patient-reports-section";
+import { ToothChartResultsTable } from "@/components/tooth-chart-results-table";
+import { generateReportPDF } from "@/lib/pdf-generator";
+
 export default function PatientDetailPage() {
-  const { user, token } = useAuth()
-  const params = useParams()
-  const router = useRouter()
-  const patientId = params?.id as string
-  
-  const [selectedPatient, setSelectedPatient] = useState(null)
-  const [toothChart, setToothChart] = useState(null)
-  const [patientImages, setPatientImages] = useState([])
+  const { user, token } = useAuth();
+  const params = useParams();
+  const router = useRouter();
+  const patientId = params?.id as string;
+
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [toothChart, setToothChart] = useState(null);
+  const [patientImages, setPatientImages] = useState([]);
   const [loading, setLoading] = useState({
     patient: true,
     toothChart: false,
@@ -68,35 +69,35 @@ export default function PatientDetailPage() {
     uploadImage: false,
     deleteImage: false,
     reports: false,
-  })
-  const [showHistory, setShowHistory] = useState(false)
-  const [doctorHistory, setDoctorHistory] = useState([])
-  const [activeTab, setActiveTab] = useState("tooth-chart")
-  const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
+  });
+  const [showHistory, setShowHistory] = useState(false);
+  const [doctorHistory, setDoctorHistory] = useState([]);
+  const [activeTab, setActiveTab] = useState("tooth-chart");
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState({
     notes: "",
     findings: "",
     treatment: "",
     medications: "",
-  })
+  });
   const [imageUpload, setImageUpload] = useState({
     type: "xray",
     title: "",
     description: "",
     imageUrl: "",
     notes: "",
-  })
-  const [imageErrors, setImageErrors] = useState<Record<string, string>>({})
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [imageToDelete, setImageToDelete] = useState<any>(null)
-  const [showMedicalDeleteModal, setShowMedicalDeleteModal] = useState(false)
-  const [medicalEntryToDelete, setMedicalEntryToDelete] = useState<number | null>(null)
-  const [showFileUpload, setShowFileUpload] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<any>(null)
-  const [showCreateReportModal, setShowCreateReportModal] = useState(false)
-  const [patientAppointments, setPatientAppointments] = useState<any[]>([])
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>("")
-  const [appointmentsLoading, setAppointmentsLoading] = useState(false)
+  });
+  const [imageErrors, setImageErrors] = useState<Record<string, string>>({});
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState<any>(null);
+  const [showMedicalDeleteModal, setShowMedicalDeleteModal] = useState(false);
+  const [medicalEntryToDelete, setMedicalEntryToDelete] = useState<number | null>(null);
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [showCreateReportModal, setShowCreateReportModal] = useState(false);
+  const [patientAppointments, setPatientAppointments] = useState<any[]>([]);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>("");
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
   const [reportFormData, setReportFormData] = useState({
     procedures: [] as string[],
     findings: "",
@@ -104,24 +105,26 @@ export default function PatientDetailPage() {
     nextVisitDate: "",
     nextVisitTime: "",
     followUpDetails: "",
-  })
-  const [reportFormErrors, setReportFormErrors] = useState<Record<string, string>>({})
-  const [reportLoading, setReportLoading] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [modalToothNumber, setModalToothNumber] = useState<number | null>(null)
-  
+  });
+  const [reportFormErrors, setReportFormErrors] = useState<Record<string, string>>({});
+  const [reportLoading, setReportLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalToothNumber, setModalToothNumber] = useState<number | null>(null);
+  const [toothProcedures, setToothProcedures] = useState<any[]>([]);
+  const [editingProcedure, setEditingProcedure] = useState<any>(null);
+
   // New states for image management
-  const [showAddImageModal, setShowAddImageModal] = useState(false)
-  const [viewImageModal, setViewImageModal] = useState(false)
-  const [selectedImageForView, setSelectedImageForView] = useState<any>(null)
+  const [showAddImageModal, setShowAddImageModal] = useState(false);
+  const [viewImageModal, setViewImageModal] = useState(false);
+  const [selectedImageForView, setSelectedImageForView] = useState<any>(null);
 
   // New states for reports
-  const [reports, setReports] = useState<any[]>([])
-  const [filteredReports, setFilteredReports] = useState<any[]>([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(5)
-  const [selectedDoctorFilter, setSelectedDoctorFilter] = useState("all")
-  const [uniqueDoctors, setUniqueDoctors] = useState<string[]>([])
+  const [reports, setReports] = useState<any[]>([]);
+  const [filteredReports, setFilteredReports] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
+  const [selectedDoctorFilter, setSelectedDoctorFilter] = useState("all");
+  const [uniqueDoctors, setUniqueDoctors] = useState<string[]>([]);
 
   // States for view report modal
   const [showViewReportModal, setShowViewReportModal] = useState(false);
@@ -134,197 +137,240 @@ export default function PatientDetailPage() {
   // Fetch patient data when patientId changes
   useEffect(() => {
     if (token && patientId) {
-      fetchPatientData(patientId)
+      fetchPatientData(patientId);
     }
-  }, [token, patientId])
+  }, [token, patientId]);
 
   // Fetch reports when active tab changes to reports
   useEffect(() => {
     if (activeTab === "reports" && token && selectedPatient) {
-      fetchPatientReports()
+      fetchPatientReports();
     }
-  }, [activeTab, token, selectedPatient])
+  }, [activeTab, token, selectedPatient]);
 
   // Filter reports when filter changes
   useEffect(() => {
     if (selectedDoctorFilter === "all") {
-      setFilteredReports(reports)
+      setFilteredReports(reports);
     } else {
       setFilteredReports(
-        reports.filter(report => 
-          report.doctorName === selectedDoctorFilter
-        )
-      )
+        reports.filter((report) => report.doctorName === selectedDoctorFilter),
+      );
     }
-    setCurrentPage(1) // Reset to first page when filter changes
-  }, [selectedDoctorFilter, reports])
+    setCurrentPage(1); // Reset to first page when filter changes
+  }, [selectedDoctorFilter, reports]);
 
   // Helper function for appointment status colors
   const getAppointmentStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'completed':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-      case 'in-progress':
-        return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-      case 'referred':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+      case "completed":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+      case "scheduled":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+      case "cancelled":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
+      case "in-progress":
+        return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
+      case "referred":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
     }
-  }
+  };
 
   const fetchPatientData = async (id: string) => {
-    setLoading((prev) => ({ ...prev, patient: true }))
-    
+    setLoading((prev) => ({ ...prev, patient: true }));
+
     try {
       // Fetch patient details
       const patientRes = await fetch(`/api/patients/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      
+      });
+
       if (patientRes.ok) {
-        const patientData = await patientRes.json()
-        setSelectedPatient(patientData.patient)
-        setDoctorHistory(patientData.patient?.doctorHistory || [])
+        const patientData = await patientRes.json();
+        setSelectedPatient(patientData.patient);
+        setDoctorHistory(patientData.patient?.doctorHistory || []);
       } else {
-        toast.error("Patient not found")
-        router.push("/dashboard/patients")
-        return
+        toast.error("Patient not found");
+        router.push("/dashboard/patients");
+        return;
       }
 
       // Fetch tooth chart
-      setLoading((prev) => ({ ...prev, toothChart: true }))
+      setLoading((prev) => ({ ...prev, toothChart: true }));
       try {
         const toothChartRes = await fetch(`/api/tooth-chart?patientId=${id}`, {
           headers: { Authorization: `Bearer ${token}` },
-        })
+        });
         if (toothChartRes.ok) {
-          const data = await toothChartRes.json()
-          const chart = data.toothChart || (data.charts && data.charts[0])
+          const data = await toothChartRes.json();
+          const chart = data.toothChart || (data.charts && data.charts[0]);
           if (chart && chart.patientId.toString() === id) {
-            setToothChart(chart)
+            console.log(
+              "Loaded chart with procedures:",
+              chart.procedures?.length || 0,
+            );
+            
+            // Build teeth object from procedures
+            const teethFromProcedures: Record<number, any> = {};
+            if (Array.isArray(chart.procedures) && chart.procedures.length > 0) {
+              chart.procedures.forEach((proc: any) => {
+                const toothNum = proc.toothNumber;
+                if (toothNum) {
+                  teethFromProcedures[toothNum] = {
+                    status: "filling", // Set non-healthy status for teeth with procedures
+                    procedure: proc.procedure,
+                    diagnosis: proc.diagnosis,
+                    notes: proc.comments,
+                    date: proc.date,
+                    fillingType: proc.fillingType,
+                  };
+                }
+              });
+            }
+
+            const updatedChart = {
+              ...chart,
+              teeth: {
+                ...(chart.teeth || {}),
+                ...teethFromProcedures,
+              },
+            };
+
+            console.log("Teeth with procedures:", Object.keys(teethFromProcedures));
+            setToothChart(updatedChart);
+            setToothProcedures(
+              Array.isArray(chart.procedures) ? chart.procedures : [],
+            );
           }
         }
       } catch (error) {
-        console.error("Error fetching tooth chart:", error)
+        console.error("Error fetching tooth chart:", error);
       } finally {
-        setLoading((prev) => ({ ...prev, toothChart: false }))
+        setLoading((prev) => ({ ...prev, toothChart: false }));
       }
 
       // Fetch patient images
-      setLoading((prev) => ({ ...prev, patientImages: true }))
+      setLoading((prev) => ({ ...prev, patientImages: true }));
       try {
         const imagesRes = await fetch(`/api/patient-images?patientId=${id}`, {
           headers: { Authorization: `Bearer ${token}` },
-        })
+        });
         if (imagesRes.ok) {
-          const data = await imagesRes.json()
-          setPatientImages(data.images || [])
+          const data = await imagesRes.json();
+          setPatientImages(data.images || []);
         }
       } catch (error) {
-        console.error("Error fetching patient images:", error)
+        console.error("Error fetching patient images:", error);
       } finally {
-        setLoading((prev) => ({ ...prev, patientImages: false }))
-      }
-
-      // Fetch appointments if user is doctor
-      if (user?.role === "doctor") {
-        await fetchPatientAppointments(id)
+        setLoading((prev) => ({ ...prev, patientImages: false }));
       }
     } catch (error) {
-      console.error(error)
-      toast.error("Failed to fetch patient data")
+      console.error(error);
+      toast.error("Failed to fetch patient data");
     } finally {
-      setLoading((prev) => ({ ...prev, patient: false }))
+      setLoading((prev) => ({ ...prev, patient: false }));
     }
-  }
+  };
 
   // Fetch reports for the patient
   const fetchPatientReports = async () => {
-    if (!selectedPatient || !token) return
-    
-    setLoading((prev) => ({ ...prev, reports: true }))
-    
+    if (!selectedPatient || !token) return;
+
+    setLoading((prev) => ({ ...prev, reports: true }));
+
     try {
-      const res = await fetch(`/api/appointment-reports?patientId=${selectedPatient._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(
+        `/api/appointment-reports?patientId=${selectedPatient._id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (res.ok) {
-        const data = await res.json()
-        const reportsData = data.reports || []
-        setReports(reportsData)
-        setFilteredReports(reportsData)
-        
+        const data = await res.json();
+        const reportsData = data.reports || [];
+        setReports(reportsData);
+        setFilteredReports(reportsData);
+
         // Extract unique doctor names
-        const doctors = Array.from(new Set(
-          reportsData
-            .filter((report: any) => report.doctorName)
-            .map((report: any) => report.doctorName)
-        )) as string[]
-        setUniqueDoctors(doctors)
+        const doctors = Array.from(
+          new Set(
+            reportsData
+              .filter((report: any) => report.doctorName)
+              .map((report: any) => report.doctorName),
+          ),
+        ) as string[];
+        setUniqueDoctors(doctors);
       }
     } catch (error) {
-      console.error("Error fetching reports:", error)
-      toast.error("Failed to fetch reports")
+      console.error("Error fetching reports:", error);
+      toast.error("Failed to fetch reports");
     } finally {
-      setLoading((prev) => ({ ...prev, reports: false }))
+      setLoading((prev) => ({ ...prev, reports: false }));
     }
-  }
+  };
 
   // Fetch appointments for the selected patient
   const fetchPatientAppointments = async (patientId: string) => {
-    setAppointmentsLoading(true)
+    setAppointmentsLoading(true);
     try {
       const res = await fetch(`/api/appointments?patientId=${patientId}`, {
         headers: { Authorization: `Bearer ${token}` },
-      })
+      });
 
       if (res.ok) {
-        const data = await res.json()
-        let appointments = data.appointments || []
+        const data = await res.json();
+        let appointments = data.appointments || [];
 
         const activeAppointments = appointments.filter((apt: any) => {
-          const status = (apt.status || "").toLowerCase().trim()
-          return status !== "completed" && status !== "cancelled" && status !== "closed" && status !== "refer_back"
-        })
+          const status = (apt.status || "").toLowerCase().trim();
+          return (
+            status !== "completed" &&
+            status !== "cancelled" &&
+            status !== "closed" &&
+            status !== "refer_back"
+          );
+        });
 
-        const doctorFilter = user?.role === "doctor" ? `&doctorId=${user.id}` : ""
-        const reportsRes = await fetch(`/api/appointment-reports?patientId=${patientId}${doctorFilter}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const doctorFilter = user?.role === "doctor" ? `&doctorId=${user.id}` : "";
+        const reportsRes = await fetch(
+          `/api/appointment-reports?patientId=${patientId}${doctorFilter}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
 
         if (reportsRes.ok) {
-          const reportsData = await reportsRes.json()
-          const reports = reportsData.reports || []
+          const reportsData = await reportsRes.json();
+          const reports = reportsData.reports || [];
 
           const appointmentIdsWithReports = new Set(
             reports
               .filter((report: any) => report.appointmentId)
-              .map((report: any) => String(report.appointmentId._id || report.appointmentId))
-          )
+              .map((report: any) =>
+                String(report.appointmentId._id || report.appointmentId),
+              ),
+          );
 
           const filteredAppointments = activeAppointments.filter((apt: any) => {
-            const appointmentId = String(apt._id || apt.id)
-            return !appointmentIdsWithReports.has(appointmentId)
-          })
+            const appointmentId = String(apt._id || apt.id);
+            return !appointmentIdsWithReports.has(appointmentId);
+          });
 
-          setPatientAppointments(filteredAppointments)
+          setPatientAppointments(filteredAppointments);
         } else {
-          setPatientAppointments(activeAppointments)
+          setPatientAppointments(activeAppointments);
         }
       }
     } catch (error) {
-      console.error("[v0] Failed to fetch appointments:", error)
-      toast.error("Failed to fetch appointments")
+      console.error("[v0] Failed to fetch appointments:", error);
+      toast.error("Failed to fetch appointments");
     } finally {
-      setAppointmentsLoading(false)
+      setAppointmentsLoading(false);
     }
-  }
+  };
 
   // Handle view report
   const handleViewReport = async (report: any) => {
@@ -336,26 +382,33 @@ export default function PatientDetailPage() {
     try {
       // Fetch appointment details if report has appointmentId
       if (report.appointmentId) {
-        const appointmentId = typeof report.appointmentId === 'object' 
-          ? report.appointmentId._id 
-          : report.appointmentId;
-        
-        const appointmentRes = await fetch(`/api/appointments/${appointmentId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const appointmentId =
+          typeof report.appointmentId === "object"
+            ? report.appointmentId._id
+            : report.appointmentId;
+
+        const appointmentRes = await fetch(
+          `/api/appointments/${appointmentId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
 
         if (appointmentRes.ok) {
           const appointmentData = await appointmentRes.json();
-          setSelectedReportAppointment(appointmentData.appointment || appointmentData);
+          setSelectedReportAppointment(
+            appointmentData.appointment || appointmentData,
+          );
         }
       }
 
       // Fetch patient details
       if (report.patientId) {
-        const patientId = typeof report.patientId === 'string' 
-          ? report.patientId 
-          : report.patientId._id || report.patientId.id;
-        
+        const patientId =
+          typeof report.patientId === "string"
+            ? report.patientId
+            : report.patientId._id || report.patientId.id;
+
         const patientRes = await fetch(`/api/patients/${patientId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -384,40 +437,46 @@ export default function PatientDetailPage() {
       toast.error("Failed to download report");
     }
   };
-    
+
   const validateReportForm = (): boolean => {
-    const errors: Record<string, string> = {}
-    if (!reportFormData.procedures || reportFormData.procedures.length === 0 || reportFormData.procedures.every((p) => !p.trim())) {
-      errors.procedures = "At least one procedure is required"
+    const errors: Record<string, string> = {};
+    if (
+      !reportFormData.procedures ||
+      reportFormData.procedures.length === 0 ||
+      reportFormData.procedures.every((p) => !p.trim())
+    ) {
+      errors.procedures = "At least one procedure is required";
     }
     if (!reportFormData.findings.trim()) {
-      errors.findings = "Findings are required"
+      errors.findings = "Findings are required";
     }
-    setReportFormErrors(errors)
-    return Object.keys(errors).length === 0
-  }
+    setReportFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleCreateReport = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedPatient) return toast.error("Please select a patient first")
+    e.preventDefault();
+    if (!selectedPatient) return toast.error("Please select a patient first");
 
     if (!selectedAppointmentId || !selectedAppointmentId.trim()) {
-      toast.error("Please select an appointment for this report")
-      return
+      toast.error("Please select an appointment for this report");
+      return;
     }
 
     if (!validateReportForm()) {
-      toast.error("Please fix the errors in the form")
-      return
+      toast.error("Please fix the errors in the form");
+      return;
     }
 
-    setReportLoading(true)
+    setReportLoading(true);
     try {
-      const appointmentIdTrimmed = selectedAppointmentId ? selectedAppointmentId.trim() : ""
+      const appointmentIdTrimmed = selectedAppointmentId
+        ? selectedAppointmentId.trim()
+        : "";
       if (!appointmentIdTrimmed) {
-        toast.error("Please select a valid appointment")
-        setReportLoading(false)
-        return
+        toast.error("Please select a valid appointment");
+        setReportLoading(false);
+        return;
       }
 
       const proceduresArray = Array.isArray(reportFormData.procedures)
@@ -425,7 +484,7 @@ export default function PatientDetailPage() {
         : reportFormData.procedures
             .split("\n")
             .map((p) => p.trim())
-            .filter(Boolean)
+            .filter(Boolean);
 
       const reportPayload: any = {
         patientId: selectedPatient._id || selectedPatient.id,
@@ -435,13 +494,13 @@ export default function PatientDetailPage() {
         nextVisitDate: reportFormData.nextVisitDate || null,
         nextVisitTime: reportFormData.nextVisitTime || null,
         followUpDetails: reportFormData.followUpDetails || "",
-      }
+      };
 
       if (appointmentIdTrimmed && appointmentIdTrimmed !== "undefined") {
-        reportPayload.appointmentId = appointmentIdTrimmed
+        reportPayload.appointmentId = appointmentIdTrimmed;
       }
 
-      console.log("[v0] Creating report with payload:", reportPayload)
+      console.log("[v0] Creating report with payload:", reportPayload);
 
       const res = await fetch("/api/appointment-reports", {
         method: "POST",
@@ -450,15 +509,15 @@ export default function PatientDetailPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(reportPayload),
-      })
+      });
 
-      const responseData = await res.json()
+      const responseData = await res.json();
 
       if (res.ok) {
-        toast.success("Report created successfully")
-        setShowCreateReportModal(false)
-        setReportFormErrors({})
-        setSelectedAppointmentId("")
+        toast.success("Report created successfully");
+        setShowCreateReportModal(false);
+        setReportFormErrors({});
+        setSelectedAppointmentId("");
         setReportFormData({
           procedures: [],
           findings: "",
@@ -466,32 +525,34 @@ export default function PatientDetailPage() {
           nextVisitDate: "",
           nextVisitTime: "",
           followUpDetails: "",
-        })
+        });
 
         // Refresh reports list
-        await fetchPatientReports()
-        
+        await fetchPatientReports();
+
         if (selectedPatient) {
-          await fetchPatientAppointments(selectedPatient._id || selectedPatient.id)
+          await fetchPatientAppointments(
+            selectedPatient._id || selectedPatient.id,
+          );
         }
       } else {
-        console.error("[v0] Report creation error:", responseData)
-        toast.error(responseData.error || "Failed to create report")
+        console.error("[v0] Report creation error:", responseData);
+        toast.error(responseData.error || "Failed to create report");
       }
     } catch (error) {
-      console.error("[v0] Failed to create report:", error)
-      toast.error("Error creating report")
+      console.error("[v0] Failed to create report:", error);
+      toast.error("Error creating report");
     } finally {
-      setReportLoading(false)
+      setReportLoading(false);
     }
-  }
+  };
 
   const handleCreateToothChart = async () => {
-    if (!selectedPatient) return toast.error("Please select a patient first")
-    setLoading((prev) => ({ ...prev, createChart: true }))
+    if (!selectedPatient) return toast.error("Please select a patient first");
+    setLoading((prev) => ({ ...prev, createChart: true }));
 
     try {
-      const patientId = selectedPatient._id || selectedPatient.id
+      const patientId = selectedPatient._id || selectedPatient.id;
       const res = await fetch("/api/tooth-chart", {
         method: "POST",
         headers: {
@@ -502,67 +563,274 @@ export default function PatientDetailPage() {
           patientId,
           overallNotes: "",
         }),
-      })
+      });
 
-      const data = await res.json()
+      const data = await res.json();
       if (res.ok) {
-        setToothChart(data.chart)
-        toast.success("Tooth chart created successfully!")
+        setToothChart(data.chart);
+        toast.success("Tooth chart created successfully!");
       } else {
-        toast.error(data.error || "Failed to create tooth chart")
+        toast.error(data.error || "Failed to create tooth chart");
       }
     } catch (error) {
-      console.error(error)
-      toast.error("Failed to create tooth chart")
+      console.error(error);
+      toast.error("Failed to create tooth chart");
     } finally {
-      setLoading((prev) => ({ ...prev, createChart: false }))
+      setLoading((prev) => ({ ...prev, createChart: false }));
     }
-  }
+  };
 
   const handleToothClick = (toothNumber: number) => {
-    setModalToothNumber(toothNumber)
-    setIsModalOpen(true)
-  }
+    console.log("[v0] Tooth clicked:", toothNumber);
+    console.log("[v0] Current editingProcedure:", editingProcedure);
 
-  const handleModalSave = (data: {
-    toothNumber: number
-    sides: string[]
-    procedure: string
-    diagnosis: string
-    comments: string
-    date: string
-    fillingType?: string
+    // Reset any previous editing state
+    setEditingProcedure(null);
+
+    setModalToothNumber(toothNumber);
+    setIsModalOpen(true);
+  };
+
+  const handleModalSave = async (data: {
+    toothNumber: number;
+    sides: string[];
+    procedure: string;
+    diagnosis: string;
+    comments: string;
+    date: string;
+    fillingType?: string;
   }) => {
-    if (!toothChart) return
-    
-    setToothChart({
-      ...toothChart,
-      teeth: {
-        ...(toothChart.teeth || {}),
-        [data.toothNumber]: {
-          ...(toothChart.teeth?.[data.toothNumber] || {}),
-          sides: data.sides,
-          procedure: data.procedure,
-          diagnosis: data.diagnosis,
-          notes: data.comments,
-          date: data.date,
-          fillingType: data.fillingType || "",
-          status: "filling",
-          lastUpdated: new Date(),
-        },
-      },
-    })
-    setIsModalOpen(false)
-    setModalToothNumber(null)
-    toast.success("Tooth procedure saved")
-  }
+    console.log("[v0] Modal save data received:", data);
+    console.log("[v0] Editing procedure:", editingProcedure);
 
-  const handleSaveToothChart = async () => {
-    if (!toothChart) return
-    setLoading((prev) => ({ ...prev, saveChart: true }))
+    if (!toothChart) {
+      toast.error("No tooth chart found");
+      return;
+    }
+
+    const chartId = toothChart._id || toothChart.id;
+    if (!chartId) {
+      toast.error("Chart ID not found");
+      return;
+    }
+
+    const isEditing = !!editingProcedure?._id && !editingProcedure._id.startsWith("temp-");
 
     try {
-      const chartId = toothChart._id || toothChart.id
+      setLoading((prev) => ({ ...prev, saveChart: true }));
+
+      const procedureData = {
+        toothNumber: data.toothNumber,
+        sides: data.sides,
+        procedure: data.procedure,
+        diagnosis: data.diagnosis,
+        comments: data.comments,
+        date: data.date,
+        fillingType: data.fillingType || "",
+      };
+
+      if (isEditing) {
+        console.log("[v0] Updating existing procedure:", editingProcedure._id);
+        // Update existing procedure
+        const res = await fetch(`/api/tooth-chart/${chartId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            procedureId: editingProcedure._id,
+            procedure: procedureData,
+            action: "updateProcedure",
+          }),
+        });
+
+        const responseData = await res.json();
+        if (res.ok) {
+          console.log("[v0] Procedure updated successfully");
+          toast.success("Procedure updated successfully");
+        } else {
+          console.error("[v0] Failed to update procedure:", responseData);
+          toast.error(responseData.error || "Failed to update procedure");
+          setLoading((prev) => ({ ...prev, saveChart: false }));
+          return;
+        }
+      } else {
+        console.log("[v0] Adding new procedure for tooth:", data.toothNumber);
+        // Add new procedure
+        const res = await fetch(`/api/tooth-chart/${chartId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            procedure: procedureData,
+            action: "addProcedure",
+          }),
+        });
+
+        const responseData = await res.json();
+        if (res.ok) {
+          console.log("[v0] Procedure added successfully");
+          toast.success("Procedure added successfully");
+        } else {
+          console.error("[v0] Failed to add procedure:", responseData);
+          toast.error(responseData.error || "Failed to add procedure");
+          setLoading((prev) => ({ ...prev, saveChart: false }));
+          return;
+        }
+      }
+
+      // Close modal IMMEDIATELY before refresh
+      setIsModalOpen(false);
+      setModalToothNumber(null);
+      setEditingProcedure(null);
+
+      // Refresh data from database
+      await refreshToothChart();
+    } catch (error) {
+      console.error("[v0] Error saving procedure:", error);
+      toast.error("Error saving procedure");
+    } finally {
+      setLoading((prev) => ({ ...prev, saveChart: false }));
+    }
+  };
+
+  const handleDeleteProcedure = async (procedureId: string) => {
+    console.log("[v0] Deleting procedure ID:", procedureId);
+
+    if (!toothChart) {
+      toast.error("No tooth chart found");
+      return;
+    }
+
+    const chartId = toothChart._id || toothChart.id;
+    if (!chartId) {
+      toast.error("Chart ID not found");
+      return;
+    }
+
+    try {
+      setLoading((prev) => ({ ...prev, saveChart: true }));
+
+      console.log("[v0] Calling API to delete procedure from database");
+      // Call API to delete procedure directly from database
+      const res = await fetch(`/api/tooth-chart/${chartId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          procedureId: procedureId,
+          action: "deleteProcedure",
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        console.log("[v0] Procedure deleted from database successfully");
+        toast.success("Procedure deleted successfully");
+        // Refresh from server to get updated data
+        await refreshToothChart();
+      } else {
+        console.error("[v0] Failed to delete procedure:", data);
+        toast.error(data.error || "Failed to delete procedure");
+      }
+    } catch (error) {
+      console.error("[v0] Delete procedure error:", error);
+      toast.error("Failed to delete procedure");
+    } finally {
+      setLoading((prev) => ({ ...prev, saveChart: false }));
+    }
+  };
+
+  const handleEditProcedure = (procedure: any) => {
+    console.log("Editing procedure:", procedure);
+    setEditingProcedure(procedure);
+    setModalToothNumber(procedure.toothNumber);
+    setIsModalOpen(true);
+  };
+
+  const refreshToothChart = async () => {
+    if (!selectedPatient || !token) return;
+
+    try {
+      setLoading((prev) => ({ ...prev, toothChart: true }));
+      const toothChartRes = await fetch(
+        `/api/tooth-chart?patientId=${selectedPatient._id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (toothChartRes.ok) {
+        const data = await toothChartRes.json();
+        const chart = data.toothChart || (data.charts && data.charts[0]);
+        if (chart && chart.patientId.toString() === selectedPatient._id) {
+          console.log(
+            "[v0] Refreshed chart with procedures:",
+            chart.procedures?.length || 0,
+          );
+
+          // Build teeth object from procedures to ensure visual updates
+          const teethFromProcedures: Record<number, any> = {};
+          if (Array.isArray(chart.procedures) && chart.procedures.length > 0) {
+            chart.procedures.forEach((proc: any) => {
+              const toothNum = proc.toothNumber;
+              if (toothNum) {
+                teethFromProcedures[toothNum] = {
+                  status: "filling", // This is the key - set a non-healthy status
+                  procedure: proc.procedure,
+                  diagnosis: proc.diagnosis,
+                  notes: proc.comments,
+                  date: proc.date,
+                  fillingType: proc.fillingType,
+                };
+              }
+            });
+          }
+
+          // Merge with existing teeth object, prioritizing procedures
+          const updatedChart = {
+            ...chart,
+            teeth: {
+              ...(chart.teeth || {}), // Start with existing teeth
+              ...teethFromProcedures,  // Override with procedure teeth
+            },
+          };
+
+          console.log("[v0] Updated teeth from procedures, total teeth with procedures:", Object.keys(teethFromProcedures).length);
+          setToothChart(updatedChart);
+          setToothProcedures(
+            Array.isArray(chart.procedures) ? chart.procedures : [],
+          );
+        }
+      }
+    } catch (error) {
+      console.error("[v0] Error refreshing tooth chart:", error);
+    } finally {
+      setLoading((prev) => ({ ...prev, toothChart: false }));
+    }
+  };
+
+  const handleSaveToothChart = async () => {
+    if (!toothChart) {
+      toast.error("No tooth chart found");
+      return;
+    }
+
+    setLoading((prev) => ({ ...prev, saveChart: true }));
+
+    try {
+      const chartId = toothChart._id || toothChart.id;
+      if (!chartId) {
+        toast.error("Chart ID not found");
+        setLoading((prev) => ({ ...prev, saveChart: false }));
+        return;
+      }
+
       const res = await fetch(`/api/tooth-chart/${chartId}`, {
         method: "PUT",
         headers: {
@@ -571,52 +839,59 @@ export default function PatientDetailPage() {
         },
         body: JSON.stringify({
           teeth: toothChart.teeth,
+          procedures: toothProcedures,
           overallNotes: toothChart.overallNotes,
         }),
-      })
+      });
 
-      const data = await res.json()
+      const data = await res.json();
       if (res.ok) {
-        toast.success("Tooth chart saved successfully!")
+        console.log("Chart saved successfully");
+        toast.success("Tooth chart saved successfully!");
+
+        // Refresh the chart data from server
+        await refreshToothChart();
       } else {
-        toast.error(data.error || "Failed to save tooth chart")
+        console.error("Failed to save chart:", data);
+        toast.error(data.error || "Failed to save tooth chart");
       }
     } catch (error) {
-      console.error(error)
-      toast.error("Failed to save tooth chart")
+      console.error("Error saving tooth chart:", error);
+      toast.error("Failed to save tooth chart");
     } finally {
-      setLoading((prev) => ({ ...prev, saveChart: false }))
+      setLoading((prev) => ({ ...prev, saveChart: false }));
     }
-  }
+  };
 
   const handleFileUploadSuccess = (fileUrl: string, fileName: string) => {
     setImageUpload({
       ...imageUpload,
       imageUrl: fileUrl,
       title: imageUpload.title || fileName.split(".")[0],
-    })
-    setShowFileUpload(false)
-  }
+    });
+    setShowFileUpload(false);
+  };
 
   // Handle upload image form
   const handleUploadImage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedPatient) return
+    e.preventDefault();
+    if (!selectedPatient) return;
 
     const validateImageUpload = (): boolean => {
-      const errors: Record<string, string> = {}
-      if (!imageUpload.title.trim()) errors.title = "Image title is required"
-      if (!imageUpload.imageUrl.trim()) errors.imageUrl = "Image URL is required"
-      setImageErrors(errors)
-      return Object.keys(errors).length === 0
-    }
+      const errors: Record<string, string> = {};
+      if (!imageUpload.title.trim()) errors.title = "Image title is required";
+      if (!imageUpload.imageUrl.trim())
+        errors.imageUrl = "Image URL is required";
+      setImageErrors(errors);
+      return Object.keys(errors).length === 0;
+    };
 
     if (!validateImageUpload()) {
-      toast.error("Please fix the errors in the form")
-      return
+      toast.error("Please fix the errors in the form");
+      return;
     }
 
-    setLoading((prev) => ({ ...prev, uploadImage: true }))
+    setLoading((prev) => ({ ...prev, uploadImage: true }));
     try {
       const res = await fetch("/api/patient-images", {
         method: "POST",
@@ -628,100 +903,108 @@ export default function PatientDetailPage() {
           patientId: selectedPatient._id,
           ...imageUpload,
         }),
-      })
+      });
 
-      const data = await res.json()
+      const data = await res.json();
       if (res.ok) {
-        setPatientImages([...patientImages, data.image])
+        setPatientImages([...patientImages, data.image]);
         setImageUpload({
           type: "xray",
           title: "",
           description: "",
           imageUrl: "",
           notes: "",
-        })
-        setImageErrors({})
-        setShowAddImageModal(false)
-        toast.success("Image uploaded successfully")
+        });
+        setImageErrors({});
+        setShowAddImageModal(false);
+        toast.success("Image uploaded successfully");
       } else {
-        toast.error(data.error || "Failed to upload image")
+        toast.error(data.error || "Failed to upload image");
       }
     } catch (error) {
-      console.error(error)
-      toast.error("Error uploading image")
+      console.error(error);
+      toast.error("Error uploading image");
     } finally {
-      setLoading((prev) => ({ ...prev, uploadImage: false }))
+      setLoading((prev) => ({ ...prev, uploadImage: false }));
     }
-  }
+  };
 
   // Handle delete image
   const handleDeleteImage = async () => {
-    if (!imageToDelete || !token) return
-    
-    setLoading((prev) => ({ ...prev, deleteImage: true }))
-    
+    if (!imageToDelete || !token) return;
+
+    setLoading((prev) => ({ ...prev, deleteImage: true }));
+
     try {
       const res = await fetch(`/api/patient-images/${imageToDelete._id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      })
+      });
 
       if (res.ok) {
         // Remove the deleted image from state
-        setPatientImages(patientImages.filter(img => img._id !== imageToDelete._id))
-        toast.success("Image deleted successfully")
-        
+        setPatientImages(
+          patientImages.filter((img) => img._id !== imageToDelete._id),
+        );
+        toast.success("Image deleted successfully");
+
         // Also close the view modal if it's open
-        if (selectedImageForView && selectedImageForView._id === imageToDelete._id) {
-          setViewImageModal(false)
-          setSelectedImageForView(null)
+        if (
+          selectedImageForView &&
+          selectedImageForView._id === imageToDelete._id
+        ) {
+          setViewImageModal(false);
+          setSelectedImageForView(null);
         }
       } else {
-        const data = await res.json()
-        toast.error(data.error || "Failed to delete image")
+        const data = await res.json();
+        toast.error(data.error || "Failed to delete image");
       }
     } catch (error) {
-      console.error("Error deleting image:", error)
-      toast.error("Error deleting image")
+      console.error("Error deleting image:", error);
+      toast.error("Error deleting image");
     } finally {
-      setLoading((prev) => ({ ...prev, deleteImage: false }))
-      setShowDeleteModal(false)
-      setImageToDelete(null)
+      setLoading((prev) => ({ ...prev, deleteImage: false }));
+      setShowDeleteModal(false);
+      setImageToDelete(null);
     }
-  }
+  };
 
   // Handle view details
   const handleViewDetails = (image: any) => {
-    setSelectedImageForView(image)
-    setViewImageModal(true)
-  }
+    setSelectedImageForView(image);
+    setViewImageModal(true);
+  };
 
   // Format date function
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   const handleBack = () => {
-    router.push("/dashboard/patients")
-  }
+    router.push("/dashboard/patients");
+  };
 
   // Pagination calculations
-  const indexOfLastItem = currentPage * itemsPerPage
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage
-  const currentReports = filteredReports.slice(indexOfFirstItem, indexOfLastItem)
-  const totalPages = Math.ceil(filteredReports.length / itemsPerPage)
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentReports = filteredReports.slice(
+    indexOfFirstItem,
+    indexOfLastItem,
+  );
+  const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
 
   const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber)
-  }
+    setCurrentPage(pageNumber);
+  };
 
   // Loading state while fetching patient
   if (loading.patient) {
@@ -732,12 +1015,14 @@ export default function PatientDetailPage() {
           <main className="flex-1 overflow-auto md:pt-0 pt-16">
             <div className="p-6 flex flex-col items-center justify-center h-full">
               <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-              <p className="text-muted-foreground">Loading patient details...</p>
+              <p className="text-muted-foreground">
+                Loading patient details...
+              </p>
             </div>
           </main>
         </div>
       </ProtectedRoute>
-    )
+    );
   }
 
   return (
@@ -754,10 +1039,11 @@ export default function PatientDetailPage() {
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground pt-2 rounded-lg transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-6 h-5" />
-                  
                 </button>
                 <div>
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Patient Clinical Tools</h1>
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">
+                    Patient Clinical Tools
+                  </h1>
                   <p className="text-xs sm:text-sm mt-1 text-muted-foreground">
                     Manage patient records, tooth charts, and medical history
                   </p>
@@ -788,11 +1074,13 @@ export default function PatientDetailPage() {
                         {selectedPatient.name}
                       </h2>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedPatient.credentialStatus === "complete"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                        }`}>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            selectedPatient.credentialStatus === "complete"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                          }`}
+                        >
                           {selectedPatient.credentialStatus === "complete" ? (
                             <>
                               <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
@@ -820,8 +1108,12 @@ export default function PatientDetailPage() {
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Date of Birth</p>
-                        <p className="font-medium text-foreground">{selectedPatient.dob || "Not provided"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Date of Birth
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {selectedPatient.dob || "Not provided"}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
@@ -829,7 +1121,8 @@ export default function PatientDetailPage() {
                       <div>
                         <p className="text-xs text-muted-foreground">Phone</p>
                         <p className="font-medium text-foreground">
-                          {selectedPatient.phones?.find((p: any) => p.isPrimary)?.number || "Not provided"}
+                          {selectedPatient.phones?.find((p: any) => p.isPrimary)
+                            ?.number || "Not provided"}
                         </p>
                       </div>
                     </div>
@@ -837,27 +1130,37 @@ export default function PatientDetailPage() {
                       <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <div>
                         <p className="text-xs text-muted-foreground">Email</p>
-                        <p className="font-medium text-foreground truncate">{selectedPatient.email || "Not provided"}</p>
+                        <p className="font-medium text-foreground truncate">
+                          {selectedPatient.email || "Not provided"}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <CreditCard className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">ID Number</p>
-                        <p className="font-medium text-foreground">{selectedPatient.idNumber || "Not provided"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          ID Number
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {selectedPatient.idNumber || "Not provided"}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <div>
                         <p className="text-xs text-muted-foreground">Address</p>
-                        <p className="font-medium text-foreground line-clamp-1">{selectedPatient.address || "Not provided"}</p>
+                        <p className="font-medium text-foreground line-clamp-1">
+                          {selectedPatient.address || "Not provided"}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Insurance</p>
+                        <p className="text-xs text-muted-foreground">
+                          Insurance
+                        </p>
                         <p className="font-medium text-foreground">
                           {selectedPatient.insuranceProvider || "Not provided"}
                         </p>
@@ -875,15 +1178,19 @@ export default function PatientDetailPage() {
                     <History className="w-4 h-4" />
                     <span>Doctor History {showHistory ? "▲" : "▼"}</span>
                   </button>
-                  
+
                   {showHistory && doctorHistory.length > 0 && (
                     <div className="mt-3 p-3 bg-muted rounded-lg">
                       <div className="space-y-2">
                         {doctorHistory.map((history, idx) => (
                           <div key={idx} className="text-sm">
-                            <span className="font-medium">{history.doctorName}</span> - From{" "}
+                            <span className="font-medium">
+                              {history.doctorName}
+                            </span>{" "}
+                            - From{" "}
                             {new Date(history.startDate).toLocaleDateString()}
-                            {history.endDate && ` to ${new Date(history.endDate).toLocaleDateString()}`}
+                            {history.endDate &&
+                              ` to ${new Date(history.endDate).toLocaleDateString()}`}
                           </div>
                         ))}
                       </div>
@@ -899,25 +1206,26 @@ export default function PatientDetailPage() {
                 <div className="bg-card rounded-lg shadow-md border border-border p-3 sm:p-4 md:p-6">
                   {/* Tabs */}
                   <div className="flex gap-1 sm:gap-2 mb-4 sm:mb-6 border-b border-border overflow-x-auto">
-                    {["tooth-chart", "history", "reports", "images"].map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        disabled={loading.toothChart || loading.patientImages}
-                        className={`px-2 sm:px-4 py-2 font-medium text-xs sm:text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap ${
-                          activeTab === tab
-                            ? "text-primary border-b-2 border-primary"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {tab === "tooth-chart" && "Teeth"}
-                        {tab === "history" && "Medical History"}
-                        {tab === "reports" && "Reports"}
-                        {tab === "images" && "Images"}
-                      </button>
-                    ))}
+                    {["tooth-chart", "history", "reports", "images"].map(
+                      (tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveTab(tab)}
+                          disabled={loading.toothChart || loading.patientImages}
+                          className={`px-2 sm:px-4 py-2 font-medium text-xs sm:text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap ${
+                            activeTab === tab
+                              ? "text-primary border-b-2 border-primary"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {tab === "tooth-chart" && "Teeth"}
+                          {tab === "history" && "Medical History"}
+                          {tab === "reports" && "Reports"}
+                          {tab === "images" && "Images"}
+                        </button>
+                      ),
+                    )}
                   </div>
-
                   {/* Tooth Chart Tab */}
                   {activeTab === "tooth-chart" && (
                     <>
@@ -936,32 +1244,28 @@ export default function PatientDetailPage() {
                             disabled={loading.createChart}
                             className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 sm:px-6 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                           >
-                            {loading.createChart && <Loader2 className="w-4 h-4 animate-spin" />}
-                            {loading.createChart ? "Creating..." : "Create Tooth Chart"}
+                            {loading.createChart && (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            )}
+                            {loading.createChart
+                              ? "Creating..."
+                              : "Create Tooth Chart"}
                           </button>
                         </div>
                       ) : (
                         <>
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
-                            <p className="text-xs sm:text-sm text-muted-foreground">
-                              ⚠️ Save after updating tooth status
+                            <p className="text-xs sm:text-sm text-green-600 dark:text-green-400">
+                              ✓ Auto-saving all changes
                             </p>
-                            <button
-                              onClick={handleSaveToothChart}
-                              disabled={loading.saveChart}
-                              className="flex-shrink-0 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-accent-foreground px-3 sm:px-6 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                            >
-                              {loading.saveChart && <Loader2 className="w-4 h-4 animate-spin" />}
-                              {loading.saveChart ? "Saving..." : "Save Chart"}
-                            </button>
                           </div>
 
                           <ToothChartVisual
-                            teeth={toothChart.teeth || {}}
+                            teeth={toothChart?.teeth || {}}
                             onToothClick={handleToothClick}
                             readOnly={false}
                           />
-                           <div className="mt-4 sm:mt-6">
+                          <div className="mt-4 sm:mt-6">
                             <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
                               Overall Notes
                             </label>
@@ -979,36 +1283,30 @@ export default function PatientDetailPage() {
                               placeholder="Add clinical notes..."
                             />
                           </div>
-                          <ToothChartResultsTable teeth={toothChart.teeth || {}} />
-
+                          <ToothChartResultsTable
+                            teeth={toothChart?.teeth || {}}
+                            procedures={toothProcedures}
+                            onEdit={handleEditProcedure}
+                            onDelete={handleDeleteProcedure}
+                            onViewDetails={() => {}}
+                          />
                         </>
                       )}
                     </>
                   )}
-
                   {/* Tooth Chart Modal */}
                   <ToothChartModal
                     isOpen={isModalOpen}
                     toothNumber={modalToothNumber}
-                    existingData={
-                      modalToothNumber && toothChart?.teeth?.[modalToothNumber]
-                        ? {
-                            sides: toothChart.teeth[modalToothNumber].sides,
-                            procedure: toothChart.teeth[modalToothNumber].procedure,
-                            diagnosis: toothChart.teeth[modalToothNumber].diagnosis,
-                            comments: toothChart.teeth[modalToothNumber].notes,
-                            date: toothChart.teeth[modalToothNumber].date,
-                            fillingType: toothChart.teeth[modalToothNumber].fillingType,
-                          }
-                        : undefined
-                    }
+                    existingData={editingProcedure || undefined}
                     onClose={() => {
-                      setIsModalOpen(false)
-                      setModalToothNumber(null)
+                      console.log("Closing modal");
+                      setIsModalOpen(false);
+                      setModalToothNumber(null);
+                      setEditingProcedure(null);
                     }}
                     onSave={handleModalSave}
                   />
-
                   {/* Medical History Tab */}
                   {activeTab === "history" && (
                     <MedicalHistorySection
@@ -1018,15 +1316,18 @@ export default function PatientDetailPage() {
                       currentDoctorId={user?.id}
                     />
                   )}
-
                   {/* Reports Tab */}
                   {activeTab === "reports" && (
                     <div className="space-y-4 sm:space-y-6">
                       {/* Header with Create Report Button */}
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                         <div>
-                          <h3 className="text-lg font-semibold text-foreground">Patient Reports</h3>
-                          <p className="text-sm text-muted-foreground">View and manage clinical reports</p>
+                          <h3 className="text-lg font-semibold text-foreground">
+                            Patient Reports
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            View and manage clinical reports
+                          </p>
                         </div>
                         {user?.role === "doctor" && (
                           <button
@@ -1044,11 +1345,15 @@ export default function PatientDetailPage() {
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-muted rounded-lg">
                           <div className="flex items-center gap-2">
                             <Filter className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm font-medium text-foreground">Filter by Doctor:</span>
+                            <span className="text-sm font-medium text-foreground">
+                              Filter by Doctor:
+                            </span>
                           </div>
                           <select
                             value={selectedDoctorFilter}
-                            onChange={(e) => setSelectedDoctorFilter(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedDoctorFilter(e.target.value)
+                            }
                             className="px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-sm cursor-pointer"
                           >
                             <option value="all">All Doctors</option>
@@ -1071,41 +1376,62 @@ export default function PatientDetailPage() {
                           <div className="space-y-4">
                             {currentReports.map((report) => {
                               // Safely extract procedures as strings
-                              const procedures = Array.isArray(report.procedures) 
+                              const procedures = Array.isArray(
+                                report.procedures,
+                              )
                                 ? report.procedures.map((proc: any) => {
-                                    if (typeof proc === 'string') return proc;
-                                    if (proc && typeof proc === 'object') return proc.name || proc.description || JSON.stringify(proc);
-                                    return String(proc || '');
+                                    if (typeof proc === "string") return proc;
+                                    if (proc && typeof proc === "object")
+                                      return (
+                                        proc.name ||
+                                        proc.description ||
+                                        JSON.stringify(proc)
+                                      );
+                                    return String(proc || "");
                                   })
                                 : [];
 
                               return (
-                                <div key={report._id} className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div
+                                  key={report._id}
+                                  className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
+                                >
                                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                                     <div className="flex-1">
                                       <div className="flex items-center justify-between mb-2">
                                         <h4 className="text-lg font-bold text-foreground">
-                                          Report #{report.reportNumber || report._id?.slice(-6)}
+                                          Report #
+                                          {report.reportNumber ||
+                                            report._id?.slice(-6)}
                                         </h4>
                                         <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
                                           {report.doctorName || "Unknown"}
                                         </span>
                                       </div>
-                                      
+
                                       <div className="space-y-1 text-sm">
                                         <div className="flex flex-wrap items-center gap-2">
-                                          <span className="text-muted-foreground">Created Date:</span>
+                                          <span className="text-muted-foreground">
+                                            Created Date:
+                                          </span>
                                           <span className="font-medium text-foreground">
-                                            {report.createdAt ? formatDate(report.createdAt) : "N/A"}
+                                            {report.createdAt
+                                              ? formatDate(report.createdAt)
+                                              : "N/A"}
                                           </span>
                                         </div>
-                                        
+
                                         {report.appointmentId && (
                                           <div className="flex flex-wrap items-center gap-2">
-                                            <span className="text-muted-foreground">Appointment:</span>
+                                            <span className="text-muted-foreground">
+                                              Appointment:
+                                            </span>
                                             <span className="font-medium text-foreground">
-                                              {typeof report.appointmentId === 'object' 
-                                                ? formatDate(report.appointmentId.date) 
+                                              {typeof report.appointmentId ===
+                                              "object"
+                                                ? formatDate(
+                                                    report.appointmentId.date,
+                                                  )
                                                 : "N/A"}
                                             </span>
                                           </div>
@@ -1118,11 +1444,21 @@ export default function PatientDetailPage() {
                                             Procedures ({procedures.length}):
                                           </p>
                                           <div className="flex flex-wrap gap-1">
-                                            {procedures.slice(0, 3).map((proc: string, idx: number) => (
-                                              <span key={idx} className="px-2 py-1 bg-muted text-xs rounded-md">
-                                                {proc.length > 20 ? proc.substring(0, 20) + "..." : proc}
-                                              </span>
-                                            ))}
+                                            {procedures
+                                              .slice(0, 3)
+                                              .map(
+                                                (proc: string, idx: number) => (
+                                                  <span
+                                                    key={idx}
+                                                    className="px-2 py-1 bg-muted text-xs rounded-md"
+                                                  >
+                                                    {proc.length > 20
+                                                      ? proc.substring(0, 20) +
+                                                        "..."
+                                                      : proc}
+                                                  </span>
+                                                ),
+                                              )}
                                             {procedures.length > 3 && (
                                               <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-md">
                                                 +{procedures.length - 3} more
@@ -1131,10 +1467,12 @@ export default function PatientDetailPage() {
                                           </div>
                                         </div>
                                       )}
-                                      
+
                                       {report.findings && (
                                         <div className="mt-3">
-                                          <p className="text-sm font-medium text-foreground mb-1">Findings:</p>
+                                          <p className="text-sm font-medium text-foreground mb-1">
+                                            Findings:
+                                          </p>
                                           <p className="text-sm text-muted-foreground line-clamp-2">
                                             {report.findings}
                                           </p>
@@ -1148,27 +1486,30 @@ export default function PatientDetailPage() {
                                         className="inline-flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors cursor-pointer px-3 py-2 border border-primary/20 rounded-lg hover:bg-primary/5"
                                       >
                                         <Eye className="w-4 h-4" />
-                                        
                                       </button>
                                       <button
-                                        onClick={() => handleDownloadReport(report)}
+                                        onClick={() =>
+                                          handleDownloadReport(report)
+                                        }
                                         className="inline-flex items-center justify-center gap-2 text-sm text-accent hover:text-accent/80 transition-colors cursor-pointer px-3 py-2 border border-accent/20 rounded-lg hover:bg-accent/5"
                                       >
                                         <Download className="w-4 h-4" />
-                                        
                                       </button>
-                                      {user?.role === "doctor" && report.doctorId === user.id && (
-                                        <button
-                                          onClick={() => {
-                                            // You can implement edit report feature here
-                                            toast.success("Edit report feature coming soon")
-                                          }}
-                                          className="inline-flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-3 py-2 border border-border rounded-lg hover:bg-muted"
-                                        >
-                                          <FileText className="w-4 h-4" />
-                                          Edit
-                                        </button>
-                                      )}
+                                      {user?.role === "doctor" &&
+                                        report.doctorId === user.id && (
+                                          <button
+                                            onClick={() => {
+                                              // You can implement edit report feature here
+                                              toast.success(
+                                                "Edit report feature coming soon",
+                                              );
+                                            }}
+                                            className="inline-flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-3 py-2 border border-border rounded-lg hover:bg-muted"
+                                          >
+                                            <FileText className="w-4 h-4" />
+                                            Edit
+                                          </button>
+                                        )}
                                     </div>
                                   </div>
                                 </div>
@@ -1180,46 +1521,60 @@ export default function PatientDetailPage() {
                           {totalPages > 1 && (
                             <div className="flex items-center justify-between pt-4 border-t border-border">
                               <div className="text-sm text-muted-foreground">
-                                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredReports.length)} of {filteredReports.length} reports
+                                Showing {indexOfFirstItem + 1} to{" "}
+                                {Math.min(
+                                  indexOfLastItem,
+                                  filteredReports.length,
+                                )}{" "}
+                                of {filteredReports.length} reports
                               </div>
                               <div className="flex items-center gap-1">
                                 <button
-                                  onClick={() => handlePageChange(currentPage - 1)}
+                                  onClick={() =>
+                                    handlePageChange(currentPage - 1)
+                                  }
                                   disabled={currentPage === 1}
                                   className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
                                 >
                                   <ChevronLeft className="w-4 h-4" />
                                 </button>
-                                
-                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                  let pageNum
-                                  if (totalPages <= 5) {
-                                    pageNum = i + 1
-                                  } else if (currentPage <= 3) {
-                                    pageNum = i + 1
-                                  } else if (currentPage >= totalPages - 2) {
-                                    pageNum = totalPages - 4 + i
-                                  } else {
-                                    pageNum = currentPage - 2 + i
-                                  }
-                                  
-                                  return (
-                                    <button
-                                      key={pageNum}
-                                      onClick={() => handlePageChange(pageNum)}
-                                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                                        currentPage === pageNum
-                                          ? "bg-primary text-primary-foreground"
-                                          : "border border-border hover:bg-muted"
-                                      }`}
-                                    >
-                                      {pageNum}
-                                    </button>
-                                  )
-                                })}
-                                
+
+                                {Array.from(
+                                  { length: Math.min(5, totalPages) },
+                                  (_, i) => {
+                                    let pageNum;
+                                    if (totalPages <= 5) {
+                                      pageNum = i + 1;
+                                    } else if (currentPage <= 3) {
+                                      pageNum = i + 1;
+                                    } else if (currentPage >= totalPages - 2) {
+                                      pageNum = totalPages - 4 + i;
+                                    } else {
+                                      pageNum = currentPage - 2 + i;
+                                    }
+
+                                    return (
+                                      <button
+                                        key={pageNum}
+                                        onClick={() =>
+                                          handlePageChange(pageNum)
+                                        }
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                                          currentPage === pageNum
+                                            ? "bg-primary text-primary-foreground"
+                                            : "border border-border hover:bg-muted"
+                                        }`}
+                                      >
+                                        {pageNum}
+                                      </button>
+                                    );
+                                  },
+                                )}
+
                                 <button
-                                  onClick={() => handlePageChange(currentPage + 1)}
+                                  onClick={() =>
+                                    handlePageChange(currentPage + 1)
+                                  }
                                   disabled={currentPage === totalPages}
                                   className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
                                 >
@@ -1232,7 +1587,9 @@ export default function PatientDetailPage() {
                       ) : (
                         <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
                           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                          <p className="text-muted-foreground mb-4">No reports found</p>
+                          <p className="text-muted-foreground mb-4">
+                            No reports found
+                          </p>
                           {user?.role === "doctor" && (
                             <button
                               onClick={() => setShowCreateReportModal(true)}
@@ -1246,15 +1603,18 @@ export default function PatientDetailPage() {
                       )}
                     </div>
                   )}
-
                   {/* Images Tab */}
                   {activeTab === "images" && (
                     <div className="space-y-4 sm:space-y-6">
                       {/* Header with Add Button */}
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                         <div>
-                          <h3 className="text-lg font-semibold text-foreground">Patient Images & X-Rays</h3>
-                          <p className="text-sm text-muted-foreground">Upload and manage patient images, X-rays, and scans</p>
+                          <h3 className="text-lg font-semibold text-foreground">
+                            Patient Images & X-Rays
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Upload and manage patient images, X-rays, and scans
+                          </p>
                         </div>
                         <button
                           onClick={() => setShowAddImageModal(true)}
@@ -1274,19 +1634,34 @@ export default function PatientDetailPage() {
                           <table className="min-w-full divide-y divide-border">
                             <thead className="bg-muted">
                               <tr>
-                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase tracking-wider">
+                                <th
+                                  scope="col"
+                                  className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase tracking-wider"
+                                >
                                   Image
                                 </th>
-                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase tracking-wider">
+                                <th
+                                  scope="col"
+                                  className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase tracking-wider"
+                                >
                                   Title & Type
                                 </th>
-                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase tracking-wider">
+                                <th
+                                  scope="col"
+                                  className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase tracking-wider"
+                                >
                                   Upload Date
                                 </th>
-                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase tracking-wider">
+                                <th
+                                  scope="col"
+                                  className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase tracking-wider"
+                                >
                                   Uploaded By
                                 </th>
-                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase tracking-wider">
+                                <th
+                                  scope="col"
+                                  className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase tracking-wider"
+                                >
                                   Actions
                                 </th>
                               </tr>
@@ -1294,24 +1669,34 @@ export default function PatientDetailPage() {
                             <tbody className="bg-card divide-y divide-border">
                               {patientImages.map((image) => {
                                 const canDeleteImage = () => {
-                                  if (user?.role !== "doctor") return false
-                                  if (!image.uploadedBy) return false
-                                  const uploadedById = String(image.uploadedBy._id || image.uploadedBy)
-                                  const currentUserId = String(user.id)
-                                  return uploadedById === currentUserId
-                                }
+                                  if (user?.role !== "doctor") return false;
+                                  if (!image.uploadedBy) return false;
+                                  const uploadedById = String(
+                                    image.uploadedBy._id || image.uploadedBy,
+                                  );
+                                  const currentUserId = String(user.id);
+                                  return uploadedById === currentUserId;
+                                };
 
                                 return (
-                                  <tr key={image._id} className="hover:bg-muted/50 transition-colors">
+                                  <tr
+                                    key={image._id}
+                                    className="hover:bg-muted/50 transition-colors"
+                                  >
                                     <td className="px-4 py-3 whitespace-nowrap">
                                       <div className="flex items-center">
-                                        {image.imageUrl?.toLowerCase().includes(".pdf") ? (
+                                        {image.imageUrl
+                                          ?.toLowerCase()
+                                          .includes(".pdf") ? (
                                           <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
                                             <FileText className="w-6 h-6 text-red-600 dark:text-red-400" />
                                           </div>
                                         ) : (
                                           <img
-                                            src={image.imageUrl || "/placeholder.svg"}
+                                            src={
+                                              image.imageUrl ||
+                                              "/placeholder.svg"
+                                             || "/placeholder.svg"}
                                             alt={image.title}
                                             className="w-12 h-12 object-cover rounded-lg"
                                           />
@@ -1320,20 +1705,30 @@ export default function PatientDetailPage() {
                                     </td>
                                     <td className="px-4 py-3">
                                       <div>
-                                        <p className="text-sm font-medium text-foreground">{image.title}</p>
-                                        <p className="text-xs text-muted-foreground capitalize">{image.type}</p>
+                                        <p className="text-sm font-medium text-foreground">
+                                          {image.title}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground capitalize">
+                                          {image.type}
+                                        </p>
                                       </div>
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap">
-                                      <p className="text-sm text-foreground">{formatDate(image.uploadedAt)}</p>
+                                      <p className="text-sm text-foreground">
+                                        {formatDate(image.uploadedAt)}
+                                      </p>
                                     </td>
                                     <td className="px-4 py-3">
-                                      <p className="text-sm text-foreground">{image.uploadedBy?.name || "Unknown"}</p>
+                                      <p className="text-sm text-foreground">
+                                        {image.uploadedBy?.name || "Unknown"}
+                                      </p>
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap">
                                       <div className="flex items-center gap-2">
                                         <button
-                                          onClick={() => handleViewDetails(image)}
+                                          onClick={() =>
+                                            handleViewDetails(image)
+                                          }
                                           className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors cursor-pointer"
                                         >
                                           <Eye className="w-4 h-4" />
@@ -1342,10 +1737,10 @@ export default function PatientDetailPage() {
                                         {canDeleteImage() && (
                                           <button
                                             onClick={(e) => {
-                                              e.stopPropagation()
-                                              e.preventDefault()
-                                              setImageToDelete(image)
-                                              setShowDeleteModal(true)
+                                              e.stopPropagation();
+                                              e.preventDefault();
+                                              setImageToDelete(image);
+                                              setShowDeleteModal(true);
                                             }}
                                             disabled={loading.deleteImage}
                                             className="inline-flex items-center gap-1 text-sm text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -1357,7 +1752,7 @@ export default function PatientDetailPage() {
                                       </div>
                                     </td>
                                   </tr>
-                                )
+                                );
                               })}
                             </tbody>
                           </table>
@@ -1365,7 +1760,9 @@ export default function PatientDetailPage() {
                       ) : (
                         <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
                           <ImageIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                          <p className="text-muted-foreground mb-4">No images uploaded yet</p>
+                          <p className="text-muted-foreground mb-4">
+                            No images uploaded yet
+                          </p>
                           <button
                             onClick={() => setShowAddImageModal(true)}
                             className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm"
@@ -1389,13 +1786,15 @@ export default function PatientDetailPage() {
             </div>
           </div>
         </main>
-        
+
         {/* Add Image Modal */}
         {showAddImageModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-foreground">Upload New Image</h2>
+                <h2 className="text-xl font-bold text-foreground">
+                  Upload New Image
+                </h2>
                 <button
                   onClick={() => setShowAddImageModal(false)}
                   className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-xl"
@@ -1435,17 +1834,26 @@ export default function PatientDetailPage() {
                       onUploadSuccess={handleFileUploadSuccess}
                       isLoading={loading.uploadImage}
                     />
-                    <p className="text-xs text-muted-foreground mt-2">Max file size: 10MB</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Max file size: 10MB
+                    </p>
                   </div>
                 )}
 
                 {imageUpload.imageUrl && (
                   <div className="p-3 bg-accent/10 border border-accent rounded-lg">
                     <p className="text-sm text-foreground">
-                      <span className="font-medium">File uploaded:</span> {imageUpload.title}
+                      <span className="font-medium">File uploaded:</span>{" "}
+                      {imageUpload.title}
                     </p>
                     <button
-                      onClick={() => setImageUpload({ ...imageUpload, imageUrl: "", title: "" })}
+                      onClick={() =>
+                        setImageUpload({
+                          ...imageUpload,
+                          imageUrl: "",
+                          title: "",
+                        })
+                      }
                       className="text-sm text-accent hover:underline mt-2 cursor-pointer"
                       type="button"
                     >
@@ -1466,15 +1874,19 @@ export default function PatientDetailPage() {
                       setImageUpload({
                         ...imageUpload,
                         title: e.target.value,
-                      })
-                      setImageErrors({ ...imageErrors, title: "" })
+                      });
+                      setImageErrors({ ...imageErrors, title: "" });
                     }}
                     disabled={loading.uploadImage}
                     className={`w-full px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                       imageErrors.title ? "border-destructive" : "border-border"
                     }`}
                   />
-                  {imageErrors.title && <p className="text-xs text-destructive mt-1">{imageErrors.title}</p>}
+                  {imageErrors.title && (
+                    <p className="text-xs text-destructive mt-1">
+                      {imageErrors.title}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1502,7 +1914,9 @@ export default function PatientDetailPage() {
                     disabled={loading.uploadImage || !imageUpload.imageUrl}
                     className="flex-1 inline-flex justify-center items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    {loading.uploadImage && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {loading.uploadImage && (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    )}
                     {loading.uploadImage ? "Uploading..." : "Upload Image"}
                   </button>
                   <button
@@ -1524,7 +1938,9 @@ export default function PatientDetailPage() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-foreground">Image Details</h2>
+                <h2 className="text-xl font-bold text-foreground">
+                  Image Details
+                </h2>
                 <button
                   onClick={() => setViewImageModal(false)}
                   className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-xl"
@@ -1536,11 +1952,17 @@ export default function PatientDetailPage() {
               <div className="flex flex-col gap-6">
                 {/* Image Preview */}
                 <div>
-                  {selectedImageForView.imageUrl?.toLowerCase().includes(".pdf") ? (
+                  {selectedImageForView.imageUrl
+                    ?.toLowerCase()
+                    .includes(".pdf") ? (
                     <div className="bg-muted rounded-lg p-8 flex flex-col items-center justify-center">
                       <FileText className="w-16 h-16 text-red-600 dark:text-red-400 mb-4" />
-                      <p className="text-lg font-medium text-foreground mb-2">PDF Document</p>
-                      <p className="text-sm text-muted-foreground mb-4">{selectedImageForView.title}</p>
+                      <p className="text-lg font-medium text-foreground mb-2">
+                        PDF Document
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {selectedImageForView.title}
+                      </p>
                       <a
                         href={selectedImageForView.imageUrl}
                         target="_blank"
@@ -1563,13 +1985,19 @@ export default function PatientDetailPage() {
                 {/* Details */}
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-2">{selectedImageForView.title}</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      {selectedImageForView.title}
+                    </h3>
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedImageForView.type === 'xray' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                        selectedImageForView.type === 'photo' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                        'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedImageForView.type === "xray"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                            : selectedImageForView.type === "photo"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                              : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                        }`}
+                      >
                         {selectedImageForView.type.toUpperCase()}
                       </span>
                     </div>
@@ -1577,26 +2005,42 @@ export default function PatientDetailPage() {
 
                   <div className="space-y-3">
                     <div>
-                      <p className="text-sm font-medium text-foreground">Upload Date</p>
-                      <p className="text-sm text-muted-foreground">{formatDate(selectedImageForView.uploadedAt)}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        Upload Date
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(selectedImageForView.uploadedAt)}
+                      </p>
                     </div>
 
                     <div>
-                      <p className="text-sm font-medium text-foreground">Uploaded By</p>
-                      <p className="text-sm text-muted-foreground">{selectedImageForView.uploadedBy?.name || "Unknown"}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        Uploaded By
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedImageForView.uploadedBy?.name || "Unknown"}
+                      </p>
                     </div>
 
                     {selectedImageForView.notes && (
                       <div>
-                        <p className="text-sm font-medium text-foreground">Notes</p>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedImageForView.notes}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          Notes
+                        </p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          {selectedImageForView.notes}
+                        </p>
                       </div>
                     )}
 
                     {selectedImageForView.description && (
                       <div>
-                        <p className="text-sm font-medium text-foreground">Description</p>
-                        <p className="text-sm text-muted-foreground">{selectedImageForView.description}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          Description
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedImageForView.description}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1612,20 +2056,24 @@ export default function PatientDetailPage() {
                         <Download className="w-4 h-4" />
                         Download
                       </a>
-                      {user?.role === "doctor" && selectedImageForView.uploadedBy && 
-                        String(selectedImageForView.uploadedBy._id || selectedImageForView.uploadedBy) === String(user.id) && (
+                      {user?.role === "doctor" &&
+                        selectedImageForView.uploadedBy &&
+                        String(
+                          selectedImageForView.uploadedBy._id ||
+                            selectedImageForView.uploadedBy,
+                        ) === String(user.id) && (
                           <button
                             onClick={() => {
-                              setViewImageModal(false)
-                              setImageToDelete(selectedImageForView)
-                              setShowDeleteModal(true)
+                              setViewImageModal(false);
+                              setImageToDelete(selectedImageForView);
+                              setShowDeleteModal(true);
                             }}
                             className="flex-1 inline-flex justify-center items-center gap-2 bg-destructive hover:bg-destructive/90 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                             Delete
                           </button>
-                      )}
+                        )}
                     </div>
                   </div>
                 </div>
@@ -1633,7 +2081,7 @@ export default function PatientDetailPage() {
             </div>
           </div>
         )}
-        
+
         {/* Image Viewer Modal */}
         {selectedImage && (
           <XrayDisplayViewer
@@ -1647,7 +2095,7 @@ export default function PatientDetailPage() {
             onClose={() => setSelectedImage(null)}
           />
         )}
-        
+
         {/* Delete Modals */}
         <ConfirmDeleteModal
           isOpen={showMedicalDeleteModal}
@@ -1655,12 +2103,12 @@ export default function PatientDetailPage() {
           description="Are you sure you want to delete this medical history entry? This action cannot be undone."
           itemName="Medical Entry"
           onConfirm={() => {
-            setShowMedicalDeleteModal(false)
-            setMedicalEntryToDelete(null)
+            setShowMedicalDeleteModal(false);
+            setMedicalEntryToDelete(null);
           }}
           onCancel={() => {
-            setShowMedicalDeleteModal(false)
-            setMedicalEntryToDelete(null)
+            setShowMedicalDeleteModal(false);
+            setMedicalEntryToDelete(null);
           }}
           isLoading={loading.addMedical}
         />
@@ -1671,212 +2119,248 @@ export default function PatientDetailPage() {
           itemName={imageToDelete?.title || "Untitled Image"}
           onConfirm={handleDeleteImage}
           onCancel={() => {
-            setShowDeleteModal(false)
-            setImageToDelete(null)
+            setShowDeleteModal(false);
+            setImageToDelete(null);
           }}
           isLoading={loading.deleteImage}
         />
 
         {/* Create Report Modal */}
-        {showCreateReportModal && selectedPatient && user?.role === "doctor" && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50">
-            <div className="bg-card rounded-lg shadow-lg border border-border p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto mx-2">
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h2 className="text-lg sm:text-xl font-bold text-foreground">Create Clinical Report</h2>
-                <button
-                  onClick={() => setShowCreateReportModal(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-xl"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <p className="text-xs sm:text-sm text-muted-foreground mb-4">
-                Patient: <span className="font-medium text-foreground">{selectedPatient.name}</span>
-              </p>
-
-              <form onSubmit={handleCreateReport} className="space-y-3 sm:space-y-4">
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
-                    Select Appointment *
-                  </label>
-                  {appointmentsLoading ? (
-                    <div className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg text-xs sm:text-sm text-muted-foreground">
-                      Loading appointments...
-                    </div>
-                  ) : patientAppointments.length === 0 ? (
-                    <div className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg text-xs sm:text-sm text-muted-foreground">
-                      No appointments found for this patient
-                    </div>
-                  ) : (
-                    <select
-                      value={selectedAppointmentId}
-                      onChange={(e) => setSelectedAppointmentId(e.target.value)}
-                      disabled={reportLoading}
-                      className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      <option value="">-- Select an appointment --</option>
-                      {patientAppointments.map((apt) => {
-                        const appointmentDate = apt.date ? new Date(apt.date).toLocaleDateString() : "N/A"
-                        const appointmentType = apt.type || "Consultation"
-                        const appointmentStatus = apt.status || "Scheduled"
-                        return (
-                          <option key={apt._id || apt.id} value={apt._id || apt.id}>
-                            {appointmentDate} at {apt.time} - {appointmentType} ({appointmentStatus})
-                          </option>
-                        )
-                      })}
-                    </select>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
-                    Procedures *
-                  </label>
-                  <textarea
-                    placeholder="List procedures performed (one per line)..."
-                    value={reportFormData.procedures.join("\n")}
-                    onChange={(e) => {
-                      setReportFormData({
-                        ...reportFormData,
-                        procedures: e.target.value.split("\n").filter(Boolean),
-                      })
-                      setReportFormErrors({ ...reportFormErrors, procedures: "" })
-                    }}
-                    disabled={reportLoading}
-                    className={`w-full px-3 sm:px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text ${
-                      reportFormErrors.procedures ? "border-destructive" : "border-border"
-                    }`}
-                    rows={3}
-                  />
-                  {reportFormErrors.procedures && (
-                    <p className="text-xs text-destructive mt-1">{reportFormErrors.procedures}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
-                    Findings *
-                  </label>
-                  <textarea
-                    placeholder="Findings..."
-                    value={reportFormData.findings}
-                    onChange={(e) => {
-                      setReportFormData({
-                        ...reportFormData,
-                        findings: e.target.value,
-                      })
-                      setReportFormErrors({ ...reportFormErrors, findings: "" })
-                    }}
-                    disabled={reportLoading}
-                    className={`w-full px-3 sm:px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text ${
-                      reportFormErrors.findings ? "border-destructive" : "border-border"
-                    }`}
-                    rows={3}
-                  />
-                  {reportFormErrors.findings && (
-                    <p className="text-xs text-destructive mt-1">{reportFormErrors.findings}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
-                    Notes
-                  </label>
-                  <textarea
-                    placeholder="Additional notes..."
-                    value={reportFormData.notes}
-                    onChange={(e) =>
-                      setReportFormData({
-                        ...reportFormData,
-                        notes: e.target.value,
-                      })
-                    }
-                    disabled={reportLoading}
-                    className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text"
-                    rows={2}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-foreground mb-1">
-                      Next Visit Date
-                    </label>
-                    <input
-                      type="date"
-                      value={reportFormData.nextVisitDate}
-                      onChange={(e) =>
-                        setReportFormData({
-                          ...reportFormData,
-                          nextVisitDate: e.target.value,
-                        })
-                      }
-                      disabled={reportLoading}
-                      className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-foreground mb-1">
-                      Next Visit Time
-                    </label>
-                    <input
-                      type="time"
-                      value={reportFormData.nextVisitTime}
-                      onChange={(e) =>
-                        setReportFormData({
-                          ...reportFormData,
-                          nextVisitTime: e.target.value,
-                        })
-                      }
-                      disabled={reportLoading}
-                      className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
-                    Follow-up Details
-                  </label>
-                  <textarea
-                    placeholder="Follow-up instructions..."
-                    value={reportFormData.followUpDetails}
-                    onChange={(e) =>
-                      setReportFormData({
-                        ...reportFormData,
-                        followUpDetails: e.target.value,
-                      })
-                    }
-                    disabled={reportLoading}
-                    className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text"
-                    rows={2}
-                  />
-                </div>
-
-                <div className="flex gap-2 sm:gap-3 pt-2 sm:pt-4">
+        {showCreateReportModal &&
+          selectedPatient &&
+          user?.role === "doctor" && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50">
+              <div className="bg-card rounded-lg shadow-lg border border-border p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto mx-2">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h2 className="text-lg sm:text-xl font-bold text-foreground">
+                    Create Clinical Report
+                  </h2>
                   <button
-                    type="submit"
-                    disabled={reportLoading}
-                    className="flex-1 inline-flex justify-center items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    {reportLoading && <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />}
-                    {reportLoading ? "Creating..." : "Create Report"}
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setShowCreateReportModal(false)}
-                    disabled={reportLoading}
-                    className="flex-1 inline-flex justify-center items-center gap-2 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-xl"
                   >
-                    Cancel
+                    ✕
                   </button>
                 </div>
-              </form>
+
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+                  Patient:{" "}
+                  <span className="font-medium text-foreground">
+                    {selectedPatient.name}
+                  </span>
+                </p>
+
+                <form
+                  onSubmit={handleCreateReport}
+                  className="space-y-3 sm:space-y-4"
+                >
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                      Select Appointment *
+                    </label>
+                    {appointmentsLoading ? (
+                      <div className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg text-xs sm:text-sm text-muted-foreground">
+                        Loading appointments...
+                      </div>
+                    ) : patientAppointments.length === 0 ? (
+                      <div className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg text-xs sm:text-sm text-muted-foreground">
+                        No appointments found for this patient
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedAppointmentId}
+                        onChange={(e) =>
+                          setSelectedAppointmentId(e.target.value)
+                        }
+                        disabled={reportLoading}
+                        className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        <option value="">-- Select an appointment --</option>
+                        {patientAppointments.map((apt) => {
+                          const appointmentDate = apt.date
+                            ? new Date(apt.date).toLocaleDateString()
+                            : "N/A";
+                          const appointmentType = apt.type || "Consultation";
+                          const appointmentStatus = apt.status || "Scheduled";
+                          return (
+                            <option
+                              key={apt._id || apt.id}
+                              value={apt._id || apt.id}
+                            >
+                              {appointmentDate} at {apt.time} -{" "}
+                              {appointmentType} ({appointmentStatus})
+                            </option>
+                          );
+                        })}
+                      </select>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                      Procedures *
+                    </label>
+                    <textarea
+                      placeholder="List procedures performed (one per line)..."
+                      value={reportFormData.procedures.join("\n")}
+                      onChange={(e) => {
+                        setReportFormData({
+                          ...reportFormData,
+                          procedures: e.target.value
+                            .split("\n")
+                            .filter(Boolean),
+                        });
+                        setReportFormErrors({
+                          ...reportFormErrors,
+                          procedures: "",
+                        });
+                      }}
+                      disabled={reportLoading}
+                      className={`w-full px-3 sm:px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text ${
+                        reportFormErrors.procedures
+                          ? "border-destructive"
+                          : "border-border"
+                      }`}
+                      rows={3}
+                    />
+                    {reportFormErrors.procedures && (
+                      <p className="text-xs text-destructive mt-1">
+                        {reportFormErrors.procedures}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                      Findings *
+                    </label>
+                    <textarea
+                      placeholder="Findings..."
+                      value={reportFormData.findings}
+                      onChange={(e) => {
+                        setReportFormData({
+                          ...reportFormData,
+                          findings: e.target.value,
+                        });
+                        setReportFormErrors({
+                          ...reportFormErrors,
+                          findings: "",
+                        });
+                      }}
+                      disabled={reportLoading}
+                      className={`w-full px-3 sm:px-4 py-2 bg-input border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text ${
+                        reportFormErrors.findings
+                          ? "border-destructive"
+                          : "border-border"
+                      }`}
+                      rows={3}
+                    />
+                    {reportFormErrors.findings && (
+                      <p className="text-xs text-destructive mt-1">
+                        {reportFormErrors.findings}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                      Notes
+                    </label>
+                    <textarea
+                      placeholder="Additional notes..."
+                      value={reportFormData.notes}
+                      onChange={(e) =>
+                        setReportFormData({
+                          ...reportFormData,
+                          notes: e.target.value,
+                        })
+                      }
+                      disabled={reportLoading}
+                      className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-semibold text-foreground mb-1">
+                        Next Visit Date
+                      </label>
+                      <input
+                        type="date"
+                        value={reportFormData.nextVisitDate}
+                        onChange={(e) =>
+                          setReportFormData({
+                            ...reportFormData,
+                            nextVisitDate: e.target.value,
+                          })
+                        }
+                        disabled={reportLoading}
+                        className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-semibold text-foreground mb-1">
+                        Next Visit Time
+                      </label>
+                      <input
+                        type="time"
+                        value={reportFormData.nextVisitTime}
+                        onChange={(e) =>
+                          setReportFormData({
+                            ...reportFormData,
+                            nextVisitTime: e.target.value,
+                          })
+                        }
+                        disabled={reportLoading}
+                        className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-foreground mb-2">
+                      Follow-up Details
+                    </label>
+                    <textarea
+                      placeholder="Follow-up instructions..."
+                      value={reportFormData.followUpDetails}
+                      onChange={(e) =>
+                        setReportFormData({
+                          ...reportFormData,
+                          followUpDetails: e.target.value,
+                        })
+                      }
+                      disabled={reportLoading}
+                      className="w-full px-3 sm:px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-text"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="flex gap-2 sm:gap-3 pt-2 sm:pt-4">
+                    <button
+                      type="submit"
+                      disabled={reportLoading}
+                      className="flex-1 inline-flex justify-center items-center gap-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {reportLoading && (
+                        <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
+                      )}
+                      {reportLoading ? "Creating..." : "Create Report"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateReportModal(false)}
+                      disabled={reportLoading}
+                      className="flex-1 inline-flex justify-center items-center gap-2 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-foreground px-3 sm:px-4 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* View Report Modal - WITH COMPLETE APPOINTMENT DETAILS */}
         {showViewReportModal && selectedReport && (
@@ -2020,8 +2504,7 @@ export default function PatientDetailPage() {
                                 Room Number
                               </p>
                               <p className="text-foreground font-semibold mt-1 text-sm sm:text-base">
-                                {selectedReportAppointment.roomNumber ||
-                                  "N/A"}
+                                {selectedReportAppointment.roomNumber || "N/A"}
                               </p>
                             </div>
                           </div>
@@ -2045,9 +2528,7 @@ export default function PatientDetailPage() {
                                     ? selectedReportAppointment.status
                                         .charAt(0)
                                         .toUpperCase() +
-                                      selectedReportAppointment.status.slice(
-                                        1,
-                                      )
+                                      selectedReportAppointment.status.slice(1)
                                     : "Unknown"}
                                 </span>
                               </div>
@@ -2070,8 +2551,7 @@ export default function PatientDetailPage() {
                             <p className="text-foreground font-semibold mt-1 text-sm sm:text-base">
                               {selectedReportAppointment.isReferred
                                 ? selectedReportAppointment.originalDoctorName
-                                : selectedReportAppointment.doctorName ||
-                                  "N/A"}
+                                : selectedReportAppointment.doctorName || "N/A"}
                             </p>
                           </div>
                         </div>
@@ -2107,8 +2587,7 @@ export default function PatientDetailPage() {
                               </p>
                               {selectedReportAppointment.createdByName && (
                                 <p className="text-foreground text-xs text-muted-foreground mt-1">
-                                  By:{" "}
-                                  {selectedReportAppointment.createdByName}
+                                  By: {selectedReportAppointment.createdByName}
                                 </p>
                               )}
                             </div>
@@ -2152,8 +2631,7 @@ export default function PatientDetailPage() {
                                 Referred Doctor
                               </p>
                               <p className="text-foreground font-medium text-sm mt-1">
-                                {selectedReportAppointment.doctorName ||
-                                  "N/A"}
+                                {selectedReportAppointment.doctorName || "N/A"}
                               </p>
                             </div>
                           </div>
@@ -2233,8 +2711,9 @@ export default function PatientDetailPage() {
                           Phone
                         </p>
                         <p className="text-foreground font-semibold mt-2 text-sm sm:text-base truncate">
-                          {selectedPatient?.phones?.find((p: any) => p.isPrimary)
-                            ?.number ||
+                          {selectedPatient?.phones?.find(
+                            (p: any) => p.isPrimary,
+                          )?.number ||
                             selectedPatient?.phones?.[0]?.number ||
                             "Not provided"}
                         </p>
@@ -2296,7 +2775,9 @@ export default function PatientDetailPage() {
                                   ✓
                                 </span>
                                 <span className="break-words font-medium">
-                                  {typeof p === 'object' ? p.name || p.description : p}
+                                  {typeof p === "object"
+                                    ? p.name || p.description
+                                    : p}
                                 </span>
                               </li>
                             ),
@@ -2399,5 +2880,5 @@ export default function PatientDetailPage() {
         )}
       </div>
     </ProtectedRoute>
-  )
+  );
 }
