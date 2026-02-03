@@ -14,6 +14,8 @@ interface ChatListItemProps {
   unreadCount: number
   profileImage?: string
   isSelected?: boolean
+  whatsappProfilePictureUrl?: string | null
+  whatsappDisplayName?: string | null
 }
 
 export default function WhatsAppChatListItem({
@@ -25,6 +27,8 @@ export default function WhatsAppChatListItem({
   unreadCount,
   profileImage,
   isSelected,
+  whatsappProfilePictureUrl,
+  whatsappDisplayName,
 }: ChatListItemProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -48,6 +52,9 @@ export default function WhatsAppChatListItem({
       .slice(0, 2)
   }
 
+  const displayName = whatsappDisplayName || patientName || "Customer"
+  const profileUrl = whatsappProfilePictureUrl || profileImage
+
   return (
     <Link href={`/dashboard/inbox/${chatId}`}>
       <div
@@ -56,17 +63,23 @@ export default function WhatsAppChatListItem({
         }`}
       >
         <div className="flex items-center gap-3">
-          <Avatar className="h-12 w-12 flex-shrink-0">
-            <AvatarImage src={profileImage || "/placeholder.svg"} alt={patientName} />
+          <Avatar className="h-12 w-12 flex-shrink-0 border-2 border-gray-200">
+            <AvatarImage 
+              src={profileUrl || ""} 
+              alt={displayName}
+              onError={(e) => {
+                e.currentTarget.style.display = "none"
+              }}
+            />
             <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-sm">
-              {getInitials(patientName)}
+              {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2 mb-1">
               <h3 className={`font-semibold text-sm truncate ${unreadCount > 0 ? "text-gray-900" : "text-gray-700"}`}>
-                {patientName}
+                {displayName}
               </h3>
               <span className="text-xs text-gray-500 flex-shrink-0">{formatDate(lastMessageAt)}</span>
             </div>

@@ -8,7 +8,7 @@
 2. Create/Open your Business App
 3. Go to WhatsApp > Getting Started
 4. Copy these values:
-   - **Phone Number ID**: (e.g., `102345678901234567`) 
+   - **Phone Number ID**: (e.g., `102345678901234567`)
    - **Access Token**: (from Settings > User Tokens)
 
 ### Step 2: Add Environment Variables (1 minute)

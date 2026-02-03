@@ -12,6 +12,8 @@ interface ChatHeaderProps {
   profileImage?: string
   isOnline?: boolean
   onBack?: () => void
+  whatsappProfilePictureUrl?: string | null
+  whatsappDisplayName?: string | null
 }
 
 export default function WhatsAppChatHeader({
@@ -19,6 +21,8 @@ export default function WhatsAppChatHeader({
   patientPhone,
   profileImage,
   isOnline = false,
+  whatsappProfilePictureUrl,
+  whatsappDisplayName,
 }: ChatHeaderProps) {
   const getInitials = (name: string) => {
     return name
@@ -40,17 +44,23 @@ export default function WhatsAppChatHeader({
 
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={profileImage || "/placeholder.svg"} alt={patientName} />
+            <Avatar className="h-12 w-12 border-2 border-gray-200">
+              <AvatarImage 
+                src={whatsappProfilePictureUrl || profileImage || ""} 
+                alt={whatsappDisplayName || patientName}
+                onError={(e) => {
+                  e.currentTarget.style.display = "none"
+                }}
+              />
               <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
-                {getInitials(patientName)}
+                {getInitials(whatsappDisplayName || patientName)}
               </AvatarFallback>
             </Avatar>
             {isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />}
           </div>
 
           <div className="flex flex-col">
-            <h2 className="font-semibold text-gray-900 text-sm">{patientName}</h2>
+            <h2 className="font-semibold text-gray-900 text-sm">{whatsappDisplayName || patientName}</h2>
             <p className="text-xs text-gray-500">{patientPhone}</p>
           </div>
         </div>

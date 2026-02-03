@@ -13,6 +13,8 @@ interface Chat {
   lastMessage: string
   lastMessageAt: string
   unreadCount: number
+  whatsappProfilePictureUrl?: string | null
+  whatsappDisplayName?: string | null
 }
 
 interface ChatSidebarProps {
@@ -87,6 +89,8 @@ export default function WhatsAppChatSidebar({
                     lastMessageAt={chat.lastMessageAt}
                     unreadCount={chat.unreadCount}
                     isSelected={selectedChatId === chat._id}
+                    whatsappProfilePictureUrl={chat.whatsappProfilePictureUrl}
+                    whatsappDisplayName={chat.whatsappDisplayName}
                   />
                 </div>
               ))}

@@ -27,6 +27,8 @@ interface Chat {
   patientPhone: string
   lastMessageAt: string
   window24HourEndsAt: string | null
+  whatsappProfilePictureUrl?: string | null
+  whatsappDisplayName?: string | null
 }
 
 export default function ChatThreadPage() {
@@ -237,6 +239,8 @@ export default function ChatThreadPage() {
         <WhatsAppChatHeader
           patientName={chat.patientName}
           patientPhone={chat.patientPhone}
+          whatsappDisplayName={chat.whatsappDisplayName}
+          whatsappProfilePictureUrl={chat.whatsappProfilePictureUrl}
         />
 
         {/* Messages Container */}

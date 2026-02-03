@@ -124,28 +124,33 @@ async function handleIncomingMessage(message: any, valueContext: any) {
       messageBody = `[${type} message received]`;
     }
 
-    // Find or create chat (ONLY CHANGE HERE)
+    // Find or create chat - phone-based, not patient-dependent
     const normalizedPhone = from.startsWith("+") ? from : `+${from}`;
 
+    // Try to find associated patient (optional)
     const patient = await Patient.findOne({
       "phones.number": normalizedPhone,
-    });
+    }).catch(() => null);
 
     const patientId = patient?._id || null;
+    const patientName = patient?.name || valueContext.contacts?.[0]?.profile?.name || "Unknown Customer";
+
+    // Get WhatsApp profile picture and display name from webhook context
+    const whatsappContact = valueContext.contacts?.[0];
+    const whatsappProfilePictureUrl = whatsappContact?.profile?.picture_url || null;
+    const whatsappDisplayName = whatsappContact?.profile?.name || null;
 
     let chat = await WhatsAppChat.findOneAndUpdate(
-      {
-        patientId,
-        patientPhone: normalizedPhone,
-      },
+      { patientPhone: normalizedPhone },
       {
         $setOnInsert: {
           patientId,
           patientPhone: normalizedPhone,
-          patientName: patient?.name || "Unknown Patient",
+          patientName,
+          whatsappProfilePictureUrl,
+          whatsappDisplayName,
           whatsappBusinessPhoneNumberId:
             valueContext.metadata?.phone_number_id || "unknown",
-
           unreadCount: 0,
           lastMessage: "",
           lastMessageAt: null,
@@ -153,6 +158,8 @@ async function handleIncomingMessage(message: any, valueContext: any) {
         },
         $set: {
           updatedAt: new Date(),
+          ...(whatsappProfilePictureUrl && { whatsappProfilePictureUrl }),
+          ...(whatsappDisplayName && { whatsappDisplayName }),
         },
       },
       {
@@ -165,9 +172,10 @@ async function handleIncomingMessage(message: any, valueContext: any) {
 
     const messageDoc = await WhatsAppMessage.create({
       chatId: chat._id,
-      patientId: chat.patientId,
+      patientId: chat.patientId || null,
       patientPhone: from,
       senderType: "patient",
+      senderName: whatsappDisplayName || "Customer",
       messageType: type,
       body: messageBody,
       mediaUrl,
