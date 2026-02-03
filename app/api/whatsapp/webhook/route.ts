@@ -133,11 +133,15 @@ async function handleIncomingMessage(message: any, valueContext: any) {
     }).catch(() => null);
 
     const patientId = patient?._id || null;
-    const patientName = patient?.name || valueContext.contacts?.[0]?.profile?.name || "Unknown Customer";
+    const patientName =
+      patient?.name ||
+      valueContext.contacts?.[0]?.profile?.name ||
+      "Unknown Customer";
 
     // Get WhatsApp profile picture and display name from webhook context
     const whatsappContact = valueContext.contacts?.[0];
-    const whatsappProfilePictureUrl = whatsappContact?.profile?.picture_url || null;
+    const whatsappProfilePictureUrl =
+      whatsappContact?.profile?.picture_url || null;
     const whatsappDisplayName = whatsappContact?.profile?.name || null;
 
     let chat = await WhatsAppChat.findOneAndUpdate(
@@ -147,8 +151,6 @@ async function handleIncomingMessage(message: any, valueContext: any) {
           patientId,
           patientPhone: normalizedPhone,
           patientName,
-          whatsappProfilePictureUrl,
-          whatsappDisplayName,
           whatsappBusinessPhoneNumberId:
             valueContext.metadata?.phone_number_id || "unknown",
           unreadCount: 0,
