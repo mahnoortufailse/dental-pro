@@ -1,25 +1,24 @@
 "use client"
 
-import React from "react"
-
-import { useEffect, useState, useRef } from "react"
+import React, { useEffect, useState, useRef } from "react"
 import { useAuth } from "@/components/auth-context"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
-import { AlertCircle, Send, ArrowLeft, Clock } from "lucide-react"
-import Link from "next/link"
+import { AlertCircle, Send, Clock } from "lucide-react"
+import WhatsAppChatHeader from "@/components/whatsapp-chat-header"
+import WhatsAppMessageBubble from "@/components/whatsapp-message-bubble"
+import WhatsAppChatSidebar from "@/components/whatsapp-chat-sidebar"
 
 interface Message {
   _id: string
   senderType: "patient" | "business"
-  senderName: string
   body: string
   status: "sent" | "delivered" | "read" | "failed"
-  window24HourValid: boolean
   createdAt: string
+  mediaType?: string | null
+  mediaUrl?: string | null
 }
 
 interface Chat {
@@ -38,10 +37,12 @@ export default function ChatThreadPage() {
 
   const [chat, setChat] = useState<Chat | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
+  const [chats, setChats] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
   const [messageText, setMessageText] = useState("")
+  const [search, setSearch] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -57,9 +58,10 @@ export default function ChatThreadPage() {
   useEffect(() => {
     if (!authLoading && user && chatId) {
       fetchMessages()
+      fetchChats()
       const interval = setInterval(() => {
         fetchMessages()
-      }, 3000) // Poll every 3 seconds for new messages
+      }, 2000)
 
       return () => clearInterval(interval)
     }
@@ -68,6 +70,34 @@ export default function ChatThreadPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  const fetchChats = async () => {
+    try {
+      const token = sessionStorage.getItem("token")
+      const params = new URLSearchParams({
+        status: "active",
+        page: "1",
+        limit: "50",
+      })
+
+      if (search) {
+        params.append("search", search)
+      }
+
+      const response = await fetch(`/api/whatsapp/chats?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setChats(data.chats || [])
+      }
+    } catch (err) {
+      console.error("[v0] Error fetching chats:", err)
+    }
+  }
 
   const fetchMessages = async () => {
     try {
@@ -83,7 +113,6 @@ export default function ChatThreadPage() {
       const data = await response.json()
       setMessages(data.messages || [])
 
-      // Fetch chat info
       const chatsResponse = await fetch(`/api/whatsapp/chats`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -127,7 +156,7 @@ export default function ChatThreadPage() {
         },
         body: JSON.stringify({
           chatId,
-          patientId: chat.patientName, // Use name as placeholder
+          patientId: chat.patientName,
           patientPhone: chat.patientPhone,
           message: messageText,
           messageType: "text",
@@ -152,131 +181,129 @@ export default function ChatThreadPage() {
     }
   }
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  }
-
   const isWindow24HourValid = chat?.window24HourEndsAt ? new Date(chat.window24HourEndsAt) > new Date() : false
 
-  if (authLoading || loading) {
+  if (authLoading || (loading && messages.length === 0)) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Spinner />
+      <div className="flex h-screen">
+        <WhatsAppChatSidebar
+          chats={chats}
+          onSearchChange={setSearch}
+          searchValue={search}
+          loading={loading}
+          selectedChatId={chatId}
+        />
+        <div className="hidden md:flex flex-1 items-center justify-center">
+          <Spinner />
+        </div>
       </div>
     )
   }
 
   if (!chat) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-2xl mx-auto">
-          <Card className="p-12 text-center">
-            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <p className="text-destructive mb-4">Chat not found</p>
-            <Link href="/dashboard/inbox">
-              <Button variant="outline">Back to Inbox</Button>
-            </Link>
-          </Card>
+      <div className="flex h-screen">
+        <WhatsAppChatSidebar
+          chats={chats}
+          onSearchChange={setSearch}
+          searchValue={search}
+          loading={loading}
+          selectedChatId={chatId}
+        />
+        <div className="hidden md:flex flex-1 flex-col items-center justify-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+          <p className="text-gray-600">Chat not found</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <div className="bg-card border-b border-border p-4 flex items-center justify-between">
-        <Link href="/dashboard/inbox">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-        </Link>
-
-        <div className="flex-1 ml-4">
-          <h2 className="text-lg font-semibold text-foreground">{chat.patientName}</h2>
-          <p className="text-sm text-muted-foreground">{chat.patientPhone}</p>
-        </div>
-
-        {/* 24-hour window indicator */}
-        {!isWindow24HourValid && (
-          <div className="flex items-center gap-2 text-warning bg-warning/10 px-3 py-1 rounded">
-            <Clock className="w-4 h-4" />
-            <span className="text-xs font-medium">Outside 24h</span>
-          </div>
-        )}
+    <div className="flex h-screen bg-white">
+      {/* Sidebar - Hidden on mobile */}
+      <div className="hidden md:block">
+        <WhatsAppChatSidebar
+          chats={chats}
+          onSearchChange={setSearch}
+          searchValue={search}
+          loading={loading}
+          selectedChatId={chatId}
+        />
       </div>
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {error && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-destructive" />
-            <p className="text-destructive text-sm">{error}</p>
-          </div>
-        )}
-
-        {messages.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No messages yet. Start a conversation!</p>
-          </div>
-        ) : (
-          messages.map((msg) => (
-            <div
-              key={msg._id}
-              className={`flex ${msg.senderType === "business" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                  msg.senderType === "business"
-                    ? "bg-primary text-primary-foreground rounded-br-none"
-                    : "bg-muted text-foreground rounded-bl-none"
-                }`}
-              >
-                <p className="text-sm mb-1">{msg.body}</p>
-
-                <div className={`flex items-center gap-2 ${msg.senderType === "business" ? "justify-end" : ""}`}>
-                  <p className="text-xs opacity-75">{formatTime(msg.createdAt)}</p>
-
-                  {msg.senderType === "business" && (
-                    <p className="text-xs opacity-75">
-                      {msg.status === "read" && "✓✓"}
-                      {msg.status === "delivered" && "✓✓"}
-                      {msg.status === "sent" && "✓"}
-                      {msg.status === "failed" && "✗"}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Message Input */}
-      {!isWindow24HourValid && messages.some((m) => m.senderType === "patient") && (
-        <div className="bg-warning/10 border-t border-warning/20 p-3">
-          <p className="text-xs text-warning font-medium">
-            Outside 24-hour window. Only template messages are allowed.
-          </p>
-        </div>
-      )}
-
-      <form onSubmit={handleSendMessage} className="bg-card border-t border-border p-4 flex gap-2">
-        <Input
-          placeholder="Type your message..."
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-          disabled={sending}
-          className="flex-1"
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col md:w-0">
+        {/* Header */}
+        <WhatsAppChatHeader
+          patientName={chat.patientName}
+          patientPhone={chat.patientPhone}
         />
 
-        <Button type="submit" disabled={sending || !messageText.trim()} size="icon">
-          {sending ? <Spinner /> : <Send className="w-4 h-4" />}
-        </Button>
-      </form>
+        {/* Messages Container */}
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-4">
+          {error && (
+            <div className="mx-auto max-w-2xl p-3 bg-red-50 border border-red-200 rounded flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
+          {messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-400 text-center">
+                <span className="block text-lg font-medium mb-1">No messages yet</span>
+                <span className="text-sm">Start a conversation with this customer</span>
+              </p>
+            </div>
+          ) : (
+            <div className="max-w-2xl mx-auto w-full space-y-2">
+              {messages.map((msg) => (
+                <WhatsAppMessageBubble
+                  key={msg._id}
+                  type={msg.senderType === "business" ? "sent" : "received"}
+                  text={msg.body}
+                  timestamp={new Date(msg.createdAt)}
+                  status={msg.status}
+                  mediaType={msg.mediaType}
+                  mediaUrl={msg.mediaUrl}
+                />
+              ))}
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* 24-hour Window Warning */}
+        {!isWindow24HourValid && messages.some((m) => m.senderType === "patient") && (
+          <div className="bg-amber-50 border-t border-amber-200 px-4 py-3 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <p className="text-xs text-amber-700 font-medium">
+              Outside 24-hour window. Only template messages are allowed.
+            </p>
+          </div>
+        )}
+
+        {/* Message Input */}
+        <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-200 p-4 flex gap-2">
+          <Input
+            placeholder="Type a message..."
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            disabled={sending}
+            className="flex-1 h-10 border-gray-300 rounded-full focus:ring-blue-500"
+          />
+
+          <Button
+            type="submit"
+            disabled={sending || !messageText.trim()}
+            size="icon"
+            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-10 h-10"
+          >
+            {sending ? <Spinner /> : <Send className="w-4 h-4" />}
+          </Button>
+        </form>
+      </div>
     </div>
   )
 }
