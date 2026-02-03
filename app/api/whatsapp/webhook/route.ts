@@ -101,25 +101,31 @@ async function handleIncomingMessage(message: any, valueContext: any) {
     let messageBody = "";
     let mediaUrl = null;
     let mediaType = null;
+    let dbMessageType = "text";
 
     if (type === "text") {
       messageBody = message.text?.body || "";
+      dbMessageType = "text";
     } else if (type === "image") {
-      mediaUrl = message.image?.link || "";
+      mediaUrl = message.image?.url || message.image?.link || "";
       mediaType = "image";
       messageBody = message.image?.caption || "[Image received]";
+      dbMessageType = "media";
     } else if (type === "document") {
-      mediaUrl = message.document?.link || "";
+      mediaUrl = message.document?.url || message.document?.link || "";
       mediaType = "document";
       messageBody = message.document?.filename || "[Document received]";
+      dbMessageType = "media";
     } else if (type === "audio") {
-      mediaUrl = message.audio?.link || "";
+      mediaUrl = message.audio?.url || message.audio?.link || "";
       mediaType = "audio";
       messageBody = "[Audio message received]";
+      dbMessageType = "media";
     } else if (type === "video") {
-      mediaUrl = message.video?.link || "";
+      mediaUrl = message.video?.url || message.video?.link || "";
       mediaType = "video";
       messageBody = message.video?.caption || "[Video received]";
+      dbMessageType = "media";
     } else {
       messageBody = `[${type} message received]`;
     }
@@ -133,36 +139,41 @@ async function handleIncomingMessage(message: any, valueContext: any) {
     }).catch(() => null);
 
     const patientId = patient?._id || null;
-    const patientName =
-      patient?.name ||
-      valueContext.contacts?.[0]?.profile?.name ||
-      "Unknown Customer";
+    const patientName = patient?.name || valueContext.contacts?.[0]?.profile?.name || "Unknown Customer";
 
     // Get WhatsApp profile picture and display name from webhook context
     const whatsappContact = valueContext.contacts?.[0];
-    const whatsappProfilePictureUrl =
-      whatsappContact?.profile?.picture_url || null;
+    const whatsappProfilePictureUrl = whatsappContact?.profile?.picture_url || null;
     const whatsappDisplayName = whatsappContact?.profile?.name || null;
+
+    // Prepare update data
+    const updateData: any = {
+      patientId: patientId || undefined,
+      patientPhone: normalizedPhone,
+      patientName,
+      whatsappBusinessPhoneNumberId:
+        valueContext.metadata?.phone_number_id || "unknown",
+      updatedAt: new Date(),
+    };
+
+    // Only add WhatsApp profile data if available
+    if (whatsappProfilePictureUrl) {
+      updateData.whatsappProfilePictureUrl = whatsappProfilePictureUrl;
+    }
+    if (whatsappDisplayName) {
+      updateData.whatsappDisplayName = whatsappDisplayName;
+    }
 
     let chat = await WhatsAppChat.findOneAndUpdate(
       { patientPhone: normalizedPhone },
       {
         $setOnInsert: {
-          patientId,
-          patientPhone: normalizedPhone,
-          patientName,
-          whatsappBusinessPhoneNumberId:
-            valueContext.metadata?.phone_number_id || "unknown",
           unreadCount: 0,
           lastMessage: "",
           lastMessageAt: null,
           createdAt: new Date(),
         },
-        $set: {
-          updatedAt: new Date(),
-          ...(whatsappProfilePictureUrl && { whatsappProfilePictureUrl }),
-          ...(whatsappDisplayName && { whatsappDisplayName }),
-        },
+        $set: updateData,
       },
       {
         new: true,
@@ -178,7 +189,7 @@ async function handleIncomingMessage(message: any, valueContext: any) {
       patientPhone: from,
       senderType: "patient",
       senderName: whatsappDisplayName || "Customer",
-      messageType: type,
+      messageType: dbMessageType,
       body: messageBody,
       mediaUrl,
       mediaType,

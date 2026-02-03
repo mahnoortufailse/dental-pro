@@ -244,9 +244,9 @@ export default function ChatThreadPage() {
         />
 
         {/* Messages Container */}
-        <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50 space-y-2">
           {error && (
-            <div className="mx-auto max-w-2xl p-3 bg-red-50 border border-red-200 rounded flex items-center gap-2">
+            <div className="p-3 bg-red-50 border border-red-200 rounded flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
               <p className="text-red-600 text-sm">{error}</p>
             </div>
@@ -260,7 +260,7 @@ export default function ChatThreadPage() {
               </p>
             </div>
           ) : (
-            <div className="max-w-2xl mx-auto w-full space-y-2">
+            <div className="w-full space-y-2">
               {messages.map((msg) => (
                 <WhatsAppMessageBubble
                   key={msg._id}

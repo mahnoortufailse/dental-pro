@@ -46,10 +46,18 @@ export default function WhatsAppMessageBubble({
     }
   }
 
+  const getProxiedMediaUrl = (url: string, type: string) => {
+    if (!url) return "";
+    // If it's already a proxied URL, return as is
+    if (url.includes("/api/whatsapp/media-proxy")) return url;
+    // Pass the full WhatsApp media URL with auth token to proxy
+    return `/api/whatsapp/media-proxy?url=${encodeURIComponent(url)}&type=${type}`;
+  };
+
   return (
     <div className={`flex ${bubbleAlign} mb-2`}>
       <div
-        className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2.5 ${bgColor} shadow-sm ${
+        className={`max-w-2xl rounded-2xl px-4 py-2.5 ${bgColor} shadow-sm ${
           isOwn ? "rounded-br-none" : "rounded-bl-none"
         }`}
       >
@@ -57,17 +65,17 @@ export default function WhatsAppMessageBubble({
         {mediaType && mediaUrl && (
           <div className="mb-2">
             {mediaType === "image" && (
-              <div className="relative rounded-lg overflow-hidden bg-black/5 max-w-sm">
+              <div className="relative rounded-lg overflow-hidden bg-black/5">
                 {loadingMedia && (
-                  <div className="h-48 flex items-center justify-center">
+                  <div className="h-48 w-80 flex items-center justify-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                   </div>
                 )}
                 {!mediaError ? (
                   <img
-                    src={mediaUrl || "/placeholder.svg"}
+                    src={getProxiedMediaUrl(mediaUrl, "image") || "/placeholder.svg"}
                     alt="Message image"
-                    className="max-w-full rounded-lg"
+                    className="max-w-full max-h-96 rounded-lg"
                     onLoad={() => setLoadingMedia(false)}
                     onError={() => {
                       setLoadingMedia(false)
@@ -76,7 +84,7 @@ export default function WhatsAppMessageBubble({
                     onLoadingCapture={() => setLoadingMedia(true)}
                   />
                 ) : (
-                  <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+                  <div className="w-80 h-48 flex flex-col items-center justify-center text-gray-400">
                     <AlertCircle className="w-8 h-8 mb-2" />
                     <p className="text-xs">Unable to load image</p>
                   </div>
@@ -85,11 +93,11 @@ export default function WhatsAppMessageBubble({
             )}
 
             {mediaType === "video" && (
-              <div className="relative rounded-lg overflow-hidden bg-black/5 max-w-sm">
+              <div className="relative rounded-lg overflow-hidden bg-black/5">
                 <video
-                  src={mediaUrl}
+                  src={getProxiedMediaUrl(mediaUrl, "video")}
                   controls
-                  className="max-w-full rounded-lg"
+                  className="max-w-full max-h-96 rounded-lg"
                   onLoadStart={() => setLoadingMedia(true)}
                   onCanPlay={() => setLoadingMedia(false)}
                   onError={() => {
@@ -102,7 +110,12 @@ export default function WhatsAppMessageBubble({
 
             {mediaType === "audio" && (
               <div className="flex items-center gap-2 bg-black/5 rounded-lg px-3 py-2">
-                <audio src={mediaUrl} controls className="flex-1 h-6" onError={() => setMediaError(true)} />
+                <audio 
+                  src={getProxiedMediaUrl(mediaUrl, "audio")} 
+                  controls 
+                  className="flex-1 h-6" 
+                  onError={() => setMediaError(true)} 
+                />
               </div>
             )}
 
@@ -114,7 +127,13 @@ export default function WhatsAppMessageBubble({
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">{text}</p>
                 </div>
-                <a href={mediaUrl} download target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                <a 
+                  href={getProxiedMediaUrl(mediaUrl, "document")} 
+                  download 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex-shrink-0"
+                >
                   <Download className="w-4 h-4" />
                 </a>
               </div>
