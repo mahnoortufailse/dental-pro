@@ -134,30 +134,30 @@ export async function POST(req: NextRequest) {
     const user = payload
 
     // Handle both JSON and FormData
-    let chatId: string,
-      patientPhone: string,
-      message: string,
-      messageType: string = "text",
-      whatsappBusinessPhoneNumberId: string,
-      mediaType: string | null = null,
-      mediaBuffer: Buffer | null = null
+    let chatId: string = ""
+    let patientPhone: string = ""
+    let message: string = ""
+    let messageType: string = "text"
+    let whatsappBusinessPhoneNumberId: string = ""
+    let mediaType: string | null = null
+    let mediaBuffer: Buffer | null = null
 
     const contentType = req.headers.get("content-type") || ""
 
     if (contentType.includes("application/json")) {
       const body = await req.json()
-      chatId = body.chatId
-      patientPhone = body.patientPhone
-      message = body.message
+      chatId = body.chatId || ""
+      patientPhone = body.patientPhone || ""
+      message = body.message || ""
       messageType = body.messageType || "text"
-      whatsappBusinessPhoneNumberId = body.whatsappBusinessPhoneNumberId
+      whatsappBusinessPhoneNumberId = body.whatsappBusinessPhoneNumberId || ""
     } else if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData()
-      chatId = formData.get("chatId") as string
-      patientPhone = formData.get("patientPhone") as string
-      message = (formData.get("message") as string) || ""
-      whatsappBusinessPhoneNumberId = formData.get("whatsappBusinessPhoneNumberId") as string
-      mediaType = (formData.get("mediaType") as string) || null
+      chatId = formData.get("chatId")?.toString() || ""
+      patientPhone = formData.get("patientPhone")?.toString() || ""
+      message = formData.get("message")?.toString() || ""
+      whatsappBusinessPhoneNumberId = formData.get("whatsappBusinessPhoneNumberId")?.toString() || ""
+      mediaType = formData.get("mediaType")?.toString() || null
 
       const mediaFile = formData.get("media") as File | null
       if (mediaFile) {
@@ -168,9 +168,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid content type" }, { status: 400 })
     }
 
-    if (!chatId || !patientPhone || !message || !whatsappBusinessPhoneNumberId) {
+    // Validate required fields - message is optional for media
+    if (!chatId || !patientPhone || !whatsappBusinessPhoneNumberId) {
       return NextResponse.json(
-        { error: "Missing required fields: chatId, patientPhone, message, whatsappBusinessPhoneNumberId" },
+        { error: "Missing required fields: chatId, patientPhone, whatsappBusinessPhoneNumberId" },
+        { status: 400 },
+      )
+    }
+
+    // Message is required only for text messages
+    if (messageType === "text" && !message) {
+      return NextResponse.json(
+        { error: "Message text is required for text messages" },
         { status: 400 },
       )
     }

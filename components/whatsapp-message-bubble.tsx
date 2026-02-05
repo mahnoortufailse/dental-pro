@@ -12,6 +12,8 @@ interface MessageBubbleProps {
   mediaType?: string | null
   mediaUrl?: string | null
   quotedMessageBody?: string | null
+  messageId?: string
+  onQuotedMessageClick?: (messageId: string) => void
 }
 
 export default function WhatsAppMessageBubble({
@@ -22,9 +24,12 @@ export default function WhatsAppMessageBubble({
   mediaType,
   mediaUrl,
   quotedMessageBody,
+  messageId,
+  onQuotedMessageClick,
 }: MessageBubbleProps) {
   const [loadingMedia, setLoadingMedia] = useState(false)
   const [mediaError, setMediaError] = useState(false)
+  const [isHighlighted, setIsHighlighted] = useState(false)
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -57,15 +62,22 @@ export default function WhatsAppMessageBubble({
   };
 
   return (
-    <div className={`flex ${bubbleAlign} mb-2`}>
+    <div className={`flex ${bubbleAlign} mb-2`} id={messageId ? `message-${messageId}` : undefined}>
       <div
-        className={`max-w-2xl rounded-2xl px-4 py-2.5 ${bgColor} shadow-sm ${
+        className={`max-w-2xl rounded-2xl px-4 py-2.5 ${bgColor} shadow-sm transition-all duration-300 ${
           isOwn ? "rounded-br-none" : "rounded-bl-none"
-        }`}
+        } ${isHighlighted ? "ring-2 ring-yellow-400 scale-105" : ""}`}
       >
         {/* Quoted Message */}
         {quotedMessageBody && (
-          <div className={`mb-2 pb-2 border-l-2 pl-2 ${isOwn ? "border-blue-300 opacity-75" : "border-gray-300 opacity-75"}`}>
+          <div
+            className={`mb-2 pb-2 border-l-2 pl-2 cursor-pointer hover:opacity-100 transition-opacity ${isOwn ? "border-blue-300 opacity-75 hover:border-blue-200" : "border-gray-300 opacity-75 hover:border-gray-400"}`}
+            onClick={() => {
+              if (quotedMessageBody && onQuotedMessageClick) {
+                onQuotedMessageClick(quotedMessageBody)
+              }
+            }}
+          >
             <p className="text-xs font-medium mb-0.5">Replying to:</p>
             <p className="text-xs line-clamp-2">{quotedMessageBody}</p>
           </div>

@@ -57,6 +57,25 @@ export default function ChatThreadPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  const handleQuotedMessageClick = (quotedText: string) => {
+    console.log("[v0] Looking for quoted message:", quotedText)
+    // Find message with this body
+    const targetMsg = messages.find(
+      (m) => m.body.includes(quotedText) || m.body.startsWith(quotedText.substring(0, 20)),
+    )
+    if (targetMsg) {
+      const element = document.getElementById(`message-${targetMsg._id}`)
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" })
+        // Add highlight effect
+        element.querySelector("[data-highlight]")?.classList.add("ring-2", "ring-yellow-400", "scale-105")
+        setTimeout(() => {
+          element.querySelector("[data-highlight]")?.classList.remove("ring-2", "ring-yellow-400", "scale-105")
+        }, 2000)
+      }
+    }
+  }
+
   useEffect(() => {
     if (!authLoading && (!user || (user.role !== "admin" && user.role !== "receptionist"))) {
       router.push("/login")
@@ -339,16 +358,19 @@ export default function ChatThreadPage() {
           ) : (
             <div className="w-full space-y-2">
               {messages.map((msg) => (
-                <WhatsAppMessageBubble
-                  key={msg._id}
-                  type={msg.senderType === "business" ? "sent" : "received"}
-                  text={msg.body}
-                  timestamp={new Date(msg.createdAt)}
-                  status={msg.status}
-                  mediaType={msg.mediaType}
-                  mediaUrl={msg.mediaUrl}
-                  quotedMessageBody={msg.quotedMessageBody}
-                />
+                <div key={msg._id} data-highlight>
+                  <WhatsAppMessageBubble
+                    messageId={msg._id}
+                    type={msg.senderType === "business" ? "sent" : "received"}
+                    text={msg.body}
+                    timestamp={new Date(msg.createdAt)}
+                    status={msg.status}
+                    mediaType={msg.mediaType}
+                    mediaUrl={msg.mediaUrl}
+                    quotedMessageBody={msg.quotedMessageBody}
+                    onQuotedMessageClick={handleQuotedMessageClick}
+                  />
+                </div>
               ))}
             </div>
           )}
