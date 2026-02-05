@@ -109,7 +109,8 @@ async function handleIncomingMessage(message: any, valueContext: any) {
     } else if (type === "image") {
       mediaUrl = message.image?.url || message.image?.link || "";
       mediaType = "image";
-      messageBody = message.image?.caption || "[Image received]";
+      // Only show "[Image received]" if there's NO caption
+      messageBody = message.image?.caption || "";
       dbMessageType = "media";
     } else if (type === "document") {
       mediaUrl = message.document?.url || message.document?.link || "";
@@ -119,12 +120,13 @@ async function handleIncomingMessage(message: any, valueContext: any) {
     } else if (type === "audio") {
       mediaUrl = message.audio?.url || message.audio?.link || "";
       mediaType = "audio";
-      messageBody = "[Audio message received]";
+      messageBody = "";
       dbMessageType = "media";
     } else if (type === "video") {
       mediaUrl = message.video?.url || message.video?.link || "";
       mediaType = "video";
-      messageBody = message.video?.caption || "[Video received]";
+      // Only show "[Video received]" if there's NO caption
+      messageBody = message.video?.caption || "";
       dbMessageType = "media";
     } else {
       messageBody = `[${type} message received]`;
@@ -183,6 +185,11 @@ async function handleIncomingMessage(message: any, valueContext: any) {
 
     console.log("[v0] Chat resolved:", chat._id);
 
+    // Handle quoted/replied messages
+    const quotedMessage = message.context?.id ? await WhatsAppMessage.findOne({
+      whatsappMessageId: message.context.id
+    }) : null;
+
     const messageDoc = await WhatsAppMessage.create({
       chatId: chat._id,
       patientId: chat.patientId || null,
@@ -194,6 +201,8 @@ async function handleIncomingMessage(message: any, valueContext: any) {
       mediaUrl,
       mediaType,
       whatsappMessageId: messageId,
+      quotedMessageId: quotedMessage?._id || null,
+      quotedMessageBody: quotedMessage?.body || null,
       status: "delivered",
       createdAt: new Date(parseInt(timestamp) * 1000),
     });

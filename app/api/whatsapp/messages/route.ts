@@ -1,9 +1,45 @@
 import { connectDB, WhatsAppMessage, WhatsAppChat, User, Patient } from "@/lib/db-server"
 import { NextRequest, NextResponse } from "next/server"
 import { verifyToken } from "@/lib/auth"
+import { v4 as uuidv4 } from "crypto"
 
 const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || ""
 const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || ""
+
+// Helper to upload media to WhatsApp and get media ID
+async function uploadMediaToWhatsApp(
+  buffer: Buffer,
+  mimeType: string,
+): Promise<string | null> {
+  try {
+    const formData = new FormData()
+    const blob = new Blob([buffer], { type: mimeType })
+    formData.append("file", blob)
+    formData.append("type", mimeType)
+
+    const response = await fetch(
+      `${WHATSAPP_API_URL.replace("/messages", "")}/media`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+        },
+        body: formData,
+      },
+    )
+
+    if (!response.ok) {
+      console.error("[v0] Failed to upload media to WhatsApp:", await response.text())
+      return null
+    }
+
+    const data = await response.json()
+    return data.id || null
+  } catch (error) {
+    console.error("[v0] Error uploading media:", error)
+    return null
+  }
+}
 
 // ============================
 // GET MESSAGES
@@ -93,15 +129,40 @@ export async function POST(req: NextRequest) {
 
     const user = payload
 
-    const body = await req.json()
+    // Handle both JSON and FormData
+    let chatId: string,
+      patientPhone: string,
+      message: string,
+      messageType: string = "text",
+      whatsappBusinessPhoneNumberId: string,
+      mediaType: string | null = null,
+      mediaBuffer: Buffer | null = null
 
-    const {
-      chatId,
-      patientPhone,
-      message,
-      messageType = "text",
-      whatsappBusinessPhoneNumberId,
-    } = body
+    const contentType = req.headers.get("content-type") || ""
+
+    if (contentType.includes("application/json")) {
+      const body = await req.json()
+      chatId = body.chatId
+      patientPhone = body.patientPhone
+      message = body.message
+      messageType = body.messageType || "text"
+      whatsappBusinessPhoneNumberId = body.whatsappBusinessPhoneNumberId
+    } else if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData()
+      chatId = formData.get("chatId") as string
+      patientPhone = formData.get("patientPhone") as string
+      message = (formData.get("message") as string) || ""
+      whatsappBusinessPhoneNumberId = formData.get("whatsappBusinessPhoneNumberId") as string
+      mediaType = (formData.get("mediaType") as string) || null
+
+      const mediaFile = formData.get("media") as File | null
+      if (mediaFile) {
+        messageType = "media"
+        mediaBuffer = Buffer.from(await mediaFile.arrayBuffer())
+      }
+    } else {
+      return NextResponse.json({ error: "Invalid content type" }, { status: 400 })
+    }
 
     if (!chatId || !patientPhone || !message || !whatsappBusinessPhoneNumberId) {
       return NextResponse.json(
@@ -153,6 +214,7 @@ export async function POST(req: NextRequest) {
       senderName: user.name,
       messageType,
       body: message,
+      mediaType,
       sentBy: user.userId,
       sentByName: user.name,
       window24HourValid,
@@ -164,7 +226,7 @@ export async function POST(req: NextRequest) {
     // SEND TO WHATSAPP
     // ============================
     try {
-      const payload = {
+      let payload: any = {
         messaging_product: "whatsapp",
         to: normalizedPhone.replace("+", ""),
         type: "text",
@@ -172,6 +234,26 @@ export async function POST(req: NextRequest) {
           preview_url: true,
           body: message,
         },
+      }
+
+      // Handle media messages
+      if (messageType === "media" && mediaBuffer && mediaType) {
+        // Upload media to WhatsApp first
+        const mediaId = await uploadMediaToWhatsApp(mediaBuffer, mediaType)
+
+        if (!mediaId) {
+          throw new Error("Failed to upload media to WhatsApp")
+        }
+
+        payload = {
+          messaging_product: "whatsapp",
+          to: normalizedPhone.replace("+", ""),
+          type: mediaType,
+          [mediaType]: {
+            link: mediaId,
+            ...(message && { caption: message }),
+          },
+        }
       }
 
       const response = await fetch(WHATSAPP_API_URL, {
@@ -188,13 +270,23 @@ export async function POST(req: NextRequest) {
       if (response.ok && data.messages?.[0]?.id) {
         const whatsappMessageId = data.messages[0].id
 
+        // Store media locally if present
+        let localMediaUrl = null
+        if (mediaBuffer && mediaType) {
+          const mediaId = `${whatsappMessageId}-${Date.now()}`
+          // In production, store to cloud storage (S3, Cloudinary, etc)
+          // For now, we'll just note that media should be stored locally
+          localMediaUrl = `/api/whatsapp/media-proxy?id=${mediaId}`
+        }
+
         await WhatsAppMessage.findByIdAndUpdate(messageDoc._id, {
           whatsappMessageId,
+          mediaUrl: localMediaUrl,
           status: "sent",
         })
 
         await WhatsAppChat.findByIdAndUpdate(chatId, {
-          lastMessage: message,
+          lastMessage: message || `[${mediaType} sent]`,
           lastMessageAt: new Date(),
           updatedAt: new Date(),
         })
@@ -205,6 +297,7 @@ export async function POST(req: NextRequest) {
             message: {
               ...messageDoc.toObject(),
               whatsappMessageId,
+              mediaUrl: localMediaUrl,
             },
           },
           { status: 201 },

@@ -6,7 +6,7 @@ import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
-import { AlertCircle, Send, Clock } from "lucide-react"
+import { AlertCircle, Send, Clock, Paperclip, Mic, X } from "lucide-react"
 import WhatsAppChatHeader from "@/components/whatsapp-chat-header"
 import WhatsAppMessageBubble from "@/components/whatsapp-message-bubble"
 import WhatsAppChatSidebar from "@/components/whatsapp-chat-sidebar"
@@ -19,6 +19,7 @@ interface Message {
   createdAt: string
   mediaType?: string | null
   mediaUrl?: string | null
+  quotedMessageBody?: string | null
 }
 
 interface Chat {
@@ -45,6 +46,11 @@ export default function ChatThreadPage() {
   const [error, setError] = useState("")
   const [messageText, setMessageText] = useState("")
   const [search, setSearch] = useState("")
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null)
+  const mediaInputRef = useRef<HTMLInputElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -140,40 +146,111 @@ export default function ChatThreadPage() {
     }
   }
 
+  const startAudioRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      const chunks: BlobPart[] = []
+
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data)
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "audio/webm" })
+        setRecordedAudio(blob)
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      console.error("[v0] Error accessing microphone:", err)
+      setError("Could not access microphone")
+    }
+  }
+
+  const stopAudioRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
+    }
+  }
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!messageText.trim() || !chat) return
+    if ((!messageText.trim() && !mediaFile && !recordedAudio) || !chat) return
 
     try {
       setSending(true)
       setError("")
 
       const token = sessionStorage.getItem("token")
-      const response = await fetch("/api/whatsapp/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          chatId,
-          patientId: chat.patientName,
-          patientPhone: chat.patientPhone,
-          message: messageText,
-          messageType: "text",
-          whatsappBusinessPhoneNumberId: "default",
-        }),
-      })
 
-      if (!response.ok) {
-        const errData = await response.json()
-        throw new Error(errData.error || "Failed to send message")
+      // If there's media file or audio, send as form data
+      if (mediaFile || recordedAudio) {
+        const formData = new FormData()
+        formData.append("chatId", chatId)
+        formData.append("patientPhone", chat.patientPhone)
+        formData.append("message", messageText || "")
+        formData.append("whatsappBusinessPhoneNumberId", "default")
+
+        if (mediaFile) {
+          formData.append("media", mediaFile)
+          formData.append("mediaType", mediaFile.type.startsWith("image") ? "image" : 
+                                       mediaFile.type.startsWith("video") ? "video" : 
+                                       mediaFile.type.startsWith("audio") ? "audio" : "document")
+        }
+
+        if (recordedAudio) {
+          formData.append("media", recordedAudio, "recording.webm")
+          formData.append("mediaType", "audio")
+        }
+
+        const response = await fetch("/api/whatsapp/messages", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const errData = await response.json()
+          throw new Error(errData.error || "Failed to send message")
+        }
+
+        const data = await response.json()
+        setMessages([...messages, data.message])
+      } else {
+        // Text-only message
+        const response = await fetch("/api/whatsapp/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            chatId,
+            patientId: chat.patientName,
+            patientPhone: chat.patientPhone,
+            message: messageText,
+            messageType: "text",
+            whatsappBusinessPhoneNumberId: "default",
+          }),
+        })
+
+        if (!response.ok) {
+          const errData = await response.json()
+          throw new Error(errData.error || "Failed to send message")
+        }
+
+        const data = await response.json()
+        setMessages([...messages, data.message])
       }
 
-      const data = await response.json()
-      setMessages([...messages, data.message])
       setMessageText("")
+      setMediaFile(null)
+      setRecordedAudio(null)
       scrollToBottom()
     } catch (err) {
       console.error("[v0] Error sending message:", err)
@@ -270,6 +347,7 @@ export default function ChatThreadPage() {
                   status={msg.status}
                   mediaType={msg.mediaType}
                   mediaUrl={msg.mediaUrl}
+                  quotedMessageBody={msg.quotedMessageBody}
                 />
               ))}
             </div>
@@ -289,23 +367,83 @@ export default function ChatThreadPage() {
         )}
 
         {/* Message Input */}
-        <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-200 p-4 flex gap-2">
-          <Input
-            placeholder="Type a message..."
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            disabled={sending}
-            className="flex-1 h-10 border-gray-300 rounded-full focus:ring-blue-500"
-          />
+        <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-200 p-4">
+          {/* Media Preview */}
+          {(mediaFile || recordedAudio) && (
+            <div className="mb-3 p-2 bg-gray-100 rounded flex items-center justify-between">
+              <p className="text-sm text-gray-700">
+                {mediaFile 
+                  ? `📎 ${mediaFile.name}` 
+                  : "🎙️ Audio recording ready"}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setMediaFile(null)
+                  setRecordedAudio(null)
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
-          <Button
-            type="submit"
-            disabled={sending || !messageText.trim()}
-            size="icon"
-            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-10 h-10"
-          >
-            {sending ? <Spinner /> : <Send className="w-4 h-4" />}
-          </Button>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Type a message..."
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              disabled={sending}
+              className="flex-1 h-10 border-gray-300 rounded-full focus:ring-blue-500"
+            />
+
+            {/* Media Upload Button */}
+            <input
+              ref={mediaInputRef}
+              type="file"
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+              onChange={(e) => {
+                if (e.target.files?.[0]) {
+                  setMediaFile(e.target.files[0])
+                  setRecordedAudio(null)
+                }
+              }}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              onClick={() => mediaInputRef.current?.click()}
+              disabled={sending || isRecording}
+              size="icon"
+              variant="ghost"
+              className="w-10 h-10"
+            >
+              <Paperclip className="w-4 h-4 text-gray-600" />
+            </Button>
+
+            {/* Audio Recording Button */}
+            <Button
+              type="button"
+              onClick={isRecording ? stopAudioRecording : startAudioRecording}
+              disabled={sending || mediaFile !== null}
+              size="icon"
+              variant="ghost"
+              className={`w-10 h-10 ${isRecording ? "text-red-600" : "text-gray-600"}`}
+            >
+              <Mic className={`w-4 h-4 ${isRecording ? "animate-pulse" : ""}`} />
+            </Button>
+
+            {/* Send Button */}
+            <Button
+              type="submit"
+              disabled={sending || (!messageText.trim() && !mediaFile && !recordedAudio)}
+              size="icon"
+              className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-10 h-10"
+            >
+              {sending ? <Spinner /> : <Send className="w-4 h-4" />}
+            </Button>
+          </div>
         </form>
       </div>
     </div>

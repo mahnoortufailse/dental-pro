@@ -11,6 +11,7 @@ interface MessageBubbleProps {
   status?: "sent" | "delivered" | "read" | "failed"
   mediaType?: string | null
   mediaUrl?: string | null
+  quotedMessageBody?: string | null
 }
 
 export default function WhatsAppMessageBubble({
@@ -20,6 +21,7 @@ export default function WhatsAppMessageBubble({
   status = "read",
   mediaType,
   mediaUrl,
+  quotedMessageBody,
 }: MessageBubbleProps) {
   const [loadingMedia, setLoadingMedia] = useState(false)
   const [mediaError, setMediaError] = useState(false)
@@ -61,6 +63,14 @@ export default function WhatsAppMessageBubble({
           isOwn ? "rounded-br-none" : "rounded-bl-none"
         }`}
       >
+        {/* Quoted Message */}
+        {quotedMessageBody && (
+          <div className={`mb-2 pb-2 border-l-2 pl-2 ${isOwn ? "border-blue-300 opacity-75" : "border-gray-300 opacity-75"}`}>
+            <p className="text-xs font-medium mb-0.5">Replying to:</p>
+            <p className="text-xs line-clamp-2">{quotedMessageBody}</p>
+          </div>
+        )}
+
         {/* Media Content */}
         {mediaType && mediaUrl && (
           <div className="mb-2">
@@ -141,8 +151,8 @@ export default function WhatsAppMessageBubble({
           </div>
         )}
 
-        {/* Text Content */}
-        {text && (
+        {/* Text Content - Only show if it's not just media without caption */}
+        {text && text.trim() !== "" && (
           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{text}</p>
         )}
 

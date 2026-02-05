@@ -7,30 +7,77 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const mediaUrl = searchParams.get("url");
     const mediaType = searchParams.get("type") || "image";
+    const mediaId = searchParams.get("id");
 
-    if (!mediaUrl) {
-      console.error("[v0] Media proxy: No URL provided");
-      return NextResponse.json({ error: "Media URL required" }, { status: 400 });
+    if (!mediaUrl && !mediaId) {
+      console.error("[v0] Media proxy: No URL or ID provided");
+      return NextResponse.json({ error: "Media URL or ID required" }, { status: 400 });
     }
 
-    console.log("[v0] Proxying WhatsApp media with auth token:", { mediaType });
+    console.log("[v0] Proxying WhatsApp media:", { mediaType, hasUrl: !!mediaUrl, hasId: !!mediaId });
+
+    // If we have a media ID, it means it's stored locally (future implementation)
+    if (mediaId && !mediaUrl) {
+      console.log("[v0] Local media storage not yet implemented for ID:", mediaId);
+      return NextResponse.json(
+        { error: "Media not found in local storage" },
+        { status: 404 }
+      );
+    }
 
     // Fetch the media content from WhatsApp's temporary URL with access token
-    // WhatsApp media URLs are temporary and require the access token in Authorization header
-    const contentResponse = await fetch(mediaUrl, {
-      headers: {
-        Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-      },
-    });
+    // WhatsApp media URLs expire in ~5 minutes, but we cache for reliability
+    let contentResponse;
+    let retries = 0;
+    const maxRetries = 2;
 
-    if (!contentResponse.ok) {
+    while (retries < maxRetries) {
+      try {
+        contentResponse = await fetch(mediaUrl, {
+          headers: {
+            Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+          },
+          signal: AbortSignal.timeout(10000), // 10 second timeout
+        });
+
+        if (contentResponse.ok) break;
+
+        if (contentResponse.status === 404) {
+          console.warn("[v0] WhatsApp media URL expired or not found, returning placeholder");
+          // Return a placeholder image for expired media
+          return new NextResponse(Buffer.from("media-expired"), {
+            status: 410, // Gone
+            headers: {
+              "Content-Type": "text/plain",
+              "Cache-Control": "no-cache",
+            },
+          });
+        }
+
+        if (contentResponse.status >= 500) {
+          retries++;
+          if (retries < maxRetries) {
+            await new Promise((resolve) => setTimeout(resolve, 1000 * retries));
+            continue;
+          }
+        }
+
+        throw new Error(`WhatsApp returned ${contentResponse.status}`);
+      } catch (error) {
+        retries++;
+        if (retries >= maxRetries) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 1000 * retries));
+      }
+    }
+
+    if (!contentResponse || !contentResponse.ok) {
       console.error("[v0] Failed to fetch media from WhatsApp URL:", {
-        status: contentResponse.status,
-        statusText: contentResponse.statusText,
+        status: contentResponse?.status,
+        statusText: contentResponse?.statusText,
       });
       return NextResponse.json(
-        { error: `Failed to fetch media: ${contentResponse.statusText}` },
-        { status: contentResponse.status }
+        { error: `Failed to fetch media: ${contentResponse?.statusText}` },
+        { status: contentResponse?.status || 500 }
       );
     }
 
@@ -39,13 +86,12 @@ export async function GET(req: NextRequest) {
 
     console.log("[v0] Media proxy success:", { contentType, size: buffer.byteLength });
 
-    // Return media with caching headers
-    // WhatsApp media URLs expire in ~5 minutes, but we cache for reliability
+    // Return media with caching headers - cache aggressively since URLs expire
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=300", // Cache for 5 minutes (URL lifetime)
+        "Cache-Control": "public, max-age=2592000", // Cache for 30 days (after first fetch)
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
       },
