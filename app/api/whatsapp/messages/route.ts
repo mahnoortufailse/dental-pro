@@ -7,7 +7,43 @@ const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || ""
 const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || ""
 const CLOUDINARY_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || ""
 
-// Helper to upload media to Cloudinary
+// Helper to upload media to WhatsApp Media API (official flow)
+async function uploadMediaToWhatsApp(
+  buffer: Buffer,
+  fileName: string,
+  mimeType: string,
+  phoneNumberId: string,
+): Promise<string | null> {
+  try {
+    const blob = new Blob([buffer], { type: mimeType })
+    const formData = new FormData()
+    formData.append("file", blob, fileName)
+    formData.append("type", mimeType)
+    formData.append("messaging_product", "whatsapp")
+
+    const mediaUrl = `${WHATSAPP_API_URL.replace("/messages", "")}/media`
+    const response = await fetch(mediaUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error?.message || "Media upload failed")
+    }
+
+    const data = await response.json()
+    return data.id || null // Return the media ID
+  } catch (error) {
+    console.error("[v0] WhatsApp media upload error:", error)
+    return null
+  }
+}
+
+// Helper to upload media to Cloudinary (for images display)
 async function uploadToCloudinary(
   buffer: Buffer,
   fileName: string,
@@ -158,6 +194,13 @@ export async function POST(req: NextRequest) {
       if (mediaFile) {
         messageType = "media"
         mediaBuffer = Buffer.from(await mediaFile.arrayBuffer())
+        
+        // Auto-detect PDF as document type
+        if (mediaFile.type === "application/pdf" || mediaFile.name?.endsWith(".pdf")) {
+          mediaType = "document"
+        } else if (mediaFile.type.startsWith("image/")) {
+          mediaType = "image"
+        }
       }
     } else {
       return NextResponse.json({ error: "Invalid content type" }, { status: 400 })
@@ -214,11 +257,27 @@ export async function POST(req: NextRequest) {
     // ============================
     // SAVE MESSAGE FIRST
     // ============================
-    // Upload media to Cloudinary first if present
-    let cloudinaryUrl: string | null = null
+    // Upload media first if present
+    let displayMediaUrl: string | null = null
+    let whatsappMediaId: string | null = null
+    const phoneNumberId = whatsappBusinessPhoneNumberId // Declare phoneNumberId here
+
     if (mediaBuffer && mediaType) {
-      const fileName = `whatsapp-${Date.now()}.${mediaType === "audio" ? "m4a" : mediaType}`
-      cloudinaryUrl = await uploadToCloudinary(mediaBuffer, fileName, `${mediaType}/*`)
+      const fileName = `whatsapp-${Date.now()}.${mediaType === "document" ? "pdf" : mediaType}`
+      const mimeType = mediaType === "document" ? "application/pdf" : `${mediaType}/*`
+
+      // For images, upload to Cloudinary for display
+      if (mediaType === "image") {
+        displayMediaUrl = await uploadToCloudinary(mediaBuffer, fileName, mimeType)
+      }
+
+      // For documents, upload to WhatsApp Media API following official flow
+      if (mediaType === "document") {
+        whatsappMediaId = await uploadMediaToWhatsApp(mediaBuffer, fileName, mimeType, phoneNumberId)
+        if (whatsappMediaId) {
+          displayMediaUrl = whatsappMediaId // Store media ID for retrieval
+        }
+      }
     }
 
     // For media-only messages, use a space to satisfy MongoDB requirement
@@ -233,7 +292,7 @@ export async function POST(req: NextRequest) {
       messageType,
       body: messageBody,
       mediaType,
-      mediaUrl: cloudinaryUrl,
+      mediaUrl: displayMediaUrl,
       mediaData: mediaBuffer || undefined,
       sentBy: user.userId,
       sentByName: user.name,
@@ -259,15 +318,30 @@ export async function POST(req: NextRequest) {
       }
 
       // Handle media messages - send actual media to WhatsApp
-      if (messageType === "media" && mediaBuffer && mediaType && cloudinaryUrl) {
-        payload = {
-          messaging_product: "whatsapp",
-          to: normalizedPhone.replace("+", ""),
-          type: mediaType,
-          [mediaType]: {
-            link: cloudinaryUrl,
-            ...(message && { caption: message }),
-          },
+      if (messageType === "media" && mediaBuffer && mediaType) {
+        // For images with Cloudinary URL
+        if (mediaType === "image" && displayMediaUrl) {
+          payload = {
+            messaging_product: "whatsapp",
+            to: normalizedPhone.replace("+", ""),
+            type: "image",
+            image: {
+              link: displayMediaUrl,
+              ...(message && { caption: message }),
+            },
+          }
+        }
+        // For documents with WhatsApp media ID
+        else if (mediaType === "document" && whatsappMediaId) {
+          payload = {
+            messaging_product: "whatsapp",
+            to: normalizedPhone.replace("+", ""),
+            type: "document",
+            document: {
+              id: whatsappMediaId,
+              ...(message && { caption: message }),
+            },
+          }
         }
       }
 
@@ -284,6 +358,7 @@ export async function POST(req: NextRequest) {
 
       if (response.ok && data.messages?.[0]?.id) {
         const whatsappMessageId = data.messages[0].id
+        const cloudinaryUrl = displayMediaUrl // Declare cloudinaryUrl here
 
         await WhatsAppMessage.findByIdAndUpdate(messageDoc._id, {
           whatsappMessageId,

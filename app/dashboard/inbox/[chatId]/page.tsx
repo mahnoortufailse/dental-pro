@@ -6,7 +6,7 @@ import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
-import { AlertCircle, Send, Clock, Paperclip, Mic, X, RefreshCw } from "lucide-react"
+import { AlertCircle, Send, Clock, Paperclip, X, RefreshCw, Mic } from "lucide-react"
 import WhatsAppChatHeader from "@/components/whatsapp-chat-header"
 import WhatsAppMessageBubble from "@/components/whatsapp-message-bubble"
 import WhatsAppChatSidebar from "@/components/whatsapp-chat-sidebar"
@@ -49,11 +49,12 @@ export default function ChatThreadPage() {
   const [messageText, setMessageText] = useState("")
   const [search, setSearch] = useState("")
   const [mediaFile, setMediaFile] = useState<File | null>(null)
-  const [isRecording, setIsRecording] = useState(false)
   const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
   const mediaInputRef = useRef<HTMLInputElement>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -77,6 +78,26 @@ export default function ChatThreadPage() {
     }
   }
 
+  const startAudioRecording = () => {
+    const mediaRecorder = new MediaRecorder(window.navigator.mediaDevices.getUserMedia({ audio: true }))
+    mediaRecorderRef.current = mediaRecorder
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        setRecordedAudio(event.data)
+      }
+    }
+    mediaRecorder.start()
+    setIsRecording(true)
+  }
+
+  const stopAudioRecording = () => {
+    const mediaRecorder = mediaRecorderRef.current
+    if (mediaRecorder) {
+      mediaRecorder.stop()
+      setIsRecording(false)
+    }
+  }
+
   useEffect(() => {
     if (!authLoading && (!user || (user.role !== "admin" && user.role !== "receptionist"))) {
       router.push("/login")
@@ -87,6 +108,17 @@ export default function ChatThreadPage() {
     if (!authLoading && user && chatId) {
       fetchMessages()
       fetchChats()
+
+      // Set up realtime polling every 5 seconds
+      pollingIntervalRef.current = setInterval(() => {
+        fetchMessages()
+      }, 5000)
+
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current)
+        }
+      }
     }
   }, [authLoading, user, chatId])
 
@@ -161,53 +193,19 @@ export default function ChatThreadPage() {
     }
   }
 
-  const startAudioRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream)
-      mediaRecorderRef.current = mediaRecorder
-      const chunks: BlobPart[] = []
-
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data)
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/webm" })
-        setRecordedAudio(blob)
-      }
-
-      mediaRecorder.start()
-      setIsRecording(true)
-    } catch (err) {
-      console.error("[v0] Error accessing microphone:", err)
-      setError("Could not access microphone")
-    }
-  }
-
-  const stopAudioRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
-      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
-    }
-  }
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if ((!messageText.trim() && !mediaFile && !recordedAudio) || !chat) return
+    if ((!messageText.trim() && !mediaFile) || !chat) return
 
     try {
-      // Auto-stop recording if still active
-      if (isRecording) {
-        stopAudioRecording()
-      }
-
       setSending(true)
       setError("")
 
       const token = sessionStorage.getItem("token")
 
-      // If there's media file or audio, send as form data
-      if (mediaFile || recordedAudio) {
+      // If there's media file, send as form data
+      if (mediaFile) {
         const formData = new FormData()
         formData.append("chatId", chatId)
         formData.append("patientPhone", chat.patientPhone)
@@ -216,14 +214,7 @@ export default function ChatThreadPage() {
 
         if (mediaFile) {
           formData.append("media", mediaFile)
-          formData.append("mediaType", mediaFile.type.startsWith("image") ? "image" : 
-                                       mediaFile.type.startsWith("video") ? "video" : 
-                                       mediaFile.type.startsWith("audio") ? "audio" : "document")
-        }
-
-        if (recordedAudio) {
-          formData.append("media", recordedAudio, "recording.webm")
-          formData.append("mediaType", "audio")
+          formData.append("mediaType", mediaFile.type.startsWith("image") ? "image" : "document")
         }
 
         const response = await fetch("/api/whatsapp/messages", {
@@ -270,7 +261,6 @@ export default function ChatThreadPage() {
 
       setMessageText("")
       setMediaFile(null)
-      setRecordedAudio(null)
       scrollToBottom()
     } catch (err) {
       console.error("[v0] Error sending message:", err)
@@ -408,31 +398,13 @@ export default function ChatThreadPage() {
 
         {/* Message Input */}
         <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-200 p-4 space-y-3">
-          {/* Recording Status */}
-          {isRecording && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between animate-pulse">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                <p className="text-sm font-medium text-red-600">Recording audio...</p>
-              </div>
-              <p className="text-xs text-red-500">Press stop or send to finish</p>
-            </div>
-          )}
-
           {/* Media Preview */}
-          {(mediaFile || recordedAudio) && (
+          {mediaFile && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-              <p className="text-sm text-blue-700 font-medium">
-                {mediaFile 
-                  ? `📎 File: ${mediaFile.name}` 
-                  : "🎙️ Audio recording ready to send"}
-              </p>
+              <p className="text-sm text-blue-700 font-medium">📎 File: {mediaFile.name}</p>
               <button
                 type="button"
-                onClick={() => {
-                  setMediaFile(null)
-                  setRecordedAudio(null)
-                }}
+                onClick={() => setMediaFile(null)}
                 className="text-blue-500 hover:text-blue-700"
                 title="Remove"
               >
@@ -446,7 +418,7 @@ export default function ChatThreadPage() {
               placeholder="Type a message..."
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
-              disabled={sending || isRecording}
+              disabled={sending}
               className="flex-1 h-10 border-gray-300 rounded-full focus:ring-blue-500"
             />
 
@@ -454,11 +426,10 @@ export default function ChatThreadPage() {
             <input
               ref={mediaInputRef}
               type="file"
-              accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+              accept="image/*,.pdf"
               onChange={(e) => {
                 if (e.target.files?.[0]) {
                   setMediaFile(e.target.files[0])
-                  setRecordedAudio(null)
                 }
               }}
               className="hidden"
@@ -466,36 +437,19 @@ export default function ChatThreadPage() {
             <Button
               type="button"
               onClick={() => mediaInputRef.current?.click()}
-              disabled={sending || isRecording || mediaFile !== null}
-              size="icon"
-              variant="ghost"
-              className="w-10 h-10"
-              title="Attach file"
-            >
-              <Paperclip className="w-4 h-4 text-gray-600" />
-            </Button>
-
-            {/* Audio Recording Button */}
-            <Button
-              type="button"
-              onClick={isRecording ? stopAudioRecording : startAudioRecording}
               disabled={sending || mediaFile !== null}
               size="icon"
               variant="ghost"
-              className={`w-10 h-10 transition-colors ${
-                isRecording
-                  ? "bg-red-100 text-red-600 hover:bg-red-200"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
-              title={isRecording ? "Stop recording" : "Start recording"}
+              className="w-10 h-10"
+              title="Attach image or PDF"
             >
-              <Mic className={`w-4 h-4 ${isRecording ? "animate-pulse" : ""}`} />
+              <Paperclip className="w-4 h-4 text-gray-600" />
             </Button>
 
             {/* Send Button */}
             <Button
               type="submit"
-              disabled={sending || (!messageText.trim() && !mediaFile && !recordedAudio)}
+              disabled={sending || (!messageText.trim() && !mediaFile)}
               size="icon"
               className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-10 h-10"
               title="Send message"
