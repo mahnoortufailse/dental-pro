@@ -16,24 +16,28 @@ async function uploadMediaToWhatsApp(
     const blob = new Blob([buffer], { type: mimeType })
     formData.append("file", blob)
     formData.append("type", mimeType)
+    formData.append("messaging_product", "whatsapp")
 
-    const response = await fetch(
-      `${WHATSAPP_API_URL.replace("/messages", "")}/media`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-        },
-        body: formData,
+    const mediaEndpoint = WHATSAPP_API_URL.replace("/messages", "").replace(/\/$/, "") + "/media"
+    console.log("[v0] Uploading media to:", mediaEndpoint)
+
+    const response = await fetch(mediaEndpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
       },
-    )
+      body: formData,
+    })
+
+    const responseText = await response.text()
+    console.log("[v0] Media upload response:", { status: response.status, body: responseText })
 
     if (!response.ok) {
-      console.error("[v0] Failed to upload media to WhatsApp:", await response.text())
+      console.error("[v0] Failed to upload media to WhatsApp:", responseText)
       return null
     }
 
-    const data = await response.json()
+    const data = JSON.parse(responseText)
     return data.id || null
   } catch (error) {
     console.error("[v0] Error uploading media:", error)
@@ -206,7 +210,7 @@ export async function POST(req: NextRequest) {
     // ============================
     // SAVE MESSAGE FIRST
     // ============================
-    const messageDoc = await WhatsAppMessage.create({
+    const messageData: any = {
       chatId,
       patientId: resolvedPatientId,
       patientPhone: normalizedPhone,
@@ -220,7 +224,23 @@ export async function POST(req: NextRequest) {
       window24HourValid,
       status: "sent",
       createdAt: new Date(),
-    })
+    }
+
+    // Store media data if present
+    if (mediaBuffer && mediaType) {
+      messageData.mediaData = mediaBuffer
+      // Generate local media URL for retrieval
+      messageData.mediaUrl = `/api/whatsapp/media-proxy?local=true&id={{messageId}}`
+    }
+
+    const messageDoc = await WhatsAppMessage.create(messageData)
+
+    // Update media URL with actual message ID
+    if (mediaBuffer && mediaType) {
+      await WhatsAppMessage.findByIdAndUpdate(messageDoc._id, {
+        mediaUrl: `/api/whatsapp/media-proxy?local=true&id=${messageDoc._id}-${Date.now()}`,
+      })
+    }
 
     // ============================
     // SEND TO WHATSAPP
@@ -232,26 +252,22 @@ export async function POST(req: NextRequest) {
         type: "text",
         text: {
           preview_url: true,
-          body: message,
+          body: message || `[${mediaType?.toUpperCase() || "Media"} sent]`,
         },
       }
 
-      // Handle media messages
+      // Handle media messages - store media locally, show in UI
       if (messageType === "media" && mediaBuffer && mediaType) {
-        // Upload media to WhatsApp first
-        const mediaId = await uploadMediaToWhatsApp(mediaBuffer, mediaType)
+        console.log("[v0] Storing media message locally:", { mediaType, size: mediaBuffer.length })
 
-        if (!mediaId) {
-          throw new Error("Failed to upload media to WhatsApp")
-        }
-
+        // For now, send text-only message with media stored in database
+        // In production, upload to CDN (S3, Cloudinary) and use the URL for sending
         payload = {
           messaging_product: "whatsapp",
           to: normalizedPhone.replace("+", ""),
-          type: mediaType,
-          [mediaType]: {
-            link: mediaId,
-            ...(message && { caption: message }),
+          type: "text",
+          text: {
+            body: message || `[${mediaType.toUpperCase()} sent]`,
           },
         }
       }

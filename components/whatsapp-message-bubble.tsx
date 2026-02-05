@@ -151,10 +151,12 @@ export default function WhatsAppMessageBubble({
           </div>
         )}
 
-        {/* Text Content - Only show if it's not just media without caption */}
-        {text && text.trim() !== "" && (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{text}</p>
-        )}
+        {/* Text Content - Only show if it's actual text, not placeholder like [Image], [Audio] */}
+        {text &&
+          text.trim() !== "" &&
+          !["[Image]", "[Audio]", "[Video]", "[Document]"].includes(text.trim()) && (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{text}</p>
+          )}
 
         {/* Timestamp and Status */}
         <div className={`flex items-center gap-1 mt-1 text-xs ${isOwn ? "text-blue-100 justify-end" : "text-gray-500"}`}>

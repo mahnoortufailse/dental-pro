@@ -109,24 +109,24 @@ async function handleIncomingMessage(message: any, valueContext: any) {
     } else if (type === "image") {
       mediaUrl = message.image?.url || message.image?.link || "";
       mediaType = "image";
-      // Only show "[Image received]" if there's NO caption
-      messageBody = message.image?.caption || "";
+      // Use caption if available, otherwise use placeholder for DB (won't display in UI)
+      messageBody = message.image?.caption || "[Image]";
       dbMessageType = "media";
     } else if (type === "document") {
       mediaUrl = message.document?.url || message.document?.link || "";
       mediaType = "document";
-      messageBody = message.document?.filename || "[Document received]";
+      messageBody = message.document?.filename || "[Document]";
       dbMessageType = "media";
     } else if (type === "audio") {
       mediaUrl = message.audio?.url || message.audio?.link || "";
       mediaType = "audio";
-      messageBody = "";
+      messageBody = "[Audio]";
       dbMessageType = "media";
     } else if (type === "video") {
       mediaUrl = message.video?.url || message.video?.link || "";
       mediaType = "video";
-      // Only show "[Video received]" if there's NO caption
-      messageBody = message.video?.caption || "";
+      // Use caption if available, otherwise use placeholder for DB (won't display in UI)
+      messageBody = message.video?.caption || "[Video]";
       dbMessageType = "media";
     } else {
       messageBody = `[${type} message received]`;

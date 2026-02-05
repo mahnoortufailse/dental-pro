@@ -16,13 +16,44 @@ export async function GET(req: NextRequest) {
 
     console.log("[v0] Proxying WhatsApp media:", { mediaType, hasUrl: !!mediaUrl, hasId: !!mediaId });
 
-    // If we have a media ID, it means it's stored locally (future implementation)
+    // If we have a media ID, it means it's stored locally
     if (mediaId && !mediaUrl) {
-      console.log("[v0] Local media storage not yet implemented for ID:", mediaId);
-      return NextResponse.json(
-        { error: "Media not found in local storage" },
-        { status: 404 }
-      );
+      try {
+        const { connectDB, WhatsAppMessage } = await import("@/lib/db-server")
+        await connectDB()
+
+        // Media ID is in format: messageId-timestamp
+        const messageId = mediaId.split("-")[0]
+        const message = await WhatsAppMessage.findById(messageId)
+
+        if (!message || !message.mediaData) {
+          console.warn("[v0] Local media not found:", messageId)
+          return NextResponse.json({ error: "Media not found" }, { status: 404 })
+        }
+
+        const mimeType =
+          message.mediaType === "audio"
+            ? "audio/webm"
+            : message.mediaType === "image"
+              ? "image/jpeg"
+              : message.mediaType === "video"
+                ? "video/mp4"
+                : "application/octet-stream"
+
+        console.log("[v0] Serving local media:", { mediaType: message.mediaType, size: message.mediaData.length })
+
+        return new NextResponse(message.mediaData, {
+          status: 200,
+          headers: {
+            "Content-Type": mimeType,
+            "Cache-Control": "public, max-age=2592000",
+            "Access-Control-Allow-Origin": "*",
+          },
+        })
+      } catch (error) {
+        console.error("[v0] Error retrieving local media:", error)
+        return NextResponse.json({ error: "Failed to retrieve local media" }, { status: 500 })
+      }
     }
 
     // Fetch the media content from WhatsApp's temporary URL with access token
