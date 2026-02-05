@@ -219,6 +219,9 @@ export async function POST(req: NextRequest) {
     // ============================
     // SAVE MESSAGE FIRST
     // ============================
+    // Ensure body is never empty - use placeholder for media-only messages
+    const messageBody = message || (mediaType ? `[${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)}]` : "")
+
     const messageData: any = {
       chatId,
       patientId: resolvedPatientId,
@@ -226,7 +229,7 @@ export async function POST(req: NextRequest) {
       senderType: "business",
       senderName: user.name,
       messageType,
-      body: message,
+      body: messageBody,
       mediaType,
       sentBy: user.userId,
       sentByName: user.name,

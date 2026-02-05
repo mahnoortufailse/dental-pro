@@ -6,7 +6,7 @@ import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
-import { AlertCircle, Send, Clock, Paperclip, Mic, X } from "lucide-react"
+import { AlertCircle, Send, Clock, Paperclip, Mic, X, RefreshCw } from "lucide-react"
 import WhatsAppChatHeader from "@/components/whatsapp-chat-header"
 import WhatsAppMessageBubble from "@/components/whatsapp-message-bubble"
 import WhatsAppChatSidebar from "@/components/whatsapp-chat-sidebar"
@@ -58,7 +58,6 @@ export default function ChatThreadPage() {
   }
 
   const handleQuotedMessageClick = (quotedText: string) => {
-    console.log("[v0] Looking for quoted message:", quotedText)
     // Find message with this body
     const targetMsg = messages.find(
       (m) => m.body.includes(quotedText) || m.body.startsWith(quotedText.substring(0, 20)),
@@ -86,11 +85,6 @@ export default function ChatThreadPage() {
     if (!authLoading && user && chatId) {
       fetchMessages()
       fetchChats()
-      const interval = setInterval(() => {
-        fetchMessages()
-      }, 2000)
-
-      return () => clearInterval(interval)
     }
   }, [authLoading, user, chatId])
 
@@ -200,6 +194,11 @@ export default function ChatThreadPage() {
     if ((!messageText.trim() && !mediaFile && !recordedAudio) || !chat) return
 
     try {
+      // Auto-stop recording if still active
+      if (isRecording) {
+        stopAudioRecording()
+      }
+
       setSending(true)
       setError("")
 
@@ -331,13 +330,28 @@ export default function ChatThreadPage() {
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col md:w-0">
-        {/* Header */}
-        <WhatsAppChatHeader
-          patientName={chat.patientName}
-          patientPhone={chat.patientPhone}
-          whatsappDisplayName={chat.whatsappDisplayName}
-          whatsappProfilePictureUrl={chat.whatsappProfilePictureUrl}
-        />
+        {/* Header with Refresh Button */}
+        <div className="flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
+          <div className="flex-1">
+            <WhatsAppChatHeader
+              patientName={chat.patientName}
+              patientPhone={chat.patientPhone}
+              whatsappDisplayName={chat.whatsappDisplayName}
+              whatsappProfilePictureUrl={chat.whatsappProfilePictureUrl}
+            />
+          </div>
+          <Button
+            type="button"
+            onClick={fetchMessages}
+            disabled={loading}
+            size="sm"
+            variant="ghost"
+            className="ml-2"
+            title="Refresh messages"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
 
         {/* Messages Container */}
         <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50 space-y-2">
@@ -389,14 +403,25 @@ export default function ChatThreadPage() {
         )}
 
         {/* Message Input */}
-        <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-200 p-4">
+        <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-200 p-4 space-y-3">
+          {/* Recording Status */}
+          {isRecording && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between animate-pulse">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                <p className="text-sm font-medium text-red-600">Recording audio...</p>
+              </div>
+              <p className="text-xs text-red-500">Press stop or send to finish</p>
+            </div>
+          )}
+
           {/* Media Preview */}
           {(mediaFile || recordedAudio) && (
-            <div className="mb-3 p-2 bg-gray-100 rounded flex items-center justify-between">
-              <p className="text-sm text-gray-700">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+              <p className="text-sm text-blue-700 font-medium">
                 {mediaFile 
-                  ? `📎 ${mediaFile.name}` 
-                  : "🎙️ Audio recording ready"}
+                  ? `📎 File: ${mediaFile.name}` 
+                  : "🎙️ Audio recording ready to send"}
               </p>
               <button
                 type="button"
@@ -404,7 +429,8 @@ export default function ChatThreadPage() {
                   setMediaFile(null)
                   setRecordedAudio(null)
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-blue-500 hover:text-blue-700"
+                title="Remove"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -416,7 +442,7 @@ export default function ChatThreadPage() {
               placeholder="Type a message..."
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
-              disabled={sending}
+              disabled={sending || isRecording}
               className="flex-1 h-10 border-gray-300 rounded-full focus:ring-blue-500"
             />
 
@@ -436,10 +462,11 @@ export default function ChatThreadPage() {
             <Button
               type="button"
               onClick={() => mediaInputRef.current?.click()}
-              disabled={sending || isRecording}
+              disabled={sending || isRecording || mediaFile !== null}
               size="icon"
               variant="ghost"
               className="w-10 h-10"
+              title="Attach file"
             >
               <Paperclip className="w-4 h-4 text-gray-600" />
             </Button>
@@ -451,7 +478,12 @@ export default function ChatThreadPage() {
               disabled={sending || mediaFile !== null}
               size="icon"
               variant="ghost"
-              className={`w-10 h-10 ${isRecording ? "text-red-600" : "text-gray-600"}`}
+              className={`w-10 h-10 transition-colors ${
+                isRecording
+                  ? "bg-red-100 text-red-600 hover:bg-red-200"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
+              title={isRecording ? "Stop recording" : "Start recording"}
             >
               <Mic className={`w-4 h-4 ${isRecording ? "animate-pulse" : ""}`} />
             </Button>
@@ -462,6 +494,7 @@ export default function ChatThreadPage() {
               disabled={sending || (!messageText.trim() && !mediaFile && !recordedAudio)}
               size="icon"
               className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-10 h-10"
+              title="Send message"
             >
               {sending ? <Spinner /> : <Send className="w-4 h-4" />}
             </Button>
