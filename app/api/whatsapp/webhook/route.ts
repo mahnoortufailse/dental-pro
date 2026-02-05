@@ -109,24 +109,24 @@ async function handleIncomingMessage(message: any, valueContext: any) {
     } else if (type === "image") {
       mediaUrl = message.image?.url || message.image?.link || "";
       mediaType = "image";
-      // Use caption if available, otherwise use placeholder for DB (won't display in UI)
-      messageBody = message.image?.caption || "[Image]";
+      // Use caption if available, otherwise use space for DB (won't display in UI)
+      messageBody = message.image?.caption || " ";
       dbMessageType = "media";
     } else if (type === "document") {
       mediaUrl = message.document?.url || message.document?.link || "";
       mediaType = "document";
-      messageBody = message.document?.filename || "[Document]";
+      messageBody = message.document?.filename || " ";
       dbMessageType = "media";
     } else if (type === "audio") {
       mediaUrl = message.audio?.url || message.audio?.link || "";
       mediaType = "audio";
-      messageBody = "[Audio]";
+      messageBody = " ";
       dbMessageType = "media";
     } else if (type === "video") {
       mediaUrl = message.video?.url || message.video?.link || "";
       mediaType = "video";
-      // Use caption if available, otherwise use placeholder for DB (won't display in UI)
-      messageBody = message.video?.caption || "[Video]";
+      // Use caption if available, otherwise use space for DB (won't display in UI)
+      messageBody = message.video?.caption || " ";
       dbMessageType = "media";
     } else {
       messageBody = `[${type} message received]`;
@@ -203,6 +203,8 @@ async function handleIncomingMessage(message: any, valueContext: any) {
       whatsappMessageId: messageId,
       quotedMessageId: quotedMessage?._id || null,
       quotedMessageBody: quotedMessage?.body || null,
+      quotedMediaUrl: quotedMessage?.mediaUrl || null,
+      quotedMediaType: quotedMessage?.mediaType || null,
       status: "delivered",
       createdAt: new Date(parseInt(timestamp) * 1000),
     });

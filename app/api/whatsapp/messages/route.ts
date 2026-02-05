@@ -1,46 +1,41 @@
 import { connectDB, WhatsAppMessage, WhatsAppChat, User, Patient } from "@/lib/db-server"
 import { NextRequest, NextResponse } from "next/server"
 import { verifyToken } from "@/lib/auth"
-import { v4 as uuidv4 } from "crypto"
 
 const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || ""
 const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || ""
+const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || ""
+const CLOUDINARY_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || ""
 
-// Helper to upload media to WhatsApp and get media ID
-async function uploadMediaToWhatsApp(
+// Helper to upload media to Cloudinary
+async function uploadToCloudinary(
   buffer: Buffer,
+  fileName: string,
   mimeType: string,
 ): Promise<string | null> {
   try {
-    const formData = new FormData()
     const blob = new Blob([buffer], { type: mimeType })
-    formData.append("file", blob)
-    formData.append("type", mimeType)
-    formData.append("messaging_product", "whatsapp")
+    const formData = new FormData()
+    formData.append("file", blob, fileName)
+    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET)
 
-    const mediaEndpoint = WHATSAPP_API_URL.replace("/messages", "").replace(/\/$/, "") + "/media"
-    console.log("[v0] Uploading media to:", mediaEndpoint)
-
-    const response = await fetch(mediaEndpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
+      {
+        method: "POST",
+        body: formData,
       },
-      body: formData,
-    })
-
-    const responseText = await response.text()
-    console.log("[v0] Media upload response:", { status: response.status, body: responseText })
+    )
 
     if (!response.ok) {
-      console.error("[v0] Failed to upload media to WhatsApp:", responseText)
-      return null
+      const error = await response.json()
+      throw new Error(error.error?.message || "Upload failed")
     }
 
-    const data = JSON.parse(responseText)
-    return data.id || null
+    const data = await response.json()
+    return data.secure_url || null
   } catch (error) {
-    console.error("[v0] Error uploading media:", error)
+    console.error("[v0] Cloudinary upload error:", error)
     return null
   }
 }
@@ -219,8 +214,15 @@ export async function POST(req: NextRequest) {
     // ============================
     // SAVE MESSAGE FIRST
     // ============================
-    // Ensure body is never empty - use placeholder for media-only messages
-    const messageBody = message || (mediaType ? `[${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)}]` : "")
+    // Upload media to Cloudinary first if present
+    let cloudinaryUrl: string | null = null
+    if (mediaBuffer && mediaType) {
+      const fileName = `whatsapp-${Date.now()}.${mediaType === "audio" ? "m4a" : mediaType}`
+      cloudinaryUrl = await uploadToCloudinary(mediaBuffer, fileName, `${mediaType}/*`)
+    }
+
+    // For media-only messages, use a space to satisfy MongoDB requirement
+    const messageBody = message || " "
 
     const messageData: any = {
       chatId,
@@ -231,6 +233,8 @@ export async function POST(req: NextRequest) {
       messageType,
       body: messageBody,
       mediaType,
+      mediaUrl: cloudinaryUrl,
+      mediaData: mediaBuffer || undefined,
       sentBy: user.userId,
       sentByName: user.name,
       window24HourValid,
@@ -238,21 +242,7 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
     }
 
-    // Store media data if present
-    if (mediaBuffer && mediaType) {
-      messageData.mediaData = mediaBuffer
-      // Generate local media URL for retrieval
-      messageData.mediaUrl = `/api/whatsapp/media-proxy?local=true&id={{messageId}}`
-    }
-
     const messageDoc = await WhatsAppMessage.create(messageData)
-
-    // Update media URL with actual message ID
-    if (mediaBuffer && mediaType) {
-      await WhatsAppMessage.findByIdAndUpdate(messageDoc._id, {
-        mediaUrl: `/api/whatsapp/media-proxy?local=true&id=${messageDoc._id}-${Date.now()}`,
-      })
-    }
 
     // ============================
     // SEND TO WHATSAPP
@@ -264,22 +254,19 @@ export async function POST(req: NextRequest) {
         type: "text",
         text: {
           preview_url: true,
-          body: message || `[${mediaType?.toUpperCase() || "Media"} sent]`,
+          body: message,
         },
       }
 
-      // Handle media messages - store media locally, show in UI
-      if (messageType === "media" && mediaBuffer && mediaType) {
-        console.log("[v0] Storing media message locally:", { mediaType, size: mediaBuffer.length })
-
-        // For now, send text-only message with media stored in database
-        // In production, upload to CDN (S3, Cloudinary) and use the URL for sending
+      // Handle media messages - send actual media to WhatsApp
+      if (messageType === "media" && mediaBuffer && mediaType && cloudinaryUrl) {
         payload = {
           messaging_product: "whatsapp",
           to: normalizedPhone.replace("+", ""),
-          type: "text",
-          text: {
-            body: message || `[${mediaType.toUpperCase()} sent]`,
+          type: mediaType,
+          [mediaType]: {
+            link: cloudinaryUrl,
+            ...(message && { caption: message }),
           },
         }
       }
@@ -298,18 +285,9 @@ export async function POST(req: NextRequest) {
       if (response.ok && data.messages?.[0]?.id) {
         const whatsappMessageId = data.messages[0].id
 
-        // Store media locally if present
-        let localMediaUrl = null
-        if (mediaBuffer && mediaType) {
-          const mediaId = `${whatsappMessageId}-${Date.now()}`
-          // In production, store to cloud storage (S3, Cloudinary, etc)
-          // For now, we'll just note that media should be stored locally
-          localMediaUrl = `/api/whatsapp/media-proxy?id=${mediaId}`
-        }
-
         await WhatsAppMessage.findByIdAndUpdate(messageDoc._id, {
           whatsappMessageId,
-          mediaUrl: localMediaUrl,
+          mediaUrl: cloudinaryUrl,
           status: "sent",
         })
 
@@ -319,14 +297,12 @@ export async function POST(req: NextRequest) {
           updatedAt: new Date(),
         })
 
+        const updatedMessage = await WhatsAppMessage.findById(messageDoc._id)
+
         return NextResponse.json(
           {
             success: true,
-            message: {
-              ...messageDoc.toObject(),
-              whatsappMessageId,
-              mediaUrl: localMediaUrl,
-            },
+            message: updatedMessage,
           },
           { status: 201 },
         )

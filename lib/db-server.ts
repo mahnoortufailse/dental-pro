@@ -444,6 +444,8 @@ const whatsAppMessageSchema = new mongoose.Schema({
   whatsappMessageId: { type: String, default: null }, // WhatsApp's message ID
   quotedMessageId: { type: mongoose.Schema.Types.ObjectId, ref: "WhatsAppMessage", default: null }, // For quoted/replied messages
   quotedMessageBody: { type: String, default: null }, // Preview of quoted message
+  quotedMediaUrl: { type: String, default: null }, // Media URL of quoted message
+  quotedMediaType: { type: String, enum: ["image", "document", "audio", "video"], default: null }, // Media type of quoted message
   status: { type: String, enum: ["sent", "delivered", "read", "failed"], default: "sent" },
   statusChangedAt: { type: Date, default: Date.now },
   errorMessage: { type: String, default: null }, // Error details if failed

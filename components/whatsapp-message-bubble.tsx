@@ -12,6 +12,8 @@ interface MessageBubbleProps {
   mediaType?: string | null
   mediaUrl?: string | null
   quotedMessageBody?: string | null
+  quotedMediaUrl?: string | null
+  quotedMediaType?: string | null
   messageId?: string
   onQuotedMessageClick?: (messageId: string) => void
 }
@@ -24,6 +26,8 @@ export default function WhatsAppMessageBubble({
   mediaType,
   mediaUrl,
   quotedMessageBody,
+  quotedMediaUrl,
+  quotedMediaType,
   messageId,
   onQuotedMessageClick,
 }: MessageBubbleProps) {
@@ -78,7 +82,30 @@ export default function WhatsAppMessageBubble({
               }
             }}
           >
-            <p className="text-xs font-medium mb-0.5">Replying to:</p>
+            <p className="text-xs font-medium mb-1">Replying to:</p>
+            
+            {/* Quoted Media Preview */}
+            {quotedMediaType && quotedMediaUrl && (
+              <div className="mb-1 rounded overflow-hidden bg-black/10 max-w-xs">
+                {quotedMediaType === "image" && (
+                  <img
+                    src={quotedMediaUrl || "/placeholder.svg"}
+                    alt="Quoted image"
+                    className="max-w-full max-h-32 rounded object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none"
+                    }}
+                  />
+                )}
+                {quotedMediaType === "audio" && (
+                  <div className="text-xs px-2 py-1">🎙️ Audio message</div>
+                )}
+                {quotedMediaType === "video" && (
+                  <div className="text-xs px-2 py-1">🎬 Video message</div>
+                )}
+              </div>
+            )}
+            
             <p className="text-xs line-clamp-2">{quotedMessageBody}</p>
           </div>
         )}
@@ -163,12 +190,10 @@ export default function WhatsAppMessageBubble({
           </div>
         )}
 
-        {/* Text Content - Only show if it's actual text, not placeholder like [Image], [Audio] */}
-        {text &&
-          text.trim() !== "" &&
-          !["[Image]", "[Audio]", "[Video]", "[Document]"].includes(text.trim()) && (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{text}</p>
-          )}
+        {/* Text Content - Only show if it's actual text with content */}
+        {text && text.trim() && text.trim() !== " " && (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{text}</p>
+        )}
 
         {/* Timestamp and Status */}
         <div className={`flex items-center gap-1 mt-1 text-xs ${isOwn ? "text-blue-100 justify-end" : "text-gray-500"}`}>

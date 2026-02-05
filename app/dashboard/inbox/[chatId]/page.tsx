@@ -20,6 +20,8 @@ interface Message {
   mediaType?: string | null
   mediaUrl?: string | null
   quotedMessageBody?: string | null
+  quotedMediaUrl?: string | null
+  quotedMediaType?: string | null
 }
 
 interface Chat {
@@ -382,6 +384,8 @@ export default function ChatThreadPage() {
                     mediaType={msg.mediaType}
                     mediaUrl={msg.mediaUrl}
                     quotedMessageBody={msg.quotedMessageBody}
+                    quotedMediaUrl={msg.quotedMediaUrl}
+                    quotedMediaType={msg.quotedMediaType}
                     onQuotedMessageClick={handleQuotedMessageClick}
                   />
                 </div>
