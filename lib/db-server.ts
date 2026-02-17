@@ -161,7 +161,6 @@ const toothChartSchema = new mongoose.Schema({
       updatedAt: { type: Date, default: Date.now },
     },
   ],
-  overallNotes: String,
   lastReview: Date,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },

@@ -108,7 +108,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           return NextResponse.json({ error: "Procedure not found" }, { status: 404 })
         }
       }
-    } else if (body.teeth || body.procedures || body.overallNotes) {
+    } else if (body.teeth || body.procedures) {
       // Handle bulk updates (legacy support)
       console.log("[v0] Handling bulk update")
       if (body.procedures && Array.isArray(body.procedures)) {
@@ -116,9 +116,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
       if (body.teeth) {
         chart.teeth = body.teeth
-      }
-      if (body.overallNotes !== undefined) {
-        chart.overallNotes = body.overallNotes
       }
     }
 

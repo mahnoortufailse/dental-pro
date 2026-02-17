@@ -32,6 +32,7 @@ interface ToothModalProps {
   toothNumber: number | null;
   existingData?: {
     _id?: string;
+    toothNumbers?: number[];
     sides?: string[];
     procedure?: string;
     diagnosis?: string;
@@ -105,8 +106,14 @@ export function ToothChartModal({
       if (existingData && existingData._id) {
         // Editing mode - load procedure data
         setIsEditing(true);
-        setEnableMultiSelect(false);
-        setSelectedTeeth(toothNumber ? [toothNumber] : []);
+        // Enable multi-select if editing a grouped record with multiple teeth
+        const hasMultipleTeeth =
+          existingData.toothNumbers && existingData.toothNumbers.length > 1;
+        setEnableMultiSelect(hasMultipleTeeth);
+        // Use toothNumbers from existingData if available, otherwise use single toothNumber
+        setSelectedTeeth(
+          existingData.toothNumbers || (toothNumber ? [toothNumber] : []),
+        );
         setSelectedSides(existingData.sides || []);
         setDiagnosis(existingData.diagnosis || "");
         setComments(existingData.comments || "");
@@ -284,39 +291,40 @@ export function ToothChartModal({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {enableMultiSelect
-              ? `Multiple Teeth - Enter Procedure Details`
-              : `Tooth #${toothNumber} - Enter Procedure Details`}
+            {enableMultiSelect && selectedTeeth.length > 1
+              ? `Teeth #${selectedTeeth.sort((a, b) => a - b).join(", #")} - Enter Procedure Details`
+              : enableMultiSelect
+                ? `Multiple Teeth - Enter Procedure Details`
+                : `Tooth #${toothNumber} - Enter Procedure Details`}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Multi-Select Toggle */}
-          {!isEditing && (
-            <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <input
-                type="checkbox"
-                id="multiSelect"
-                checked={enableMultiSelect}
-                onChange={(e) => {
-                  setEnableMultiSelect(e.target.checked);
-                  if (!e.target.checked) {
-                    setSelectedTeeth(toothNumber ? [toothNumber] : []);
-                  }
-                }}
-                className="w-4 h-4 cursor-pointer"
-              />
-              <Label
-                htmlFor="multiSelect"
-                className="text-sm font-medium cursor-pointer"
-              >
-                Apply same procedure to multiple teeth
-              </Label>
-            </div>
-          )}
+          <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <input
+              type="checkbox"
+              id="multiSelect"
+              checked={enableMultiSelect}
+              onChange={(e) => {
+                setEnableMultiSelect(e.target.checked);
+                if (!e.target.checked) {
+                  setSelectedTeeth(toothNumber ? [toothNumber] : []);
+                }
+              }}
+              className="w-4 h-4 cursor-pointer"
+              disabled={isEditing}
+            />
+            <Label
+              htmlFor="multiSelect"
+              className={`text-sm font-medium ${isEditing ? "cursor-default" : "cursor-pointer"}`}
+            >
+              Apply same procedure to multiple teeth
+            </Label>
+          </div>
 
           {/* Multiple Teeth Selection */}
-          {enableMultiSelect && !isEditing && (
+          {enableMultiSelect && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">Select Teeth</Label>
               <div className="grid grid-cols-8 gap-1 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-32 overflow-y-auto">
