@@ -154,6 +154,7 @@ const toothChartSchema = new mongoose.Schema({
       procedure: String,
       date: { type: Date, default: Date.now },
       fillingType: String,
+      rootCanalType: String,
       comments: String,
       createdBy: String,
       createdAt: { type: Date, default: Date.now },
@@ -385,7 +386,13 @@ const appointmentReferralSchema = new mongoose.Schema({
 export const User = mongoose.models.User || mongoose.model("User", userSchema)
 export const Patient = mongoose.models.Patient || mongoose.model("Patient", patientSchema)
 export const Appointment = mongoose.models.Appointment || mongoose.model("Appointment", appointmentSchema)
-export const ToothChart = mongoose.models.ToothChart || mongoose.model("ToothChart", toothChartSchema)
+
+// Force recompile ToothChart model to pick up schema changes
+if (mongoose.models.ToothChart) {
+  delete mongoose.models.ToothChart
+}
+export const ToothChart = mongoose.model("ToothChart", toothChartSchema)
+
 export const Billing = mongoose.models.Billing || mongoose.model("Billing", billingSchema)
 export const Inventory = mongoose.models.Inventory || mongoose.model("Inventory", inventorySchema)
 export const MedicalHistory = mongoose.models.MedicalHistory || mongoose.model("MedicalHistory", medicalHistorySchema)

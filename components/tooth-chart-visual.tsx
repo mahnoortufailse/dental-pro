@@ -253,11 +253,11 @@ export function ToothChartVisual({
       <div>
         <h3 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm md:text-base">Lower Teeth</h3>
         {renderTeethRow(
-          [38, 37, 36, 35, 34, 33, 32, 31, 41, 42, 43, 44, 45, 46, 47, 48],
+          [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38],
           "bg-green-50",
           "border-green-200",
         )}
-      </div>  
+      </div>
 
       {/* Notation Guide - responsive layout */}
       <div className="p-3 sm:p-4 bg-amber-50 rounded-lg border border-amber-200">

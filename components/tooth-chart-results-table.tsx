@@ -15,6 +15,7 @@ interface ToothRecord {
   comments: string
   date: string
   fillingType?: string
+  rootCanalType?: string
   createdBy?: string
 }
 
@@ -51,6 +52,7 @@ const formatDate = (dateString: string | Date): string => {
 }
 
 export function ToothChartResultsTable({ teeth, procedures = [], onEdit, onDelete, onViewDetails }: ToothChartResultsTableProps) {
+  console.log("[Table] Received procedures:", procedures)
   const [currentPage, setCurrentPage] = useState(1)
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; recordId?: string; toothNumber?: number; procedure?: string }>({
     isOpen: false,
@@ -96,6 +98,30 @@ export function ToothChartResultsTable({ teeth, procedures = [], onEdit, onDelet
   const endIndex = startIndex + ITEMS_PER_PAGE.md
   const paginatedData = tableData.slice(startIndex, endIndex)
 
+  // Determine which type column to show based on procedures
+  const showTypeColumn = useMemo(() => {
+    return paginatedData.some(record =>
+      record.procedure?.toLowerCase() === "filling" ||
+      record.procedure?.toLowerCase() === "root canal"
+    )
+  }, [paginatedData])
+
+  // Helper function to get the type value for a record
+  const getTypeValue = (record: ToothRecord) => {
+    console.log(`[Table] Getting type for tooth #${record.toothNumber}:`, {
+      procedure: record.procedure,
+      fillingType: record.fillingType,
+      rootCanalType: record.rootCanalType,
+    })
+    if (record.procedure?.toLowerCase() === "filling" && record.fillingType) {
+      return record.fillingType
+    }
+    if (record.procedure?.toLowerCase() === "root canal" && record.rootCanalType) {
+      return record.rootCanalType
+    }
+    return "-"
+  }
+
   if (tableData.length === 0) {
     return (
       <div className="bg-card border border-border rounded-lg p-4 sm:p-6 text-center">
@@ -122,7 +148,9 @@ export function ToothChartResultsTable({ teeth, procedures = [], onEdit, onDelet
                   <th className="text-left py-3 px-4 font-semibold text-foreground">Tooth #</th>
                   <th className="text-left py-3 px-4 font-semibold text-foreground">Side(s)</th>
                   <th className="text-left py-3 px-4 font-semibold text-foreground">Procedure</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Filling Type</th>
+                  {showTypeColumn && (
+                    <th className="text-left py-3 px-4 font-semibold text-foreground">Type</th>
+                  )}
                   <th className="text-left py-3 px-4 font-semibold text-foreground">Diagnosis</th>
                   <th className="text-left py-3 px-4 font-semibold text-foreground">Date</th>
                   {(onEdit || onDelete || onViewDetails) && (
@@ -150,9 +178,11 @@ export function ToothChartResultsTable({ teeth, procedures = [], onEdit, onDelet
                       </div>
                     </td>
                     <td className="py-3 px-4 text-foreground">{record.procedure}</td>
-                    <td className="py-3 px-4 text-foreground text-sm">
-                      {record.fillingType && record.procedure?.toLowerCase() === "filling" ? record.fillingType : "-"}
-                    </td>
+                    {showTypeColumn && (
+                      <td className="py-3 px-4 text-foreground text-sm">
+                        {getTypeValue(record)}
+                      </td>
+                    )}
                     <td className="py-3 px-4 text-foreground">{record.diagnosis || "-"}</td>
                     <td className="py-3 px-4 text-muted-foreground text-sm">
                       {formatDate(record.date)}
@@ -244,7 +274,10 @@ export function ToothChartResultsTable({ teeth, procedures = [], onEdit, onDelet
                       <div>
                         <div className="font-medium">{record.procedure}</div>
                         {record.fillingType && record.procedure?.toLowerCase() === "filling" && (
-                          <div className="text-xs text-muted-foreground mt-0.5">{record.fillingType}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">Type: {record.fillingType}</div>
+                        )}
+                        {record.rootCanalType && record.procedure?.toLowerCase() === "root canal" && (
+                          <div className="text-xs text-muted-foreground mt-0.5">Type: {record.rootCanalType}</div>
                         )}
                         <div className="text-xs text-muted-foreground mt-0.5">{record.diagnosis || "No diagnosis"}</div>
                       </div>
@@ -390,6 +423,13 @@ export function ToothChartResultsTable({ teeth, procedures = [], onEdit, onDelet
                     <p className="text-foreground">{record.fillingType}</p>
                   </div>
                 )}
+
+                {record.rootCanalType && record.procedure?.toLowerCase() === "root canal" && (
+                  <div>
+                    <span className="font-medium text-foreground">Root Canal Type:</span>
+                    <p className="text-foreground">{record.rootCanalType}</p>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -479,6 +519,13 @@ export function ToothChartResultsTable({ teeth, procedures = [], onEdit, onDelet
                   <div>
                     <span className="font-medium text-foreground">Filling:</span>
                     <p className="text-foreground text-xs">{record.fillingType}</p>
+                  </div>
+                )}
+
+                {record.rootCanalType && record.procedure?.toLowerCase() === "root canal" && (
+                  <div>
+                    <span className="font-medium text-foreground">Root Canal:</span>
+                    <p className="text-foreground text-xs">{record.rootCanalType}</p>
                   </div>
                 )}
               </div>

@@ -43,6 +43,8 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
   const [showHistory, setShowHistory] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalToothNumber, setModalToothNumber] = useState<number | null>(null)
+  const [toothChart, setToothChart] = useState<any>(null)
+  const [procedures, setProcedures] = useState<any[]>([])
 
   useEffect(() => {
     fetchToothChart()
@@ -70,29 +72,46 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
     try {
       // Initialize with empty teeth first
       const initialTeeth = initializeTeeth()
-      
+
       const res = await fetch(`/api/tooth-chart?patientId=${patientId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
         const data = await res.json()
-        if (data.toothChart && data.toothChart.teeth) {
+        if (data.toothChart) {
+          // Store the full tooth chart object
+          setToothChart(data.toothChart)
+
+          // Store procedures array
+          setProcedures(data.toothChart.procedures || [])
+
           // Merge fetched data with initialized teeth
-          const mergedTeeth = { ...initialTeeth, ...data.toothChart.teeth }
-          setTeeth(mergedTeeth)
+          if (data.toothChart.teeth) {
+            const mergedTeeth = { ...initialTeeth, ...data.toothChart.teeth }
+            setTeeth(mergedTeeth)
+          } else {
+            setTeeth(initialTeeth)
+          }
+
           setOverallNotes(data.toothChart.overallNotes || "")
         } else {
           setTeeth(initialTeeth)
+          setToothChart(null)
+          setProcedures([])
         }
         setChartHistory(data.chartHistory || [])
       } else {
         // If fetch fails, initialize with empty teeth
         setTeeth(initialTeeth)
+        setToothChart(null)
+        setProcedures([])
       }
     } catch (error) {
       console.error("Error fetching tooth chart:", error)
       // Initialize with empty teeth on error
       setTeeth(initializeTeeth())
+      setToothChart(null)
+      setProcedures([])
     } finally {
       setLoading(false)
     }
@@ -195,30 +214,131 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
     setIsModalOpen(true)
   }
 
-  const handleModalSave = (data: {
+  const handleModalSave = async (data: {
     toothNumber: number
+    toothNumbers?: number[]
     sides: string[]
     procedure: string
     diagnosis: string
     comments: string
     date: string
+    fillingType?: string
+    rootCanalType?: string
   }) => {
-    setTeeth((prev) => ({
-      ...prev,
-      [data.toothNumber]: {
-        ...prev[data.toothNumber],
-        sides: data.sides,
-        procedure: data.procedure,
-        diagnosis: data.diagnosis,
-        notes: data.comments,
-        date: data.date,
-        status: "filling", // Mark as having procedure
-        lastUpdated: new Date(),
-      },
-    }))
-    setIsModalOpen(false)
-    setModalToothNumber(null)
-    toast.success("Tooth procedure saved")
+    // Handle multiple teeth if selected
+    const teethToUpdate = data.toothNumbers || [data.toothNumber]
+    console.log("[ToothChart] handleModalSave called with data:", data)
+    console.log("[ToothChart] teethToUpdate:", teethToUpdate)
+
+    setSaving(true)
+    try {
+      // Get or create tooth chart ID
+      let chartId = toothChart?._id || toothChart?.id
+
+      // If no chart exists, create one first
+      if (!chartId) {
+        const createRes = await fetch("/api/tooth-chart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            patientId,
+            teeth: {},
+            procedures: [],
+            overallNotes: "",
+          }),
+        })
+
+        if (createRes.ok) {
+          const createData = await createRes.json()
+          chartId = createData.chart._id || createData.chart.id
+          setToothChart(createData.chart)
+        } else {
+          toast.error("Failed to create tooth chart")
+          setSaving(false)
+          return
+        }
+      }
+
+      // Save procedure for each tooth (using atomic operations in API to prevent race conditions)
+      console.log("[ToothChart] Saving procedures for teeth:", teethToUpdate)
+      for (let i = 0; i < teethToUpdate.length; i++) {
+        const toothNum = teethToUpdate[i]
+        const procedureData = {
+          toothNumber: toothNum,
+          sides: data.sides,
+          diagnosis: data.diagnosis,
+          procedure: data.procedure,
+          date: data.date,
+          fillingType: data.fillingType || "",
+          rootCanalType: data.rootCanalType || "",
+          comments: data.comments,
+        }
+
+        console.log(`[ToothChart] Saving procedure for tooth #${toothNum} (${i + 1}/${teethToUpdate.length})`)
+        const res = await fetch(`/api/tooth-chart/${chartId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            procedure: procedureData,
+            action: "addProcedure",
+          }),
+        })
+
+        if (!res.ok) {
+          const error = await res.json()
+          console.error(`[ToothChart] Failed to save procedure for tooth #${toothNum}:`, error)
+          toast.error(error.error || `Failed to save procedure for tooth ${toothNum}`)
+          setSaving(false)
+          return
+        }
+
+        const result = await res.json()
+        console.log(`[ToothChart] Successfully saved procedure for tooth #${toothNum}. Total procedures:`, result.chart?.procedures?.length)
+      }
+      console.log("[ToothChart] All procedures saved successfully")
+
+      // Update local state for visual feedback
+      setTeeth((prev) => {
+        const updated = { ...prev }
+        teethToUpdate.forEach((toothNum) => {
+          updated[toothNum] = {
+            ...prev[toothNum],
+            sides: data.sides,
+            procedure: data.procedure,
+            diagnosis: data.diagnosis,
+            notes: data.comments,
+            date: data.date,
+            fillingType: data.fillingType || "",
+            status: "filling", // Mark as having procedure
+            lastUpdated: new Date(),
+          }
+        })
+        return updated
+      })
+
+      // Refresh tooth chart data to get updated procedures
+      await fetchToothChart()
+
+      setIsModalOpen(false)
+      setModalToothNumber(null)
+
+      if (teethToUpdate.length > 1) {
+        toast.success(`Procedure saved for ${teethToUpdate.length} teeth`)
+      } else {
+        toast.success("Tooth procedure saved")
+      }
+    } catch (error) {
+      console.error("Error saving procedure:", error)
+      toast.error("Error saving procedure")
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) {
@@ -334,7 +454,7 @@ export function ToothChart({ patientId, token, onSave }: ToothChartProps) {
           Reset
         </button>
       </div>
-      <ToothChartResultsTable teeth={teeth} />
+      <ToothChartResultsTable teeth={teeth} procedures={procedures} />
     </div>
   )
 }

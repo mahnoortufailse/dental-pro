@@ -593,12 +593,14 @@ export default function PatientDetailPage() {
 
   const handleModalSave = async (data: {
     toothNumber: number;
+    toothNumbers?: number[];
     sides: string[];
     procedure: string;
     diagnosis: string;
     comments: string;
     date: string;
     fillingType?: string;
+    rootCanalType?: string;
   }) => {
     console.log("[v0] Modal save data received:", data);
     console.log("[v0] Editing procedure:", editingProcedure);
@@ -627,6 +629,7 @@ export default function PatientDetailPage() {
         comments: data.comments,
         date: data.date,
         fillingType: data.fillingType || "",
+        rootCanalType: data.rootCanalType || "",
       };
 
       if (isEditing) {
@@ -656,29 +659,50 @@ export default function PatientDetailPage() {
           return;
         }
       } else {
-        console.log("[v0] Adding new procedure for tooth:", data.toothNumber);
-        // Add new procedure
-        const res = await fetch(`/api/tooth-chart/${chartId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            procedure: procedureData,
-            action: "addProcedure",
-          }),
-        });
+        // Handle multiple teeth if selected
+        const teethToUpdate = data.toothNumbers || [data.toothNumber];
+        console.log("[v0] Adding new procedures for teeth:", teethToUpdate);
 
-        const responseData = await res.json();
-        if (res.ok) {
-          console.log("[v0] Procedure added successfully");
-          toast.success("Procedure added successfully");
+        // Add new procedure for each tooth
+        for (let i = 0; i < teethToUpdate.length; i++) {
+          const toothNum = teethToUpdate[i];
+          const procedureDataForTooth = {
+            ...procedureData,
+            toothNumber: toothNum,
+          };
+
+          console.log(`[v0] Adding procedure for tooth #${toothNum} (${i + 1}/${teethToUpdate.length})`);
+          console.log(`[v0] Procedure data being sent:`, procedureDataForTooth);
+          const requestBody = {
+            procedure: procedureDataForTooth,
+            action: "addProcedure",
+          };
+          console.log(`[v0] Request body JSON:`, JSON.stringify(requestBody, null, 2));
+          const res = await fetch(`/api/tooth-chart/${chartId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(requestBody),
+          });
+
+          const responseData = await res.json();
+          if (res.ok) {
+            console.log(`[v0] Procedure added successfully for tooth #${toothNum}`);
+          } else {
+            console.error(`[v0] Failed to add procedure for tooth #${toothNum}:`, responseData);
+            toast.error(responseData.error || `Failed to add procedure for tooth ${toothNum}`);
+            setLoading((prev) => ({ ...prev, saveChart: false }));
+            return;
+          }
+        }
+
+        // Show success message
+        if (teethToUpdate.length > 1) {
+          toast.success(`Procedure added for ${teethToUpdate.length} teeth`);
         } else {
-          console.error("[v0] Failed to add procedure:", responseData);
-          toast.error(responseData.error || "Failed to add procedure");
-          setLoading((prev) => ({ ...prev, saveChart: false }));
-          return;
+          toast.success("Procedure added successfully");
         }
       }
 
@@ -802,6 +826,7 @@ export default function PatientDetailPage() {
           };
 
           console.log("[v0] Updated teeth from procedures, total teeth with procedures:", Object.keys(teethFromProcedures).length);
+          console.log("[v0] Chart procedures from API:", chart.procedures);
           setToothChart(updatedChart);
           setToothProcedures(
             Array.isArray(chart.procedures) ? chart.procedures : [],
@@ -1288,7 +1313,7 @@ export default function PatientDetailPage() {
                             procedures={toothProcedures}
                             onEdit={handleEditProcedure}
                             onDelete={handleDeleteProcedure}
-                            onViewDetails={() => {}}
+                            {...(user?.role === "doctor" && { onViewDetails: () => {} })}
                           />
                         </>
                       )}
