@@ -24,7 +24,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    const { id } = params
     console.log("🟠 [GET] Fetching appointment with ID:", id)
 
     const appointment = await Appointment.findById(id)
@@ -55,11 +54,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     console.log("🟢 [PATCH] Updating report")
     await connectDB()
 
+    const { id } = await params
     const token = request.headers.get("authorization")?.split(" ")[1]
     if (!token) {
       console.warn("🔴 [PATCH] No token found")
@@ -76,8 +76,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       console.warn("🔴 [PATCH] Unauthorized role tried to update report:", payload.role)
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
-
-    const { id } = params
     const body = await request.json()
     const { findings, notes, followUpDetails, nextVisitDate, nextVisitTime } = body // Added nextVisitTime
 
@@ -285,11 +283,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     console.log("🟢 [DELETE] Deleting report")
     await connectDB()
 
+    const { id } = await params
     const token = request.headers.get("authorization")?.split(" ")[1]
     if (!token) {
       console.warn("🔴 [DELETE] No token found")
@@ -306,8 +305,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     //   console.warn("🔴 [DELETE] Unauthorized role tried to delete report:", payload.role)
     //   return NextResponse.json({ error: "Access denied" }, { status: 403 })
     // }
-
-    const { id } = params
     console.log("🟠 [DELETE] Report ID:", id)
 
     const deletedReport = await AppointmentReport.findByIdAndDelete(id)

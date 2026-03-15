@@ -51,16 +51,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 // Also update the PUT endpoint for patient updates - FIXED VERSION
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
+    const { id } = await params
     const token = request.headers.get("authorization")?.split(" ")[1]
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const payload = verifyToken(token)
     if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-
-    const { id } = params
     const updateData = await request.json()
 
     // Check if patient exists

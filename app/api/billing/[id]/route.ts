@@ -62,17 +62,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
+    const { id } = await params
     const token = request.headers.get("authorization")?.split(" ")[1]
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const payload = verifyToken(token)
     if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     if (payload.role === "doctor") return NextResponse.json({ error: "Access denied" }, { status: 403 })
-
-    const { id } = params
     const deletedBilling = await Billing.findByIdAndDelete(id)
     if (!deletedBilling) return NextResponse.json({ error: "Billing record not found" }, { status: 404 })
 
