@@ -16,7 +16,7 @@ import { Types } from "mongoose"
 import { formatPhoneForDatabase, validatePhoneWithDetails } from "@/lib/validation"
 
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
     const token = request.headers.get("authorization")?.split(" ")[1]
@@ -25,7 +25,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const payload = verifyToken(token)
     if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 })
 
-    const patient = await Patient.findById(params.id).populate("assignedDoctorId", "name email specialty")
+    const { id } = await params
+    const patient = await Patient.findById(id).populate("assignedDoctorId", "name email specialty")
     if (!patient) return NextResponse.json({ error: "Patient not found" }, { status: 404 })
 
     // if (payload.role === "doctor") {

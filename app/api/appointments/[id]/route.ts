@@ -12,11 +12,12 @@ import { sendAppointmentCancellationEmail } from "@/lib/nodemailer-service"
 import { sendAppointmentRescheduleEmail } from "@/lib/nodemailer-service"
 import { formatTimeFor12Hour } from "@/lib/utils"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     console.log("🟢 [GET] Fetching appointment details")
     await connectDB()
 
+    const { id } = await params
     const token = request.headers.get("authorization")?.split(" ")[1]
     if (!token) {
       console.warn("🔴 [GET] No token found in request")
