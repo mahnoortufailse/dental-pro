@@ -36,6 +36,7 @@ interface ToothChartProps {
   generalProcedures?: GeneralProcedure[];
   toothChart?: any;
   patientId?: string;
+  patientDob?: string;
   token?: string;
   onGeneralProcedureAdd?: (procedure: GeneralProcedure) => void;
   onGeneralProcedureRemove?: (procedureId: string) => void;
@@ -66,6 +67,7 @@ export function ToothChartVisual({
   generalProcedures = [],
   toothChart,
   patientId,
+  patientDob,
   token,
   onGeneralProcedureAdd,
   onGeneralProcedureRemove,
@@ -82,6 +84,24 @@ export function ToothChartVisual({
   >(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Calculate patient age from DOB to determine if baby teeth should be shown
+  const patientAge = (() => {
+    if (!patientDob) return null;
+    try {
+      const birth = new Date(patientDob);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+      return age;
+    } catch {
+      return null;
+    }
+  })();
+
+  // Show baby teeth only when age is 14 or under (or DOB unknown)
+  const showBabyTeeth = patientAge === null || patientAge <= 14;
 
   // Check if mobile on mount and window resize
   useEffect(() => {
@@ -650,30 +670,34 @@ export function ToothChartVisual({
                   </div>
                 </div>
 
-                {/* Upper Baby Teeth Row */}
-                <div className={`flex items-center ${isMobile ? "justify-start" : "justify-center"} mt-0.5`}>
-                  <div className={`flex ${getToothGap()}`}>
-                    {upperBabyTeeth.slice(0, 5).map((toothNum) => renderBabyToothBox(toothNum, true))}
+                {/* Upper Baby Teeth Row - only for age <= 14 */}
+                {showBabyTeeth && (
+                  <div className={`flex items-center ${isMobile ? "justify-start" : "justify-center"} mt-0.5`}>
+                    <div className={`flex ${getToothGap()}`}>
+                      {upperBabyTeeth.slice(0, 5).map((toothNum) => renderBabyToothBox(toothNum, true))}
+                    </div>
+                    <div className="w-0.5 bg-amber-400 mx-0.5 sm:mx-1 flex-shrink-0" style={{ height: isMobile ? "48px" : "72px" }} />
+                    <div className={`flex ${getToothGap()}`}>
+                      {upperBabyTeeth.slice(5).map((toothNum) => renderBabyToothBox(toothNum, true))}
+                    </div>
                   </div>
-                  <div className="w-0.5 bg-amber-400 mx-0.5 sm:mx-1 flex-shrink-0" style={{ height: isMobile ? "48px" : "72px" }} />
-                  <div className={`flex ${getToothGap()}`}>
-                    {upperBabyTeeth.slice(5).map((toothNum) => renderBabyToothBox(toothNum, true))}
-                  </div>
-                </div>
+                )}
 
                 {/* Horizontal line between upper and lower */}
                 <div className="h-0.5 bg-red-500 my-0.5 sm:my-1" />
 
-                {/* Lower Baby Teeth Row */}
-                <div className={`flex items-center ${isMobile ? "justify-start" : "justify-center"} mb-0.5`}>
-                  <div className={`flex ${getToothGap()}`}>
-                    {lowerBabyTeeth.slice(0, 5).map((toothNum) => renderBabyToothBox(toothNum, false))}
+                {/* Lower Baby Teeth Row - only for age <= 14 */}
+                {showBabyTeeth && (
+                  <div className={`flex items-center ${isMobile ? "justify-start" : "justify-center"} mb-0.5`}>
+                    <div className={`flex ${getToothGap()}`}>
+                      {lowerBabyTeeth.slice(0, 5).map((toothNum) => renderBabyToothBox(toothNum, false))}
+                    </div>
+                    <div className="w-0.5 bg-amber-400 mx-0.5 sm:mx-1 flex-shrink-0" style={{ height: isMobile ? "48px" : "72px" }} />
+                    <div className={`flex ${getToothGap()}`}>
+                      {lowerBabyTeeth.slice(5).map((toothNum) => renderBabyToothBox(toothNum, false))}
+                    </div>
                   </div>
-                  <div className="w-0.5 bg-amber-400 mx-0.5 sm:mx-1 flex-shrink-0" style={{ height: isMobile ? "48px" : "72px" }} />
-                  <div className={`flex ${getToothGap()}`}>
-                    {lowerBabyTeeth.slice(5).map((toothNum) => renderBabyToothBox(toothNum, false))}
-                  </div>
-                </div>
+                )}
 
                 {/* Lower Adult Teeth Row */}
                 <div
@@ -720,10 +744,12 @@ export function ToothChartVisual({
             <div className="w-3 h-3 bg-[#d1d5db] rounded-full"></div>
             <span>Healthy</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 bg-amber-200 rounded-full border border-amber-400"></div>
-            <span>Baby Teeth</span>
-          </div>
+          {showBabyTeeth && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-amber-200 rounded-full border border-amber-400"></div>
+              <span>Baby Teeth</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -738,10 +764,12 @@ export function ToothChartVisual({
             <div className="w-3 h-3 bg-[#d1d5db] rounded-full"></div>
             <span>Healthy</span>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-amber-200 rounded-full border border-amber-400"></div>
-            <span>Baby Teeth (A–T)</span>
-          </div>
+          {showBabyTeeth && (
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-amber-200 rounded-full border border-amber-400"></div>
+              <span>Baby Teeth (A–T)</span>
+            </div>
+          )}
         </div>
       )}
 
